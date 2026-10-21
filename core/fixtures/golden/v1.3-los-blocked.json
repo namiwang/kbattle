@@ -1,0 +1,103 @@
+{
+  "scene": "LOS blocked. 60 x 60 m arena with one box (x 16..18, y 26..34), tick 600 of 6000. a0 at (10, 30) faces 0 deg. Behind the box, inside a0's cone and range: a1 walking 12 m dead ahead, and a3 standing 11.4 m away at -15 deg. a2 at (30, 48) stands in the open at 42 deg, 26.9 m. a0 sees only a2 and hears a1's steps through the box; a3 is silent.",
+  "observations": {
+    "a0": {
+      "self": {
+        "pos": {
+          "x": 10,
+          "y": 30
+        },
+        "facing": 0,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 270
+      },
+      "visible": [
+        {
+          "id": "a2",
+          "bearing": 42,
+          "dist": 27,
+          "moving": false
+        }
+      ],
+      "heard": [
+        {
+          "kind": "steps",
+          "bearing": 0,
+          "dist": "near"
+        }
+      ],
+      "incoming": []
+    },
+    "a1": {
+      "self": {
+        "pos": {
+          "x": 22,
+          "y": 30
+        },
+        "facing": 180,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 270
+      },
+      "visible": [],
+      "heard": [],
+      "incoming": []
+    },
+    "a2": {
+      "self": {
+        "pos": {
+          "x": 30,
+          "y": 48
+        },
+        "facing": -138,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 270
+      },
+      "visible": [
+        {
+          "id": "a1",
+          "bearing": 24,
+          "dist": 20,
+          "moving": true
+        },
+        {
+          "id": "a3",
+          "bearing": 25,
+          "dist": 23,
+          "moving": false
+        },
+        {
+          "id": "a0",
+          "bearing": 0,
+          "dist": 27,
+          "moving": false
+        }
+      ],
+      "heard": [],
+      "incoming": []
+    },
+    "a3": {
+      "self": {
+        "pos": {
+          "x": 21,
+          "y": 27
+        },
+        "facing": 0,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 270
+      },
+      "visible": [],
+      "heard": [
+        {
+          "kind": "steps",
+          "bearing": 72,
+          "dist": "near"
+        }
+      ],
+      "incoming": []
+    }
+  }
+}

@@ -1,0 +1,193 @@
+{
+  "scene": "Hearing without sight. 100 x 40 m arena with a wall (x 8..9, y 5..35) 3 m in front of a0, tick 2400 of 6000. a0 at (5, 20) faces 0 deg and fired into the wall this tick (its own shot is not heard). Also firing this tick: a1 70 m away (heard far), a2 85 m away (beyond 80 m, not heard), a4 30.4 m away (heard mid). a3 walks 10 m away behind the wall (steps near). a0 sees nobody. a1 sees a3 at exactly 60 m.",
+  "observations": {
+    "a0": {
+      "self": {
+        "pos": {
+          "x": 5,
+          "y": 20
+        },
+        "facing": 0,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 180
+      },
+      "visible": [],
+      "heard": [
+        {
+          "kind": "shot",
+          "bearing": 9,
+          "dist": "mid"
+        },
+        {
+          "kind": "shot",
+          "bearing": 0,
+          "dist": "far"
+        },
+        {
+          "kind": "steps",
+          "bearing": 0,
+          "dist": "near"
+        }
+      ],
+      "incoming": []
+    },
+    "a1": {
+      "self": {
+        "pos": {
+          "x": 75,
+          "y": 20
+        },
+        "facing": 180,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 180
+      },
+      "visible": [
+        {
+          "id": "a4",
+          "bearing": -7,
+          "dist": 40,
+          "moving": false
+        },
+        {
+          "id": "a3",
+          "bearing": 0,
+          "dist": 60,
+          "moving": true
+        }
+      ],
+      "heard": [
+        {
+          "kind": "shot",
+          "bearing": 180,
+          "dist": "near"
+        },
+        {
+          "kind": "shot",
+          "bearing": -7,
+          "dist": "mid"
+        },
+        {
+          "kind": "shot",
+          "bearing": 0,
+          "dist": "far"
+        }
+      ],
+      "incoming": []
+    },
+    "a2": {
+      "self": {
+        "pos": {
+          "x": 90,
+          "y": 20
+        },
+        "facing": 180,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 180
+      },
+      "visible": [
+        {
+          "id": "a1",
+          "bearing": 0,
+          "dist": 15,
+          "moving": false
+        },
+        {
+          "id": "a4",
+          "bearing": -5,
+          "dist": 55,
+          "moving": false
+        }
+      ],
+      "heard": [
+        {
+          "kind": "shot",
+          "bearing": 0,
+          "dist": "near"
+        },
+        {
+          "kind": "shot",
+          "bearing": -5,
+          "dist": "far"
+        }
+      ],
+      "incoming": []
+    },
+    "a3": {
+      "self": {
+        "pos": {
+          "x": 15,
+          "y": 20
+        },
+        "facing": 180,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 180
+      },
+      "visible": [],
+      "heard": [
+        {
+          "kind": "shot",
+          "bearing": 0,
+          "dist": "near"
+        },
+        {
+          "kind": "shot",
+          "bearing": -166,
+          "dist": "mid"
+        },
+        {
+          "kind": "shot",
+          "bearing": 180,
+          "dist": "far"
+        },
+        {
+          "kind": "shot",
+          "bearing": 180,
+          "dist": "far"
+        }
+      ],
+      "incoming": []
+    },
+    "a4": {
+      "self": {
+        "pos": {
+          "x": 35,
+          "y": 25
+        },
+        "facing": 180,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 180
+      },
+      "visible": [
+        {
+          "id": "a3",
+          "bearing": 14,
+          "dist": 21,
+          "moving": true
+        }
+      ],
+      "heard": [
+        {
+          "kind": "shot",
+          "bearing": 9,
+          "dist": "mid"
+        },
+        {
+          "kind": "shot",
+          "bearing": 173,
+          "dist": "mid"
+        },
+        {
+          "kind": "shot",
+          "bearing": 175,
+          "dist": "far"
+        }
+      ],
+      "incoming": []
+    }
+  }
+}

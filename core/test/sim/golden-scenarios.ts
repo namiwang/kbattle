@@ -3,11 +3,12 @@
 // files. Tests never write goldens: change one on purpose by rerunning the
 // script and reviewing the diff.
 
+import { perceive } from "../../src/sim/perceive";
 import { step } from "../../src/sim/step";
 import { BULLET_STEP_M } from "../../src/sim/weapons";
-import type { WorldState } from "../../src/types";
+import type { AgentId, Observation, WorldState } from "../../src/types";
 import { angleOf, fromAngle, norm, scale, sub, type Vec2 } from "../../src/vec2";
-import { makeAgent, makeBullet, makeWorld } from "./helpers";
+import { loadScene, makeAgent, makeBullet, makeWorld } from "./helpers";
 
 export const GOLDEN_DIR = new URL("../../fixtures/golden/", import.meta.url);
 
@@ -124,11 +125,26 @@ export function turnFireGolden() {
   };
 }
 
+// ---- v1.3: what every agent perceives in five hand-written scenes ----
+
+/** The scenes in core/fixtures/scenes, golden `v1.3-<name>.json` each. */
+export const SCENES = Object.freeze(["cone-edge", "los-blocked", "hearing", "incoming", "combined"] as const);
+
+/** The scene's description and every agent's Observation, by agent id. */
+export function perceptionGolden(name: string): { scene: string; observations: Record<AgentId, Observation> } {
+  const { description, state } = loadScene(name);
+  return {
+    scene: description,
+    observations: Object.fromEntries(state.agents.map((a) => [a.id, perceive(state, a.id)])),
+  };
+}
+
 /** Golden file name → the function that regenerates its content. */
 export const GOLDENS: Readonly<Record<string, () => Record<string, unknown>>> = {
   "v1.1-single-bullet.json": singleBulletGolden,
   "v1.2-bullet-wall.json": bulletWallGolden,
   "v1.2-turn-fire.json": turnFireGolden,
+  ...Object.fromEntries(SCENES.map((name) => [`v1.3-${name}.json`, () => perceptionGolden(name)])),
 };
 
 /** Top-level fields pretty, each row of an array field on one line: readable, diffable. */

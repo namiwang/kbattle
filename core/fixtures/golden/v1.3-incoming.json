@@ -1,0 +1,116 @@
+{
+  "scene": "Incoming fire. Open 60 x 60 m arena, tick 3000 of 6000, nobody fired this tick. a0 at (20, 20) faces 0 deg. This tick a bullet from a2 (20, 50), behind a0's right shoulder, hit it (HP 80), and a bullet from a1 (5, 36), behind its left, passed 1.1 m from it. a0's own older bullet passed near a3 (45, 40), which a0 can see. a0's incoming lists the hit, then the near miss, as the shooters' bearings; a3's lists a0.",
+  "observations": {
+    "a0": {
+      "self": {
+        "pos": {
+          "x": 20,
+          "y": 20
+        },
+        "facing": 0,
+        "hp": 80,
+        "kills": 0,
+        "secondsLeft": 150
+      },
+      "visible": [
+        {
+          "id": "a3",
+          "bearing": 39,
+          "dist": 32,
+          "moving": false
+        }
+      ],
+      "heard": [],
+      "incoming": [
+        {
+          "bearing": 90
+        },
+        {
+          "bearing": 133
+        }
+      ]
+    },
+    "a1": {
+      "self": {
+        "pos": {
+          "x": 5,
+          "y": 36
+        },
+        "facing": -47,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 150
+      },
+      "visible": [
+        {
+          "id": "a0",
+          "bearing": 0,
+          "dist": 22,
+          "moving": false
+        }
+      ],
+      "heard": [],
+      "incoming": []
+    },
+    "a2": {
+      "self": {
+        "pos": {
+          "x": 20,
+          "y": 50
+        },
+        "facing": -90,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 150
+      },
+      "visible": [
+        {
+          "id": "a0",
+          "bearing": 0,
+          "dist": 30,
+          "moving": false
+        }
+      ],
+      "heard": [],
+      "incoming": []
+    },
+    "a3": {
+      "self": {
+        "pos": {
+          "x": 45,
+          "y": 40
+        },
+        "facing": 180,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 150
+      },
+      "visible": [
+        {
+          "id": "a2",
+          "bearing": -22,
+          "dist": 27,
+          "moving": false
+        },
+        {
+          "id": "a0",
+          "bearing": 39,
+          "dist": 32,
+          "moving": false
+        },
+        {
+          "id": "a1",
+          "bearing": 6,
+          "dist": 40,
+          "moving": false
+        }
+      ],
+      "heard": [],
+      "incoming": [
+        {
+          "bearing": 39
+        }
+      ]
+    }
+  }
+}

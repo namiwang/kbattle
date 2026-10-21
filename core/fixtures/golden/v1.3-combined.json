@@ -1,0 +1,145 @@
+{
+  "scene": "All combined, on arena-1 with 4 agents, tick 600 of 6000. a0 at the center (50, 50) faces 0 deg and fires this tick at a1, which walks toward it 30 m east (seen) and was hit this tick by a0's previous bullet. a2 at (50, 10), north of the north block, fires this tick (heard mid at -90, not seen). a3 at (40, 58) walks behind a0's right shoulder (steps near) and its older bullet passed near a0 this tick (incoming).",
+  "observations": {
+    "a0": {
+      "self": {
+        "pos": {
+          "x": 50,
+          "y": 50
+        },
+        "facing": 0,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 270
+      },
+      "visible": [
+        {
+          "id": "a1",
+          "bearing": -9,
+          "dist": 30,
+          "moving": true
+        }
+      ],
+      "heard": [
+        {
+          "kind": "shot",
+          "bearing": -90,
+          "dist": "mid"
+        },
+        {
+          "kind": "steps",
+          "bearing": 141,
+          "dist": "near"
+        }
+      ],
+      "incoming": [
+        {
+          "bearing": 141
+        }
+      ]
+    },
+    "a1": {
+      "self": {
+        "pos": {
+          "x": 80,
+          "y": 45
+        },
+        "facing": 170,
+        "hp": 80,
+        "kills": 0,
+        "secondsLeft": 270
+      },
+      "visible": [
+        {
+          "id": "a0",
+          "bearing": 1,
+          "dist": 30,
+          "moving": false
+        },
+        {
+          "id": "a3",
+          "bearing": -8,
+          "dist": 42,
+          "moving": true
+        }
+      ],
+      "heard": [
+        {
+          "kind": "shot",
+          "bearing": 1,
+          "dist": "mid"
+        },
+        {
+          "kind": "shot",
+          "bearing": 59,
+          "dist": "far"
+        }
+      ],
+      "incoming": [
+        {
+          "bearing": 1
+        }
+      ]
+    },
+    "a2": {
+      "self": {
+        "pos": {
+          "x": 50,
+          "y": 10
+        },
+        "facing": 90,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 270
+      },
+      "visible": [],
+      "heard": [
+        {
+          "kind": "shot",
+          "bearing": 0,
+          "dist": "mid"
+        }
+      ],
+      "incoming": []
+    },
+    "a3": {
+      "self": {
+        "pos": {
+          "x": 40,
+          "y": 58
+        },
+        "facing": -30,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 270
+      },
+      "visible": [
+        {
+          "id": "a0",
+          "bearing": -9,
+          "dist": 13,
+          "moving": false
+        },
+        {
+          "id": "a1",
+          "bearing": 12,
+          "dist": 42,
+          "moving": true
+        }
+      ],
+      "heard": [
+        {
+          "kind": "shot",
+          "bearing": -9,
+          "dist": "near"
+        },
+        {
+          "kind": "shot",
+          "bearing": -48,
+          "dist": "far"
+        }
+      ],
+      "incoming": []
+    }
+  }
+}

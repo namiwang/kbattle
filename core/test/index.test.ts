@@ -63,6 +63,27 @@ describe("@kbattle/core entry point", () => {
     expect(facts).toEqual({ shots: [], hits: [], nearMisses: [] });
   });
 
+  it("exposes the v1.3 perception: perceive on a world or on the PerceptionState subset", () => {
+    const map = core.getMap("arena-1");
+    const world = core.spawn(
+      { mapId: "arena-1", seed: 1, durationTicks: 100, slots: [{ kind: "doer" }, { kind: "doer" }] },
+      map,
+    );
+    const view: core.Observation = core.perceive(world, "a0");
+    expect(view.self.secondsLeft).toBe(5);
+    const agents = world.agents.map((a) => ({
+      id: a.id,
+      pos: a.pos,
+      facing: a.facing,
+      hp: a.hp,
+      alive: a.alive,
+      kills: a.kills,
+      moved: a.moved,
+    }));
+    const subset: core.PerceptionState = { ...world, agents };
+    expect(core.perceive(subset, "a0")).toEqual(view);
+  });
+
   it("exports each boundary type as z.infer of its schema", () => {
     expectTypeOf<core.MatchLog>().toEqualTypeOf<z.infer<typeof core.MatchLogSchema>>();
     expectTypeOf<core.DoerAnswer>().toEqualTypeOf<z.infer<typeof core.DoerAnswerSchema>>();
