@@ -5,3 +5,11 @@ compatibility_date = "2026-10-19"
 [assets]
 directory = "../web/dist"
 binding = "ASSETS"
+
+# Workers AI, for Clef behind POST /decide from v0.5; until then /decide answers with the mock.
+# Commented out because with it `wrangler dev` needs a Cloudflare login (ISSUES I-001): AI is
+# always remote, so it opens a remote session and exits with "Failed to start the remote proxy
+# session. ... In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN
+# environment variable". `wrangler dev --local` starts, but env.AI is then defined and cannot run.
+# [ai]
+# binding = "AI"

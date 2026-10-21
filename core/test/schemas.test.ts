@@ -544,6 +544,11 @@ describe("fixtures", () => {
     expect(statSync(new URL("sample-log.json", fixtures)).size).toBeLessThan(50 * 1024);
   });
 
+  it("decide-request.json validates against DecideRequest and round-trips", () => {
+    const request = readJson("decide-request.json");
+    expect(roundTrip(DecideRequestSchema, request)).toEqual(request);
+  });
+
   // Each bad fixture is a valid minimal log with one defect: exactly one issue, at this path.
   const badFixtures: Record<string, PropertyKey[]> = {
     "wrong-version.json": ["version"],
@@ -554,12 +559,24 @@ describe("fixtures", () => {
     "doer-ok-without-answers.json": ["events", 3, "answers"],
   };
 
+  // The same for /decide bodies (the Worker answers them with 400): decide-request.json with one defect.
+  const badRequests: Record<string, PropertyKey[]> = {
+    "decide-request-client-model.json": [],
+    "decide-request-unknown-question.json": ["questions"],
+    "decide-request-one-target-option.json": ["questions", "target", "criteria"],
+  };
+
   it("bad/ holds exactly the expected fixtures", () => {
-    expect(readdirSync(new URL("bad/", fixtures)).sort()).toEqual(Object.keys(badFixtures).sort());
+    const expected = [...Object.keys(badFixtures), ...Object.keys(badRequests)];
+    expect(readdirSync(new URL("bad/", fixtures)).sort()).toEqual(expected.sort());
   });
 
   it.each(Object.entries(badFixtures))("bad/%s fails with one issue at %j", (name, path) => {
     expect(issuePaths(MatchLogSchema, readJson(`bad/${name}`))).toEqual([path]);
+  });
+
+  it.each(Object.entries(badRequests))("bad/%s fails DecideRequest with one issue at %j", (name, path) => {
+    expect(issuePaths(DecideRequestSchema, readJson(`bad/${name}`))).toEqual([path]);
   });
 });
 

@@ -1,0 +1,78 @@
+{
+  "state": {
+    "self": {
+      "pos": [
+        62.5,
+        40
+      ],
+      "facing": -30,
+      "hp": 72,
+      "kills": 1,
+      "secondsLeft": 241.5
+    },
+    "visible": [
+      {
+        "id": "a3",
+        "bearing": -12,
+        "dist": 38,
+        "moving": true
+      }
+    ],
+    "heard": [
+      {
+        "kind": "shot",
+        "bearing": 140,
+        "dist": "far"
+      }
+    ],
+    "incoming": [
+      {
+        "bearing": 95
+      }
+    ],
+    "plan": "Hold the east wall, engage anyone crossing the gap, retreat north under 40 HP."
+  },
+  "questions": {
+    "move": {
+      "type": "choice",
+      "instructions": "Follow the plan. Stop once you are at the range it names.",
+      "criteria": {
+        "forward": "Step the way you face.",
+        "back": "Step away from where you face.",
+        "left": "Strafe left.",
+        "right": "Strafe right.",
+        "stop": "Stand still."
+      }
+    },
+    "turn": {
+      "type": "choice",
+      "instructions": "Face the target when you have one; otherwise keep your facing.",
+      "criteria": {
+        "left": "Turn left.",
+        "right": "Turn right.",
+        "none": "Keep your facing.",
+        "face_target": "Turn toward the target."
+      }
+    },
+    "fire": {
+      "type": "noul",
+      "instructions": "Fire when the target is close to the center of your view."
+    },
+    "target": {
+      "type": "choice",
+      "instructions": "Pick the closest visible enemy.",
+      "criteria": {
+        "a3": "Enemy a3: 38 m away, 12 degrees to your left, moving.",
+        "none": "No target."
+      }
+    },
+    "escalate": {
+      "type": "noul",
+      "instructions": "The plan no longer fits the situation.",
+      "criteria": {
+        "true": "Ask for a new plan.",
+        "false": "Keep the plan."
+      }
+    }
+  }
+}

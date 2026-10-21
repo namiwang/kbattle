@@ -1,5 +1,6 @@
-// Writes core/fixtures/sample-log.json and the negative fixtures in
-// core/fixtures/bad/. Deterministic: a rerun rewrites the same bytes.
+// Writes core/fixtures/sample-log.json and the negative MatchLog fixtures in
+// core/fixtures/bad/. Deterministic: a rerun rewrites the same bytes. (The
+// bad/decide-request-*.json files are hand-made, not written here.)
 //
 //   pnpm --filter core exec tsx scripts/make-sample-log.ts
 //
