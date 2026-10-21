@@ -162,6 +162,7 @@ function spawnAgent(id: string, slot: number, spawn: Vec2): Agent {
     facing: headingTo(spawn, center),
     hp: AGENT_HP,
     alive: true,
+    deathTick: null,
     kills: 0,
     cooldownTicks: 0,
     action: { move: "stop", turn: "none", fire: false, target: null },

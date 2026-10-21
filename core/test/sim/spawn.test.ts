@@ -42,9 +42,13 @@ describe("spawn: the world at tick 0", () => {
 
   it("gives every agent full HP, no kills, a ready weapon and STOP_ACTION", () => {
     for (const a of state.agents) {
-      expect(a).toMatchObject({ hp: AGENT_HP, alive: true, kills: 0, cooldownTicks: 0, moved: false });
+      expect(a).toMatchObject({ hp: AGENT_HP, alive: true, deathTick: null, kills: 0, cooldownTicks: 0, moved: false });
       expect(a.action).toEqual(STOP_ACTION);
     }
+  });
+
+  it("starts with empty per-tick facts: no shots, hits or near misses yet (R6)", () => {
+    expect(state.lastTick).toEqual({ shots: [], hits: [], nearMisses: [] });
   });
 
   it("faces every agent toward the arena center", () => {

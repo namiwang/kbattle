@@ -4,7 +4,9 @@
 // script and reviewing the diff.
 
 import { step } from "../../src/sim/step";
+import { BULLET_STEP_M } from "../../src/sim/weapons";
 import type { WorldState } from "../../src/types";
+import { angleOf, fromAngle, norm, scale, sub, type Vec2 } from "../../src/vec2";
 import { makeAgent, makeBullet, makeWorld } from "./helpers";
 
 export const GOLDEN_DIR = new URL("../../fixtures/golden/", import.meta.url);
@@ -46,9 +48,87 @@ export function singleBulletGolden() {
   };
 }
 
+// ---- v1.2: bullets stop at walls on the tick their path crosses one ----
+
+const WALL_MUZZLE = { x: 10.6, y: 24 };
+const toward = (p: Vec2) => scale(norm(sub(p, WALL_MUZZLE)), BULLET_STEP_M);
+
+/**
+ * a0 at (10, 24) facing 0 on arena-1, holding still, with four bullets of its
+ * own pre-placed at its muzzle at bullet speed: b0 straight at the north block's
+ * west face (x = 42), b1 at the west triangle's slanted face at (24, 33), b2 at
+ * -120° into the arena boundary x = 0, b3 clearing the block's corner (42, 18)
+ * by 0.2 m on its way to the boundary x = 100.
+ */
+export function bulletWallWorld(): WorldState {
+  return makeWorld({
+    agents: [makeAgent(0, { x: 10, y: 24 }, 0)],
+    bullets: [
+      makeBullet(0, "a0", WALL_MUZZLE, { x: BULLET_STEP_M, y: 0 }),
+      makeBullet(1, "a0", WALL_MUZZLE, toward({ x: 24, y: 33 })),
+      makeBullet(2, "a0", WALL_MUZZLE, scale(fromAngle(-120), BULLET_STEP_M)),
+      makeBullet(3, "a0", WALL_MUZZLE, toward({ x: 42, y: 17.8 })),
+    ],
+  });
+}
+
+export function bulletWallGolden() {
+  let state = bulletWallWorld();
+  const removedAt: Record<string, number | null> = Object.fromEntries(state.bullets.map((b) => [b.id, null]));
+  const trace: [number, ...[string, number, number][]][] = [];
+  for (let i = 0; i < 32; i++) {
+    const before = state.bullets.map((b) => b.id);
+    const result = step(state, {});
+    state = result.state;
+    if (result.events.length > 0) throw new Error(`walls make no events, got ${JSON.stringify(result.events)}`);
+    for (const id of before) if (!state.bullets.some((b) => b.id === id)) removedAt[id] = state.tick;
+    trace.push([state.tick, ...state.bullets.map((b): [string, number, number] => [b.id, round6(b.pos.x), round6(b.pos.y)])]);
+  }
+  return {
+    scenario:
+      "arena-1; a0 at (10, 24) facing 0, stopped; its bullets from (10.6, 24) at 3 m/tick: " +
+      "b0 at 0 deg into the north block (x = 42), b1 toward (24, 33) on the west triangle, " +
+      "b2 at -120 deg into the boundary x = 0, b3 toward (42, 17.8) past the block's corner to x = 100; 32 ticks",
+    removedAt, // bullet id → the tick its path crossed a wall (null: still flying)
+    trace, // [tick, ...[id, x, y] of the bullets still in flight after each step]
+  };
+}
+
+// ---- v1.2: an agent firing while turning ----
+
+/** a0 alone at the center of arena-1 facing 0, turning right and firing every chance it gets; seed 7. */
+export function turnFireWorld(): WorldState {
+  const action = { move: "stop", turn: "right", fire: true, target: null } as const;
+  return makeWorld({ seed: 7, agents: [makeAgent(0, { x: 50, y: 50 }, 0, { action })] });
+}
+
+export function turnFireGolden() {
+  let state = turnFireWorld();
+  const shots: [number, string, number][] = [];
+  const trace: [number, number, number][] = [];
+  for (let i = 0; i < 50; i++) {
+    const result = step(state, {});
+    state = result.state;
+    for (const e of result.events) {
+      if (e.kind !== "Shot") continue;
+      const bullet = state.bullets.find((b) => b.id === e.bullet);
+      if (!bullet) throw new Error(`${e.bullet} was gone in the tick it was fired`);
+      shots.push([e.tick, e.bullet, round6(angleOf(bullet.vel))]);
+    }
+    trace.push([state.tick, round6(state.agents[0]!.facing), state.bullets.length]);
+  }
+  return {
+    scenario: "arena-1, seed 7; a0 at (50, 50) facing 0, action { stop, right, fire }; 50 ticks",
+    shots, // [tick, bullet id, heading in degrees] per Shot
+    trace, // [tick, a0 facing, bullets in flight] after each step
+  };
+}
+
 /** Golden file name → the function that regenerates its content. */
 export const GOLDENS: Readonly<Record<string, () => Record<string, unknown>>> = {
   "v1.1-single-bullet.json": singleBulletGolden,
+  "v1.2-bullet-wall.json": bulletWallGolden,
+  "v1.2-turn-fire.json": turnFireGolden,
 };
 
 /** Top-level fields pretty, each row of an array field on one line: readable, diffable. */

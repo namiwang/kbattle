@@ -53,6 +53,7 @@ export interface Agent {
   facing: number; // absolute degrees, (-180, 180]
   hp: number;
   alive: boolean;
+  deathTick: number | null; // the tick it died on, null while alive (for ranking)
   kills: number;
   cooldownTicks: number; // ticks until the weapon can fire again
   action: Action; // persists until the next doer answer
@@ -67,6 +68,18 @@ export interface Bullet {
   spawnTick: number;
 }
 
+/**
+ * What happened during the last step that perception reads and the state keeps
+ * nowhere else (sim ruling R6): tick t's shots, hits and near misses, rewritten
+ * by every step, so `perceive(state, agent)` at tick t stays pure. `from` is the
+ * shooter's position at tick t, which perception reports as a bearing.
+ */
+export interface TickFacts {
+  shots: { agent: AgentId; pos: Vec2 }[]; // who fired, standing where
+  hits: { target: AgentId; from: Vec2 }[];
+  nearMisses: { target: AgentId; from: Vec2 }[]; // bullets that passed within INCOMING_RADIUS_M without hitting
+}
+
 export interface WorldState {
   tick: number;
   durationTicks: number; // the match's length (MatchConfig), for perception's time left
@@ -75,6 +88,7 @@ export interface WorldState {
   bullets: Bullet[];
   nextBulletId: number; // n of the next `b<n>`
   rng: RngState; // seeded from MatchConfig.seed; the spawn shuffle and bullet spread draw from it (R3)
+  lastTick: TickFacts; // what happened during the step that produced `tick`
 }
 
 /**

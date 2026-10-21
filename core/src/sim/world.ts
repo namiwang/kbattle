@@ -31,13 +31,23 @@ export function spawn(config: MatchConfig, map: MapSpec): WorldState {
       facing: headingTo(pos, center),
       hp: AGENT_HP,
       alive: true,
+      deathTick: null,
       kills: 0,
       cooldownTicks: 0,
       action: { ...STOP_ACTION },
       moved: false,
     };
   });
-  return { tick: 0, durationTicks: config.durationTicks, map, agents, bullets: [], nextBulletId: 0, rng };
+  return {
+    tick: 0,
+    durationTicks: config.durationTicks,
+    map,
+    agents,
+    bullets: [],
+    nextBulletId: 0,
+    rng,
+    lastTick: { shots: [], hits: [], nearMisses: [] },
+  };
 }
 
 /** Fisher–Yates with the seeded RNG: a shuffled copy and the advanced RNG state. */

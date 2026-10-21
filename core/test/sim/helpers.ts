@@ -27,6 +27,7 @@ export function makeAgent(slot: number, pos: Vec2, facing = 0, overrides: Partia
     facing,
     hp: AGENT_HP,
     alive: true,
+    deathTick: null,
     kills: 0,
     cooldownTicks: 0,
     action: { ...STOP_ACTION },
@@ -57,5 +58,6 @@ export function makeWorld(parts: {
     bullets,
     nextBulletId: Math.max(-1, ...bullets.map((b) => Number(b.id.slice(1)))) + 1,
     rng: createRng(parts.seed ?? 1),
+    lastTick: { shots: [], hits: [], nearMisses: [] },
   };
 }
