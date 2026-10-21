@@ -1,0 +1,24 @@
+{
+  "description": "LOS blocked. 60 x 60 m arena with one box (x 16..18, y 26..34), tick 600 of 6000. a0 at (10, 30) faces 0 deg. Behind the box, inside a0's cone and range: a1 walking 12 m dead ahead, and a3 standing 11.4 m away at -15 deg. a2 at (30, 48) stands in the open at 42 deg, 26.9 m. a0 sees only a2 and hears a1's steps through the box; a3 is silent.",
+  "state": {
+    "tick": 600,
+    "durationTicks": 6000,
+    "map": {
+      "id": "scene-box-60",
+      "width": 60,
+      "height": 60,
+      "obstacles": [{ "vertices": [{ "x": 16, "y": 26 }, { "x": 18, "y": 26 }, { "x": 18, "y": 34 }, { "x": 16, "y": 34 }] }],
+      "spawns": [{ "x": 4, "y": 4 }, { "x": 56, "y": 56 }]
+    },
+    "agents": [
+      { "id": "a0", "slot": 0, "pos": { "x": 10, "y": 30 }, "facing": 0, "hp": 100, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 0, "action": { "move": "stop", "turn": "none", "fire": false, "target": null }, "moved": false },
+      { "id": "a1", "slot": 1, "pos": { "x": 22, "y": 30 }, "facing": 180, "hp": 100, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 0, "action": { "move": "forward", "turn": "none", "fire": false, "target": null }, "moved": true },
+      { "id": "a2", "slot": 2, "pos": { "x": 30, "y": 48 }, "facing": -138, "hp": 100, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 0, "action": { "move": "stop", "turn": "none", "fire": false, "target": null }, "moved": false },
+      { "id": "a3", "slot": 3, "pos": { "x": 21, "y": 27 }, "facing": 0, "hp": 100, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 0, "action": { "move": "stop", "turn": "none", "fire": false, "target": null }, "moved": false }
+    ],
+    "bullets": [],
+    "nextBulletId": 0,
+    "rng": { "s": 2 },
+    "lastTick": { "shots": [], "hits": [], "nearMisses": [] }
+  }
+}

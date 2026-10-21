@@ -1,0 +1,28 @@
+{
+  "description": "Incoming fire. Open 60 x 60 m arena, tick 3000 of 6000, nobody fired this tick. a0 at (20, 20) faces 0 deg. This tick a bullet from a2 (20, 50), behind a0's right shoulder, hit it (HP 80), and a bullet from a1 (5, 36), behind its left, passed 1.1 m from it. a0's own older bullet passed near a3 (45, 40), which a0 can see. a0's incoming lists the hit, then the near miss, as the shooters' bearings; a3's lists a0.",
+  "state": {
+    "tick": 3000,
+    "durationTicks": 6000,
+    "map": { "id": "scene-open-60", "width": 60, "height": 60, "obstacles": [], "spawns": [{ "x": 4, "y": 4 }, { "x": 56, "y": 56 }] },
+    "agents": [
+      { "id": "a0", "slot": 0, "pos": { "x": 20, "y": 20 }, "facing": 0, "hp": 80, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 0, "action": { "move": "stop", "turn": "none", "fire": false, "target": null }, "moved": false },
+      { "id": "a1", "slot": 1, "pos": { "x": 5, "y": 36 }, "facing": -47, "hp": 100, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 2, "action": { "move": "stop", "turn": "none", "fire": true, "target": null }, "moved": false },
+      { "id": "a2", "slot": 2, "pos": { "x": 20, "y": 50 }, "facing": -90, "hp": 100, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 0, "action": { "move": "stop", "turn": "none", "fire": true, "target": null }, "moved": false },
+      { "id": "a3", "slot": 3, "pos": { "x": 45, "y": 40 }, "facing": 180, "hp": 100, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 0, "action": { "move": "stop", "turn": "none", "fire": false, "target": null }, "moved": false }
+    ],
+    "bullets": [
+      { "id": "b12", "owner": "a1", "pos": { "x": 22.26, "y": 19.32 }, "vel": { "x": 2.157, "y": -2.084 }, "spawnTick": 2992 },
+      { "id": "b13", "owner": "a0", "pos": { "x": 47.6, "y": 41.3 }, "vel": { "x": 2.4, "y": 1.8 }, "spawnTick": 2989 }
+    ],
+    "nextBulletId": 14,
+    "rng": { "s": 4 },
+    "lastTick": {
+      "shots": [],
+      "hits": [{ "target": "a0", "from": { "x": 20, "y": 50 } }],
+      "nearMisses": [
+        { "target": "a0", "from": { "x": 5, "y": 36 } },
+        { "target": "a3", "from": { "x": 20, "y": 20 } }
+      ]
+    }
+  }
+}

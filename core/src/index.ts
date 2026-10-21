@@ -12,9 +12,14 @@ export * from "./maps";
 export * from "./log";
 
 // The sim (DESIGN.md §5.1 core role, §6.2): seeded RNG, world setup, one tick,
-// doer answers to actions. Geometry lives under `collision` (collision.hasLineOfSight, ...).
+// perception, doer answers to actions. Geometry lives under `collision` (collision.hasLineOfSight, ...).
 export { createRng, nextFloat, nextUint32, type Draw, type RngState } from "./sim/rng";
 export { spawn } from "./sim/world";
 export { step, type StepActions, type StepEvent, type StepResult } from "./sim/step";
+export { perceive, type PerceivedAgent, type PerceptionState } from "./sim/perceive";
 export { actionFromAnswers } from "./sim/actions";
+export type { DecisionContext, DecisionProvider } from "./sim/providers";
 export * as collision from "./sim/collision";
+
+// Scripted bots (§6.2 Bots): the quality floor, as DecisionProviders.
+export { makeBot } from "./bots";

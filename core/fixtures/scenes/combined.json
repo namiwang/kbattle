@@ -1,0 +1,45 @@
+{
+  "description": "All combined, on arena-1 with 4 agents, tick 600 of 6000. a0 at the center (50, 50) faces 0 deg and fires this tick at a1, which walks toward it 30 m east (seen) and was hit this tick by a0's previous bullet. a2 at (50, 10), north of the north block, fires this tick (heard mid at -90, not seen). a3 at (40, 58) walks behind a0's right shoulder (steps near) and its older bullet passed near a0 this tick (incoming).",
+  "state": {
+    "tick": 600,
+    "durationTicks": 6000,
+    "map": {
+      "id": "arena-1",
+      "width": 100,
+      "height": 100,
+      "obstacles": [
+        { "vertices": [{ "x": 42, "y": 18 }, { "x": 58, "y": 18 }, { "x": 58, "y": 30 }, { "x": 42, "y": 30 }] },
+        { "vertices": [{ "x": 18, "y": 30 }, { "x": 30, "y": 36 }, { "x": 18, "y": 42 }] },
+        { "vertices": [{ "x": 82, "y": 58 }, { "x": 82, "y": 70 }, { "x": 70, "y": 64 }] },
+        { "vertices": [{ "x": 42, "y": 70 }, { "x": 58, "y": 70 }, { "x": 58, "y": 82 }, { "x": 42, "y": 82 }] }
+      ],
+      "spawns": [
+        { "x": 4, "y": 4 }, { "x": 27, "y": 4 }, { "x": 50, "y": 4 }, { "x": 73, "y": 4 },
+        { "x": 96, "y": 4 }, { "x": 96, "y": 27 }, { "x": 96, "y": 50 }, { "x": 96, "y": 73 },
+        { "x": 96, "y": 96 }, { "x": 73, "y": 96 }, { "x": 50, "y": 96 }, { "x": 27, "y": 96 },
+        { "x": 4, "y": 96 }, { "x": 4, "y": 73 }, { "x": 4, "y": 50 }, { "x": 4, "y": 27 }
+      ]
+    },
+    "agents": [
+      { "id": "a0", "slot": 0, "pos": { "x": 50, "y": 50 }, "facing": 0, "hp": 100, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 10, "action": { "move": "stop", "turn": "face_target", "fire": true, "target": "a1" }, "moved": false },
+      { "id": "a1", "slot": 1, "pos": { "x": 80, "y": 45 }, "facing": 170, "hp": 80, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 0, "action": { "move": "forward", "turn": "none", "fire": false, "target": null }, "moved": true },
+      { "id": "a2", "slot": 2, "pos": { "x": 50, "y": 10 }, "facing": 90, "hp": 100, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 10, "action": { "move": "stop", "turn": "none", "fire": true, "target": null }, "moved": false },
+      { "id": "a3", "slot": 3, "pos": { "x": 40, "y": 58 }, "facing": -30, "hp": 100, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 4, "action": { "move": "forward", "turn": "none", "fire": true, "target": null }, "moved": true }
+    ],
+    "bullets": [
+      { "id": "b27", "owner": "a3", "pos": { "x": 52.6, "y": 48.5 }, "vel": { "x": 2.6, "y": -1.5 }, "spawnTick": 594 },
+      { "id": "b30", "owner": "a0", "pos": { "x": 53.55, "y": 49.5 }, "vel": { "x": 2.96, "y": -0.49 }, "spawnTick": 600 },
+      { "id": "b31", "owner": "a2", "pos": { "x": 50, "y": 13.6 }, "vel": { "x": 0, "y": 3 }, "spawnTick": 600 }
+    ],
+    "nextBulletId": 32,
+    "rng": { "s": 5 },
+    "lastTick": {
+      "shots": [
+        { "agent": "a0", "pos": { "x": 50, "y": 50 } },
+        { "agent": "a2", "pos": { "x": 50, "y": 10 } }
+      ],
+      "hits": [{ "target": "a1", "from": { "x": 50, "y": 50 } }],
+      "nearMisses": [{ "target": "a0", "from": { "x": 40, "y": 58 } }]
+    }
+  }
+}

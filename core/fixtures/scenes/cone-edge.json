@@ -1,0 +1,17 @@
+{
+  "description": "Cone edge. Open 60 x 60 m arena, tick 1200 of 6000. a0 at (10, 30) faces 0 deg. a1 and a2 stand 30 m away at bearings 44 and 46 deg from a0 (coordinates to 6 decimals, so 43.9999999 and 46.0000001), both facing a0; a1 is walking. The cone is 90 deg wide, so a0 sees a1 and not a2; each of them sees a0 dead ahead, and a2 hears a1's steps 1 m away.",
+  "state": {
+    "tick": 1200,
+    "durationTicks": 6000,
+    "map": { "id": "scene-open-60", "width": 60, "height": 60, "obstacles": [], "spawns": [{ "x": 4, "y": 4 }, { "x": 56, "y": 56 }] },
+    "agents": [
+      { "id": "a0", "slot": 0, "pos": { "x": 10, "y": 30 }, "facing": 0, "hp": 100, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 0, "action": { "move": "stop", "turn": "none", "fire": false, "target": null }, "moved": false },
+      { "id": "a1", "slot": 1, "pos": { "x": 31.580194, "y": 50.839751 }, "facing": -136, "hp": 100, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 0, "action": { "move": "forward", "turn": "none", "fire": false, "target": null }, "moved": true },
+      { "id": "a2", "slot": 2, "pos": { "x": 30.839751, "y": 51.580194 }, "facing": -134, "hp": 100, "alive": true, "deathTick": null, "kills": 0, "cooldownTicks": 0, "action": { "move": "stop", "turn": "none", "fire": false, "target": null }, "moved": false }
+    ],
+    "bullets": [],
+    "nextBulletId": 0,
+    "rng": { "s": 1 },
+    "lastTick": { "shots": [], "hits": [], "nearMisses": [] }
+  }
+}

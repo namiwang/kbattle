@@ -1,0 +1,77 @@
+{
+  "scene": "Cone edge. Open 60 x 60 m arena, tick 1200 of 6000. a0 at (10, 30) faces 0 deg. a1 and a2 stand 30 m away at bearings 44 and 46 deg from a0 (coordinates to 6 decimals, so 43.9999999 and 46.0000001), both facing a0; a1 is walking. The cone is 90 deg wide, so a0 sees a1 and not a2; each of them sees a0 dead ahead, and a2 hears a1's steps 1 m away.",
+  "observations": {
+    "a0": {
+      "self": {
+        "pos": {
+          "x": 10,
+          "y": 30
+        },
+        "facing": 0,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 240
+      },
+      "visible": [
+        {
+          "id": "a1",
+          "bearing": 44,
+          "dist": 30,
+          "moving": true
+        }
+      ],
+      "heard": [],
+      "incoming": []
+    },
+    "a1": {
+      "self": {
+        "pos": {
+          "x": 31.58,
+          "y": 50.84
+        },
+        "facing": -136,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 240
+      },
+      "visible": [
+        {
+          "id": "a0",
+          "bearing": 0,
+          "dist": 30,
+          "moving": false
+        }
+      ],
+      "heard": [],
+      "incoming": []
+    },
+    "a2": {
+      "self": {
+        "pos": {
+          "x": 30.84,
+          "y": 51.58
+        },
+        "facing": -134,
+        "hp": 100,
+        "kills": 0,
+        "secondsLeft": 240
+      },
+      "visible": [
+        {
+          "id": "a0",
+          "bearing": 0,
+          "dist": 30,
+          "moving": false
+        }
+      ],
+      "heard": [
+        {
+          "kind": "steps",
+          "bearing": 89,
+          "dist": "near"
+        }
+      ],
+      "incoming": []
+    }
+  }
+}

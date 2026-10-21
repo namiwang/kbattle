@@ -1,5 +1,6 @@
 // Hand-built worlds for the sim tests and the golden scenarios.
 
+import { readFileSync } from "node:fs";
 import { AGENT_HP } from "../../src/constants";
 import { getMap } from "../../src/maps";
 import type { MapSpec } from "../../src/schemas";
@@ -60,4 +61,19 @@ export function makeWorld(parts: {
     rng: createRng(parts.seed ?? 1),
     lastTick: { shots: [], hits: [], nearMisses: [] },
   };
+}
+
+export const SCENE_DIR = new URL("../../fixtures/scenes/", import.meta.url);
+
+/**
+ * A hand-written world snapshot from core/fixtures/scenes/<name>.json: a
+ * description of what it shows, and the WorldState itself (map inline, explicit
+ * lastTick). Deeply frozen, so a perception that writes to it throws.
+ */
+export function loadScene(name: string): { description: string; state: WorldState } {
+  const json = JSON.parse(readFileSync(new URL(`${name}.json`, SCENE_DIR), "utf8")) as {
+    description: string;
+    state: WorldState;
+  };
+  return { description: json.description, state: deepFreeze(json.state) };
 }

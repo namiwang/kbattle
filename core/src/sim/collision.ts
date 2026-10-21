@@ -117,3 +117,44 @@ export function hasLineOfSight(a: Vec2, b: Vec2, obstacles: readonly Obstacle[])
   }
   return true;
 }
+
+/** Sign of the turn a → b → c: 1 counter-clockwise in math axes, −1 clockwise, 0 collinear. Exact sign of the cross product. */
+function orientation(a: Vec2, b: Vec2, c: Vec2): number {
+  return Math.sign(cross(b.x - a.x, b.y - a.y, c.x - a.x, c.y - a.y));
+}
+
+/** Whether `p`, collinear with a → b, lies within its bounding box (so on the segment). */
+function withinBox(a: Vec2, b: Vec2, p: Vec2): boolean {
+  return (
+    Math.min(a.x, b.x) <= p.x && p.x <= Math.max(a.x, b.x) && Math.min(a.y, b.y) <= p.y && p.y <= Math.max(a.y, b.y)
+  );
+}
+
+/**
+ * Whether the closed segments a → b and c → d share a point: crossing, touching
+ * at an end or a T, or overlapping when collinear (which segmentSegmentT ignores).
+ * For map validation; exact for the decimal coordinates maps are written in.
+ */
+export function segmentsIntersect(a: Vec2, b: Vec2, c: Vec2, d: Vec2): boolean {
+  const o1 = orientation(c, d, a);
+  const o2 = orientation(c, d, b);
+  const o3 = orientation(a, b, c);
+  const o4 = orientation(a, b, d);
+  if (o1 * o2 < 0 && o3 * o4 < 0) return true;
+  return (
+    (o1 === 0 && withinBox(c, d, a)) ||
+    (o2 === 0 && withinBox(c, d, b)) ||
+    (o3 === 0 && withinBox(a, b, c)) ||
+    (o4 === 0 && withinBox(a, b, d))
+  );
+}
+
+/** Distance from `p` to a polygon: 0 inside or on its boundary, else to its nearest edge. */
+export function pointPolygonDistance(p: Vec2, vertices: readonly Vec2[]): number {
+  if (pointInPolygon(p, vertices)) return 0;
+  let nearest = Infinity;
+  for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+    nearest = Math.min(nearest, pointSegmentDistance(p, vertices[j]!, vertices[i]!));
+  }
+  return nearest;
+}

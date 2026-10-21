@@ -63,6 +63,45 @@ describe("@kbattle/core entry point", () => {
     expect(facts).toEqual({ shots: [], hits: [], nearMisses: [] });
   });
 
+  it("exposes the v1.3 perception: perceive on a world or on the PerceptionState subset", () => {
+    const map = core.getMap("arena-1");
+    const world = core.spawn(
+      { mapId: "arena-1", seed: 1, durationTicks: 100, slots: [{ kind: "doer" }, { kind: "doer" }] },
+      map,
+    );
+    const view: core.Observation = core.perceive(world, "a0");
+    expect(view.self.secondsLeft).toBe(5);
+    const agents = world.agents.map((a) => ({
+      id: a.id,
+      pos: a.pos,
+      facing: a.facing,
+      hp: a.hp,
+      alive: a.alive,
+      kills: a.kills,
+      moved: a.moved,
+    }));
+    const subset: core.PerceptionState = { ...world, agents };
+    expect(core.perceive(subset, "a0")).toEqual(view);
+  });
+
+  it("exposes the v1.4 surface: both maps, map checks, makeBot as a DecisionProvider", async () => {
+    expect(core.MAP_IDS).toEqual(["arena-1", "arena-2"]);
+    expect(core.validateMap(core.getMap("arena-2"))).toEqual([]);
+    const spawns = [
+      { x: 50, y: 24 },
+      { x: 4, y: 4 },
+    ];
+    expect(() => core.loadMap({ ...core.getMap("arena-1"), spawns })).toThrow(/inside obstacle 0/);
+    const bot: core.DecisionProvider = core.makeBot("camper", 1, 0);
+    const slots: core.Slot[] = [
+      { kind: "bot", bot: "camper" },
+      { kind: "bot", bot: "wanderer" },
+    ];
+    const world = core.spawn({ mapId: "arena-2", seed: 1, durationTicks: 100, slots }, core.getMap("arena-2"));
+    const ctx: core.DecisionContext = { tick: 1, agent: "a0", observation: core.perceive(world, "a0"), plan: "" };
+    expect(core.DoerAnswerSchema.parse(await bot.decide(ctx)).model).toBe("bot:camper");
+  });
+
   it("exports each boundary type as z.infer of its schema", () => {
     expectTypeOf<core.MatchLog>().toEqualTypeOf<z.infer<typeof core.MatchLogSchema>>();
     expectTypeOf<core.DoerAnswer>().toEqualTypeOf<z.infer<typeof core.DoerAnswerSchema>>();
