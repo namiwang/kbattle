@@ -192,15 +192,42 @@ describe("DoerAnswer: Worker → browser, Clef's response as-is", () => {
     ["a noul answer where a choice belongs", { move: { type: "noul", noul: 0.5 } }, ["answers", "move", "type"]],
     ["a choice answer where a noul belongs", { fire: answers.target }, ["answers", "fire", "type"]],
     ["a score answer (not modeled)", { escalate: { type: "score", score: 2 } }, ["answers", "escalate", "type"]],
-    ["an unknown question id", { jump: answers.fire }, ["answers"]],
-    ["an unexpected key inside an answer", { fire: { type: "noul", noul: 0.5, why: "x" } }, ["answers", "fire"]],
   ])("rejects %s", (_name, change, path) => {
     const value = { ...doerAnswer, answers: { ...answers, ...change } };
     expect(issuePaths(DoerAnswerSchema, value)).toContainEqual(path);
   });
 
+  // A third-party response: a harmless extra key must not fault every call (ISSUES I-009).
   it.each([
-    ["an unexpected top-level key (strict)", { ...doerAnswer, latencyMs: 30 }, []],
+    ["an unexpected top-level key", { ...doerAnswer, latencyMs: 30 }, ["latencyMs"]],
+    ["an unknown question id", { ...doerAnswer, answers: { ...answers, jump: answers.fire } }, ["answers", "jump"]],
+    [
+      "an unexpected key inside a noul answer",
+      { ...doerAnswer, answers: { ...answers, fire: { ...answers.fire, why: "x" } } },
+      ["answers", "fire", "why"],
+    ],
+    [
+      "an unexpected key inside a choice answer",
+      { ...doerAnswer, answers: { ...answers, target: { ...answers.target, why: "x" } } },
+      ["answers", "target", "why"],
+    ],
+    [
+      "an unexpected key inside a move answer",
+      { ...doerAnswer, answers: { ...answers, move: { ...answers.move, why: "x" } } },
+      ["answers", "move", "why"],
+    ],
+    [
+      "an unexpected key inside usage",
+      { ...doerAnswer, usage: { ...doerAnswer.usage, cached_tokens: 3 } },
+      ["usage", "cached_tokens"],
+    ],
+  ])("strips %s instead of rejecting it", (_name, value, path) => {
+    const parsed = DoerAnswerSchema.parse(value);
+    expect(parsed).not.toHaveProperty(path);
+    expect(parsed).toEqual(doerAnswer);
+  });
+
+  it.each([
     ["negative token usage", { ...doerAnswer, usage: { input_tokens: -1, output_tokens: 0 } }, ["usage", "input_tokens"]],
     ["fractional token usage", { ...doerAnswer, usage: { input_tokens: 1.5, output_tokens: 0 } }, ["usage", "input_tokens"]],
     ["a missing answers object", { model: doerAnswer.model }, ["answers"]],
@@ -220,9 +247,14 @@ describe("Plan: thinker → browser", () => {
     ["text over 2000 characters", { text: "x".repeat(2001), scratchpad: "" }, ["text"]],
     ["a scratchpad over 4000 characters", { text: "Go.", scratchpad: "x".repeat(4001) }, ["scratchpad"]],
     ["a missing scratchpad", { text: "Go." }, ["scratchpad"]],
-    ["an unexpected key (strict)", { ...plan, reasoning: "because" }, []],
   ])("rejects %s", (_name, value, path) => {
     expect(issuePaths(PlanSchema, value)).toContainEqual(path);
+  });
+
+  it("strips an unexpected key instead of rejecting it (a third-party response, ISSUES I-009)", () => {
+    const parsed = PlanSchema.parse({ ...plan, reasoning: "because" });
+    expect(parsed).not.toHaveProperty("reasoning");
+    expect(parsed).toEqual(plan);
   });
 
   it("accepts the length limits exactly", () => {
@@ -435,6 +467,12 @@ describe("Event: the replay's discriminated union", () => {
     expect(EventSchema.parse({ ...events.Shot, spread: 1.5 })).toEqual(events.Shot);
   });
 
+  it("drops an unknown key inside a Thinker plan (Plan strips, ISSUES I-009)", () => {
+    const parsed = EventSchema.parse({ ...events.Thinker, plan: { ...plan, mood: "calm" } });
+    expect(parsed).not.toHaveProperty(["plan", "mood"]);
+    expect(parsed).toEqual(events.Thinker);
+  });
+
   it.each([
     ["an unknown kind", { kind: "Teleport", tick: 1, agent: "a0" }, ["kind"]],
     ["Doer ok: true without answers", without(events.Doer, "answers"), ["answers"]],
@@ -443,7 +481,6 @@ describe("Event: the replay's discriminated union", () => {
     ["Thinker ok: false without error", { ...events.Thinker, ok: false }, ["error"]],
     ["Thinker requested after it was applied", { ...events.Thinker, requestedTick: 9 }, ["requestedTick"]],
     ["Thinker without input", without(events.Thinker, "input"), ["input"]],
-    ["Thinker plan with an unexpected key (payloads stay strict)", { ...events.Thinker, plan: { ...plan, mood: "calm" } }, ["plan"]],
     ["a Tick agent row without hp", { ...events.Tick, agents: [["a0", 7, 50, 0]] }, ["agents", 0]],
     ["a Tick bullet row with a non-numeric x", { ...events.Tick, bullets: [["b0", "40", 50]] }, ["bullets", 0, 1]],
     ["a fractional tick", { ...events.Shot, tick: 1.5 }, ["tick"]],
