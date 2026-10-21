@@ -22,6 +22,7 @@ export { actionFromAnswers } from "./sim/actions";
 export type { DecisionContext, DecisionProvider, ProviderFactory } from "./sim/providers";
 export { rankAgents, runMatch, type RunMatchDeps } from "./sim/match";
 export { createLogWriter, spawnEvents, tickEvent, type LogWriter } from "./sim/log";
+export { makeReplayingProvider, replayMatch } from "./sim/replay-provider";
 export * as collision from "./sim/collision";
 
 // Scripted bots (§6.2 Bots): the quality floor, as DecisionProviders.

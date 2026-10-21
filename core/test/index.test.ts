@@ -125,6 +125,23 @@ describe("@kbattle/core entry point", () => {
     expect(core.rankAgents(world.agents)).toEqual(["a0", "a1"]);
   });
 
+  it("exposes the v1.6 determinism harness: a replay of a match is the same bytes", async () => {
+    const config: core.MatchConfig = {
+      mapId: "arena-1",
+      seed: 5,
+      durationTicks: 60,
+      slots: [
+        { kind: "bot", bot: "camper" },
+        { kind: "bot", bot: "wanderer" },
+      ],
+    };
+    const prompts: core.Prompts = { thinkerSystem: "", doerInstructions: { move: "", turn: "", fire: "", target: "" } };
+    const log = await core.runMatch(config, { providers: core.botProviders(config.seed), prompts });
+    const replayer: core.DecisionProvider = core.makeReplayingProvider(log, "a1");
+    expect(replayer.pollEvents?.(1)).toEqual([]);
+    expect(JSON.stringify(await core.replayMatch(log))).toBe(JSON.stringify(log));
+  });
+
   it("exports each boundary type as z.infer of its schema", () => {
     expectTypeOf<core.MatchLog>().toEqualTypeOf<z.infer<typeof core.MatchLogSchema>>();
     expectTypeOf<core.DoerAnswer>().toEqualTypeOf<z.infer<typeof core.DoerAnswerSchema>>();
