@@ -15,6 +15,8 @@ export interface Stage {
   readonly transform: Transform;
   /** Called after every resize with the new transform. */
   onResize(listener: (transform: Transform) => void): void;
+  /** Stops watching the host, then destroys the Pixi app, its scene and its canvas. */
+  destroy(): void;
 }
 
 export async function createStage(host: HTMLElement, mapW: number, mapH: number): Promise<Stage> {
@@ -29,7 +31,8 @@ export async function createStage(host: HTMLElement, mapW: number, mapH: number)
   });
   host.append(app.canvas);
   // resizeTo only listens to the window; this also catches layout changes around the host.
-  new ResizeObserver(() => app.queueResize()).observe(host);
+  const observer = new ResizeObserver(() => app.queueResize());
+  observer.observe(host);
 
   const world = new Container({ label: "world" });
   app.stage.addChild(world);
@@ -55,6 +58,14 @@ export async function createStage(host: HTMLElement, mapW: number, mapH: number)
     },
     onResize(listener) {
       listeners.push(listener);
+    },
+    destroy() {
+      observer.disconnect();
+      listeners.length = 0;
+      // Stops the ticker, removes Pixi's window and document listeners, loses the WebGL
+      // context. releaseGlobalResources empties Pixi's global pools, which would otherwise
+      // keep batches and textures of this dead renderer; fine while the page holds one app.
+      app.destroy({ removeView: true, releaseGlobalResources: true }, { children: true });
     },
   };
 }

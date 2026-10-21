@@ -3,21 +3,28 @@
 // loads the page in Playwright's chromium, waits for window.__kbattle.ready,
 // checks canvas pixels against the sample log and the map, resizes the window,
 // then drives the playback controls (keyboard, buttons, timeline drag, every
-// speed) and checks the scene against the log at each stop. Screenshots go to
-// web/.smoke/. Exits 1 if any check fails.
+// speed) and checks the scene against the log at each stop. Then the files
+// (v2.5): uploads through the file input (good, schema-bad, not JSON), checks
+// that each re-mount leaves no listener, observer or WebGL context behind,
+// downloads and re-opens the log, drops a file, and times a 5 MB upload.
+// Screenshots and the downloaded file go to web/.smoke/. Exits 1 if any check
+// fails.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { eventsOfKind, getMap, MatchLogSchema, type Vec2 } from "@kbattle/core";
-import { chromium, type Page } from "playwright";
+import { isDeepStrictEqual } from "node:util";
+import { eventsOfKind, getMap, MatchLogSchema, type Event as LogEvent, type MatchLog, type Vec2 } from "@kbattle/core";
+import { chromium, type Locator, type Page } from "playwright";
 import { createServer, type ViteDevServer } from "vite";
 import type { DrawnAgent, KbattleDebug } from "../src/replay/debug";
 import { COLORS, KIND_COLORS, MARKER } from "../src/replay/theme";
 
 const webDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = join(webDir, ".smoke");
-const log = MatchLogSchema.parse(JSON.parse(readFileSync(join(webDir, "../core/fixtures/sample-log.json"), "utf8")));
+const samplePath = join(webDir, "../core/fixtures/sample-log.json");
+const badPath = join(webDir, "../core/fixtures/bad/unknown-event-kind.json"); // one issue, at events[5].kind
+const log = MatchLogSchema.parse(JSON.parse(readFileSync(samplePath, "utf8")));
 const map = getMap(log.config.mapId);
 const frames = new Map(eventsOfKind(log, "Tick").map((e) => [e.tick, e]));
 const lastTick = Math.max(...frames.keys());
@@ -316,6 +323,289 @@ async function checkPlayback(page: Page): Promise<void> {
   check("play at the last tick starts over from 0", restarted < 40, `tick ${restarted}`);
 }
 
+// ---- files (v2.5) ----
+
+// Installed before the page's own scripts. Counts what a mounted viewer holds on to:
+// listeners on window and document, live ResizeObservers, live WebGL contexts. After a
+// re-mount the counts must be what they were after the first mount. A string, not a
+// callback, for the tsx/__name reason given in checkPlayback.
+const LEAK_PROBE = `(() => {
+  const listeners = new Map();
+  const where = (t) => (t === window ? "window" : t === document ? "document" : null);
+  const keyOf = (at, type, options) =>
+    at + ":" + type + ((typeof options === "boolean" ? options : !!(options && options.capture)) ? ":capture" : "");
+  const forget = (listener, key) => {
+    const keys = listeners.get(listener);
+    if (keys) keys.delete(key);
+  };
+  const add = EventTarget.prototype.addEventListener;
+  const remove = EventTarget.prototype.removeEventListener;
+  EventTarget.prototype.addEventListener = function (type, listener, options) {
+    const at = where(this);
+    const signal = options && typeof options === "object" ? options.signal : undefined;
+    const once = options && typeof options === "object" && options.once;
+    if (at && listener && !once && !(signal && signal.aborted)) {
+      const key = keyOf(at, type, options);
+      if (!listeners.has(listener)) listeners.set(listener, new Set());
+      listeners.get(listener).add(key);
+      if (signal) signal.addEventListener("abort", () => forget(listener, key));
+    }
+    return add.call(this, type, listener, options);
+  };
+  EventTarget.prototype.removeEventListener = function (type, listener, options) {
+    const at = where(this);
+    if (at && listener) forget(listener, keyOf(at, type, options));
+    return remove.call(this, type, listener, options);
+  };
+  const observers = new Set();
+  const NativeResizeObserver = window.ResizeObserver;
+  window.ResizeObserver = class extends NativeResizeObserver {
+    observe(target, options) {
+      observers.add(this);
+      return super.observe(target, options);
+    }
+    disconnect() {
+      observers.delete(this);
+      return super.disconnect();
+    }
+  };
+  const contexts = new Set();
+  const getContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
+    const context = getContext.call(this, type, ...rest);
+    if (context && /webgl/.test(type)) contexts.add(context);
+    return context;
+  };
+  window.__leaks = () => {
+    const counts = {};
+    for (const keys of listeners.values()) for (const key of keys) counts[key] = (counts[key] || 0) + 1;
+    return {
+      listeners: Object.fromEntries(Object.entries(counts).sort(([a], [b]) => (a < b ? -1 : 1))),
+      resizeObservers: observers.size,
+      webglContexts: [...contexts].filter((c) => !c.isContextLost()).length,
+      canvases: document.querySelectorAll("canvas").length,
+      viewers: document.querySelectorAll(".replay").length,
+    };
+  };
+})()`;
+
+interface Leaks {
+  listeners: Record<string, number>;
+  resizeObservers: number;
+  webglContexts: number;
+  canvases: number;
+  viewers: number;
+}
+
+async function leaks(page: Page): Promise<Leaks> {
+  return page.evaluate("window.__leaks()");
+}
+
+const fileInput = (page: Page) => page.locator('input[type="file"]');
+const errorBox = (page: Page) => page.locator(".replay-error");
+const statusText = async (page: Page) => ((await page.locator(".replay-status").textContent()) ?? "").trim();
+
+/** Logs opened so far: each open records a `replay-open` measure, from file in hand to first frame. */
+async function openCount(page: Page): Promise<number> {
+  return page.evaluate(() => performance.getEntriesByName("replay-open", "measure").length);
+}
+
+async function waitOpened(page: Page, before: number): Promise<void> {
+  await page.waitForFunction(
+    (n) => performance.getEntriesByName("replay-open", "measure").length > n && window.__kbattle?.ready === true,
+    before,
+  );
+}
+
+type InputFiles = Parameters<Locator["setInputFiles"]>[0];
+
+/** Feeds `files` to the file input, waits until the log is on screen. */
+async function upload(page: Page, files: InputFiles): Promise<void> {
+  const before = await openCount(page);
+  await fileInput(page).setInputFiles(files);
+  await waitOpened(page, before);
+  await frames2(page);
+}
+
+/** Feeds a file that must not open; returns the error box text. */
+async function uploadBad(page: Page, files: InputFiles): Promise<string> {
+  await fileInput(page).setInputFiles(files);
+  await errorBox(page).waitFor({ state: "visible" });
+  return (await errorBox(page).innerText()).trim();
+}
+
+const round = (v: number, digits: number) => Math.round(v * 10 ** digits) / 10 ** digits;
+
+/** A 16-agent log of at least `bytes` as compact JSON: Spawns, one Tick per tick, a Doer call every 10 ticks. */
+function syntheticLog(bytes: number): MatchLog {
+  const n = 16;
+  const doer = eventsOfKind(log, "Doer")[0];
+  if (!doer) throw new Error("sample log has no Doer event");
+  const events: LogEvent[] = [];
+  for (let i = 0; i < n; i++) events.push({ kind: "Spawn", tick: 0, agent: `a${i}`, pos: { x: 5 + 5 * i, y: 50 }, facing: 0 });
+  let size = 0;
+  let tick = 0;
+  while (size < bytes) {
+    const tickEvent: LogEvent = {
+      kind: "Tick",
+      tick,
+      agents: Array.from({ length: n }, (_, i): [string, number, number, number, number] => [
+        `a${i}`,
+        round(50 + 40 * Math.sin((tick + 37 * i) / 97), 2),
+        round(50 + 40 * Math.cos((tick + 53 * i) / 89), 2),
+        round((tick * 3 + i * 22.5) % 360, 1),
+        100,
+      ]),
+      bullets: [[`b${tick}`, round(50 + 30 * Math.sin(tick / 7), 2), 50]],
+    };
+    events.push(tickEvent);
+    size += JSON.stringify(tickEvent).length + 1;
+    if (tick % 10 === 1) {
+      const call: LogEvent = { ...doer, tick, agent: "a0" };
+      events.push(call);
+      size += JSON.stringify(call).length + 1;
+    }
+    tick++;
+  }
+  events.push({ kind: "MatchEnd", tick: tick - 1, ranking: ["a0"] });
+  const slots: MatchLog["config"]["slots"] = [{ kind: "prompted" }, ...Array.from({ length: n - 1 }, () => ({ kind: "bot" as const, bot: "wanderer" as const }))];
+  return { version: 1, config: { mapId: "arena-1", seed: 7, durationTicks: tick, slots }, seed: 7, prompts: log.prompts, events };
+}
+
+async function checkFiles(page: Page): Promise<void> {
+  // Per mounted viewer Pixi adds a ResizeObserver of its own (accessibility CanvasObserver) and keeps
+  // one global test WebGL context, so these counts are compared with the baseline, not with 1.
+  const baseline = await leaks(page);
+  check(
+    "one viewer mounted: one .replay, one canvas, one keydown listener on document",
+    baseline.viewers === 1 && baseline.canvases === 1 && baseline.listeners["document:keydown"] === 1,
+    `${baseline.resizeObservers} ResizeObservers, ${baseline.webglContexts} live WebGL contexts`,
+  );
+
+  // Upload while playing from tick 100: the new replay replaces the old one, paused at tick 0.
+  await scrubTo(page, 100);
+  await playButton(page).click();
+  await page.waitForTimeout(150);
+  await upload(page, samplePath);
+  const s = await state(page);
+  check(
+    "upload replaces the replay: paused at tick 0, readout 0 / 142, timeline at 0",
+    s.tick === 0 && (await readout(page)) === `0 / ${lastTick}` && (await playButton(page).textContent()) === "Play" && Number(await timeline(page).inputValue()) === 0,
+    `tick ${s.tick}, readout "${await readout(page)}"`,
+  );
+  check("upload did not reload the page", (await page.evaluate("window.__smokeMarker")) === true);
+  check("the file bar names the open file", (await statusText(page)).includes("sample-log.json"), await statusText(page));
+  await checkFrame(page, "after upload", 0, "upload-tick0.png");
+
+  // Upload again; space must then toggle the new replay exactly once.
+  await upload(page, samplePath);
+  await blur(page);
+  await page.keyboard.press("Space");
+  await frames2(page);
+  const label = await playButton(page).textContent();
+  await page.waitForTimeout(300);
+  const playedTo = (await state(page)).tick;
+  await page.keyboard.press("Space");
+  await frames2(page);
+  check(
+    "after two uploads, space toggles the replay exactly once",
+    label === "Pause" && playedTo > 0 && (await playButton(page).textContent()) === "Play",
+    `button "${label}" after space, tick ${playedTo} 300 ms later`,
+  );
+  const after = await leaks(page);
+  check("re-mounting twice leaves nothing behind (listeners, observers, WebGL contexts, canvases)", isDeepStrictEqual(after, baseline), `after ${JSON.stringify(after)}`);
+
+  // JSON that is not a MatchLog: the error box names the file and the issue path; the replay stays.
+  const opens = await openCount(page);
+  const shown = await readout(page);
+  const schemaError = await uploadBad(page, badPath);
+  check(
+    "a schema failure shows the error box with the file and the issue path events[5].kind",
+    schemaError.includes("unknown-event-kind.json") && schemaError.includes("events[5].kind:"),
+    JSON.stringify(schemaError),
+  );
+  check("a schema failure leaves the replay on screen", (await openCount(page)) === opens && (await readout(page)) === shown && (await leaks(page)).viewers === 1);
+  await page.screenshot({ path: join(outDir, "upload-error.png") });
+  await page.getByRole("button", { name: "Dismiss" }).click();
+  check("the error box dismisses", await errorBox(page).isHidden());
+
+  // Not JSON at all.
+  const jsonError = await uploadBad(page, { name: "broken.json", mimeType: "application/json", buffer: Buffer.from('{ "version": 1, ') });
+  check(
+    "invalid JSON shows a readable error: the file, 'not valid JSON', the parser's position",
+    jsonError.includes("broken.json") && jsonError.includes("not valid JSON") && /position \d+/.test(jsonError),
+    JSON.stringify(jsonError),
+  );
+  await page.getByRole("button", { name: "Dismiss" }).click();
+
+  // Download the log on screen; the file is the same MatchLog and opens again.
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download" }).click()]);
+  const savedPath = join(outDir, download.suggestedFilename());
+  await download.saveAs(savedPath);
+  const savedText = readFileSync(savedPath, "utf8");
+  check("download is named kbattle-<mapId>-<seed>.json", download.suggestedFilename() === `kbattle-${log.config.mapId}-${log.seed}.json`, download.suggestedFilename());
+  check(
+    "the downloaded file is compact JSON of the same MatchLog",
+    !savedText.includes("\n") && isDeepStrictEqual(MatchLogSchema.parse(JSON.parse(savedText)), log),
+    `${savedText.length} bytes`,
+  );
+  await upload(page, savedPath);
+  check("the downloaded file uploads again", (await readout(page)) === `0 / ${lastTick}` && (await statusText(page)).includes(download.suggestedFilename()), await statusText(page));
+
+  // Drop a file on the replay: the drop zone shows while dragging, the file opens.
+  const dataTransfer = await page.evaluateHandle(
+    ({ text, name }) => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([text], name, { type: "application/json" }));
+      return transfer;
+    },
+    { text: savedText, name: "dropped.json" },
+  );
+  const canvas = page.locator("canvas");
+  await canvas.dispatchEvent("dragenter", { dataTransfer });
+  await canvas.dispatchEvent("dragover", { dataTransfer });
+  check("dragging a file over the page shows the drop zone", await page.locator(".replay-drop").isVisible());
+  await page.screenshot({ path: join(outDir, "drop.png") });
+  const beforeDrop = await openCount(page);
+  await canvas.dispatchEvent("drop", { dataTransfer });
+  await waitOpened(page, beforeDrop);
+  await frames2(page);
+  check(
+    "dropping a .json file opens it",
+    (await statusText(page)).includes("dropped.json") && (await readout(page)) === `0 / ${lastTick}` && (await page.locator(".replay-drop").isHidden()),
+    await statusText(page),
+  );
+  await page.screenshot({ path: join(outDir, "upload.png") });
+
+  // Budget (plan v2.5): upload to first frame under 300 ms for a 5 MB log; "Loading…" shows meanwhile.
+  // replay-open ends when the first frame of the new log is rendered. Under SwiftShader the browser
+  // then stalls ~0.4 s compiling the new WebGL context's shaders in software; a GPU does not.
+  const big = syntheticLog(5 * 1024 * 1024);
+  const bigText = JSON.stringify(big);
+  const bigPath = join(outDir, "synthetic-5mb.json");
+  writeFileSync(bigPath, bigText);
+  await page.evaluate(`(() => {
+    const status = document.querySelector(".replay-status");
+    window.__statuses = [];
+    new MutationObserver(() => window.__statuses.push(status.textContent)).observe(status, { childList: true, characterData: true, subtree: true });
+  })()`);
+  await upload(page, bigPath);
+  const statuses = (await page.evaluate("window.__statuses")) as string[];
+  const timing = await page.evaluate(() => ({
+    open: performance.getEntriesByName("replay-open", "measure").at(-1)?.duration ?? Number.NaN,
+    parse: performance.getEntriesByName("replay-parse", "measure").at(-1)?.duration ?? Number.NaN,
+  }));
+  const bigLast = big.events.at(-1)?.tick ?? 0;
+  check("the 5 MB log opens", (await state(page)).lastTick === bigLast && (await readout(page)) === `0 / ${bigLast}`, await readout(page));
+  check("a loading state shows while the log parses", statuses.some((t) => t.startsWith("Loading")), JSON.stringify(statuses));
+  check(
+    "budget: upload to first frame under 300 ms for a 5 MB log",
+    timing.open < 300,
+    `${(bigText.length / 1024 / 1024).toFixed(2)} MiB, ${bigLast} ticks: ${timing.open.toFixed(0)} ms to first frame, ${timing.parse.toFixed(0)} ms read+parse`,
+  );
+  check("after every upload, still nothing left behind", isDeepStrictEqual(await leaks(page), baseline), JSON.stringify(await leaks(page)));
+}
+
 async function main(): Promise<void> {
   mkdirSync(outDir, { recursive: true });
   let server: ViteDevServer | undefined;
@@ -339,8 +629,19 @@ async function main(): Promise<void> {
     });
     page.on("pageerror", (err) => errors.push(`pageerror: ${err.message}`));
 
+    await page.addInitScript(LEAK_PROBE);
     await page.goto(url);
     await page.waitForFunction(() => window.__kbattle?.ready === true, undefined, { timeout: 20_000 });
+    // Timings below depend on it: headless Chromium usually renders WebGL in software (SwiftShader).
+    const renderer = await page.evaluate(() => {
+      const gl = document.createElement("canvas").getContext("webgl2");
+      const info = gl?.getExtension("WEBGL_debug_renderer_info");
+      const name = info ? String(gl?.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "unknown";
+      gl?.getExtension("WEBGL_lose_context")?.loseContext();
+      return name;
+    });
+    console.log(`smoke: WebGL renderer ${renderer}`);
+    await page.evaluate("window.__smokeMarker = true"); // gone if the page ever reloads
     await frames2(page);
     const s = await state(page);
     check("ready at tick 0", s.ready && s.tick === 0, JSON.stringify(s));
@@ -359,6 +660,7 @@ async function main(): Promise<void> {
     await frames2(page);
     await checkPlayback(page);
     await page.screenshot({ path: join(outDir, "page.png") });
+    await checkFiles(page);
 
     check("zero console errors", errors.length === 0, errors.join(" | "));
   } finally {

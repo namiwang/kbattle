@@ -58,3 +58,116 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- the page around the viewer: file bar, error box, drop zone (v2.5) ---- */
+
+.replay-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #0e1014;
+  color: #d5dbe3;
+  font: 13px/1.4 system-ui, sans-serif;
+}
+
+/* Author display rules would otherwise beat the hidden attribute. */
+.replay-page [hidden] {
+  display: none !important;
+}
+
+.replay-files {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #262c37;
+  background: #13161c;
+}
+
+.replay-files button,
+.replay-error button {
+  font: inherit;
+  color: inherit;
+  background: #1f2530;
+  border: 1px solid #343c4a;
+  border-radius: 4px;
+  padding: 3px 10px;
+}
+
+.replay-files button:disabled {
+  opacity: 0.45;
+}
+
+.replay-status {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #9aa4b2;
+}
+
+.replay-main {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.replay-host {
+  position: absolute;
+  inset: 0;
+}
+
+.replay-page.is-loading .replay-host {
+  opacity: 0.45;
+}
+
+.replay-error {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 1;
+  box-sizing: border-box;
+  width: min(640px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  overflow: auto;
+  transform: translateX(-50%);
+  padding: 10px 12px;
+  background: #2a1519;
+  border: 1px solid #8c3b44;
+  border-radius: 6px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 45%);
+}
+
+.replay-error-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.replay-error-head strong {
+  flex: 1 1 auto;
+  color: #f4c7cc;
+}
+
+.replay-error pre {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Shown while a file is dragged over the page; the drop itself lands on whatever is under it. */
+.replay-drop {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: rgb(14 16 20 / 82%);
+  border: 2px dashed #f2b134;
+  color: #f2b134;
+  font-size: 18px;
+  pointer-events: none;
+}

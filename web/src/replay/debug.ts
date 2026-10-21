@@ -14,8 +14,8 @@ export interface DrawnAgent {
 }
 
 export interface KbattleDebug {
-  /** True once the log is loaded and its first frame has been drawn. */
-  ready: boolean;
+  /** True once a log is open and its first frame drawn; false while a file loads. */
+  readonly ready: boolean;
   /** The tick on screen. */
   readonly tick: number;
   readonly lastTick: number;
