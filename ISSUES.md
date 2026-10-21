@@ -107,3 +107,11 @@ not stop another site from spending Nami's Workers AI budget through a
 visitor's browser. Requiring `content-type: application/json` (415
 otherwise) forces a preflight and is a one-line guard; v4.4 adds it with
 the rate limit. Cost if wrong: none, it only rejects non-JSON callers.
+
+## I-011 pnpm 11 passes `--` through to the script — resolved
+
+`pnpm --filter web dev -- --port 5174` hands the literal `--` to Vite,
+which then ignores the port and starts on 5173. Use
+`pnpm --filter web dev --port 5174 --strictPort`. Also: functions declared
+inside Playwright `page.evaluate` callbacks break under tsx (esbuild's
+`__name` helper is missing in the page); pass a string script instead.
