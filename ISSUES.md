@@ -145,3 +145,15 @@ index hang the tab. v1.5 adds a refinement: every event tick is an
 integer within `0..config.durationTicks`, and the writer guarantees it
 (cancelled runs end early, never late). Cost if wrong: a hostile file
 still parses; the viewer could add its own guard.
+
+## I-015 Workers AI binding errors carry no status or Retry-After — open (v0.5 live, v4.4)
+
+In workerd 1.20261019.1 `env.AI.run` throws `InferenceUpstreamError` with
+no status; the status is only recorded on the binding as the undocumented
+`lastRequestHttpStatusCode`, shared within the isolate. The Worker reads
+it to answer 429 vs 502, which can misattribute under concurrency, and no
+`Retry-After` is available to forward. The browser client therefore backs
+off on its own schedule (§5.5). Also: `wrangler deploy --env live` names
+the Worker `kbattle-live`; v4.5 decides the production name. Cost if
+wrong: a rare 429 reported as 502 (client keeps the last answer either
+way).
