@@ -8,11 +8,13 @@ import {
   circleOverlapsPolygon,
   hasLineOfSight,
   pointInPolygon,
+  pointPolygonDistance,
   pointSegmentDistance,
   segmentCircleT,
   segmentLeavesArenaT,
   segmentPolygonT,
   segmentSegmentT,
+  segmentsIntersect,
 } from "../../src/sim/collision";
 import { bulletWallGolden, GOLDEN_DIR } from "./golden-scenarios";
 import { arena1, makeAgent, makeBullet, makeWorld } from "./helpers";
@@ -197,6 +199,41 @@ function run(state: WorldState, ticks: number): { state: WorldState; events: Ste
 }
 
 const agent = (state: WorldState, id: string): Agent => state.agents.find((a) => a.id === id)!;
+
+describe("segmentsIntersect: closed segments meet, touching and overlap included (map validation)", () => {
+  const p = (x: number, y: number) => ({ x, y });
+
+  it("crossing, touching at an end, or a T-junction", () => {
+    expect(segmentsIntersect(p(0, 0), p(10, 10), p(0, 10), p(10, 0))).toBe(true);
+    expect(segmentsIntersect(p(0, 0), p(5, 5), p(5, 5), p(10, 0))).toBe(true);
+    expect(segmentsIntersect(p(0, 0), p(10, 0), p(5, 0), p(5, 5))).toBe(true);
+  });
+
+  it("collinear: overlapping or sharing an end point meets; a gap does not", () => {
+    expect(segmentsIntersect(p(0, 0), p(10, 0), p(5, 0), p(15, 0))).toBe(true);
+    expect(segmentsIntersect(p(0, 0), p(5, 0), p(5, 0), p(10, 0))).toBe(true);
+    expect(segmentsIntersect(p(0, 0), p(4, 0), p(5, 0), p(10, 0))).toBe(false);
+  });
+
+  it("parallel or apart: no", () => {
+    expect(segmentsIntersect(p(0, 0), p(10, 0), p(0, 1), p(10, 1))).toBe(false);
+    expect(segmentsIntersect(p(0, 0), p(4, 4), p(5, 0), p(9, -4))).toBe(false);
+    expect(segmentsIntersect(p(0, 0), p(10, 0), p(5, 0.1), p(5, 5))).toBe(false); // a T that stops 0.1 m short
+  });
+});
+
+describe("pointPolygonDistance", () => {
+  it("is 0 inside or on the boundary", () => {
+    expect(pointPolygonDistance({ x: 5, y: 5 }, square)).toBe(0);
+    expect(pointPolygonDistance({ x: 10, y: 5 }, square)).toBe(0);
+  });
+
+  it("is the distance to the nearest edge outside, a concave notch included", () => {
+    expect(pointPolygonDistance({ x: 15, y: 5 }, square)).toBe(5);
+    expect(pointPolygonDistance({ x: 13, y: 14 }, square)).toBe(5); // to the corner (10, 10)
+    expect(pointPolygonDistance({ x: 8, y: 5 }, cShape)).toBe(1); // in the notch, 1 m from its sides
+  });
+});
 
 describe("bullets against walls", () => {
   it("golden: each bullet is gone on the tick its path crosses a wall (v1.2-bullet-wall.json)", () => {

@@ -18,4 +18,8 @@ export { spawn } from "./sim/world";
 export { step, type StepActions, type StepEvent, type StepResult } from "./sim/step";
 export { perceive, type PerceivedAgent, type PerceptionState } from "./sim/perceive";
 export { actionFromAnswers } from "./sim/actions";
+export type { DecisionContext, DecisionProvider } from "./sim/providers";
 export * as collision from "./sim/collision";
+
+// Scripted bots (§6.2 Bots): the quality floor, as DecisionProviders.
+export { makeBot } from "./bots";
