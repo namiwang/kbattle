@@ -8,6 +8,8 @@ export interface Controls {
   readonly element: HTMLElement;
   /** Brings the widgets in line with the clock. Cheap when nothing changed; call every frame. */
   sync(): void;
+  /** Stops listening for keys on the document. Removing `element` is up to whoever placed it. */
+  destroy(): void;
 }
 
 export function createControls(clock: Clock, keys: Document = document): Controls {
@@ -39,7 +41,7 @@ export function createControls(clock: Clock, keys: Document = document): Control
   play.addEventListener("click", () => clock.toggle());
   speed.addEventListener("change", () => clock.setSpeed(Number(speed.value)));
   timeline.addEventListener("input", () => clock.seek(Number(timeline.value)));
-  keys.addEventListener("keydown", (event) => {
+  const onKey = (event: KeyboardEvent) => {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
     const target = event.target;
     // Leave keys alone where they type or pick something.
@@ -56,7 +58,8 @@ export function createControls(clock: Clock, keys: Document = document): Control
       event.preventDefault(); // a focused timeline would move on its own as well
       clock.step(event.key === "ArrowRight" ? 1 : -1);
     }
-  });
+  };
+  keys.addEventListener("keydown", onKey);
 
   let shownTick = -1;
   let shownPlaying: boolean | undefined;
@@ -80,5 +83,5 @@ export function createControls(clock: Clock, keys: Document = document): Control
   };
   sync();
 
-  return { element, sync };
+  return { element, sync, destroy: () => keys.removeEventListener("keydown", onKey) };
 }

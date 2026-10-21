@@ -3,6 +3,7 @@
 // nothing here runs the sim.
 
 import { getMap, type MatchLog } from "@kbattle/core";
+import { UPDATE_PRIORITY } from "pixi.js";
 import { createAgentLayer } from "./agents";
 import { createClock, type Clock } from "./clock";
 import { createControls } from "./controls";
@@ -10,7 +11,7 @@ import type { Transform } from "./coords";
 import type { DrawnAgent } from "./debug";
 import { indexLog, type LogIndex } from "./log-index";
 import { drawMap } from "./map";
-import { createStage } from "./stage";
+import { createStage, type Stage } from "./stage";
 import "./replay.css";
 
 export interface ReplayViewer {
@@ -22,6 +23,15 @@ export interface ReplayViewer {
   /** The meters-to-pixels transform right now. */
   readonly transform: Transform;
   drawnAgents(): DrawnAgent[];
+  /** Settles once the scene has been rendered for the first time (tick 0), or on destroy. */
+  readonly firstFrame: Promise<void>;
+  /**
+   * Releases everything mountReplay took: the document keydown listener, the
+   * ResizeObserver, the Pixi app (ticker, scene, WebGL context, canvas), and the
+   * elements it added to the host. mountReplay can then run again on the same host.
+   * Calling it twice is harmless; the viewer is unusable afterwards.
+   */
+  destroy(): void;
 }
 
 /** Builds the replay of `log` inside `host` (any sized element), paused at tick 0. */
@@ -38,7 +48,14 @@ export async function mountReplay(host: HTMLElement, log: MatchLog): Promise<Rep
   root.append(stageHost, controls.element);
   host.append(root);
 
-  const stage = await createStage(stageHost, map.width, map.height);
+  let stage: Stage;
+  try {
+    stage = await createStage(stageHost, map.width, map.height);
+  } catch (error) {
+    controls.destroy();
+    root.remove();
+    throw error;
+  }
   const agents = createAgentLayer((id) => index.kindOf(id));
   stage.world.addChild(drawMap(map), agents.view);
   agents.setPixelsPerMeter(stage.transform.scale);
@@ -55,7 +72,12 @@ export async function mountReplay(host: HTMLElement, log: MatchLog): Promise<Rep
     }
     controls.sync();
   });
+  let firstFrameDone = () => {};
+  const firstFrame = new Promise<void>((resolve) => (firstFrameDone = resolve));
+  // UTILITY runs after Pixi's render callback (LOW) in the same tick.
+  stage.app.ticker.addOnce(() => firstFrameDone(), undefined, UPDATE_PRIORITY.UTILITY);
 
+  let destroyed = false;
   return {
     index,
     clock,
@@ -66,5 +88,14 @@ export async function mountReplay(host: HTMLElement, log: MatchLog): Promise<Rep
       return stage.transform;
     },
     drawnAgents: () => agents.drawn(),
+    firstFrame,
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      controls.destroy();
+      stage.destroy();
+      root.remove();
+      firstFrameDone(); // its ticker is gone; nobody waits forever
+    },
   };
 }
