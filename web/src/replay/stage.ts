@@ -28,6 +28,8 @@ export async function createStage(host: HTMLElement, mapW: number, mapH: number)
     preference: "webgl",
   });
   host.append(app.canvas);
+  // resizeTo only listens to the window; this also catches layout changes around the host.
+  new ResizeObserver(() => app.queueResize()).observe(host);
 
   const world = new Container({ label: "world" });
   app.stage.addChild(world);

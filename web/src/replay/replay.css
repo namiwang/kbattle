@@ -23,3 +23,38 @@
   left: 0;
   display: block;
 }
+
+.replay-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-top: 1px solid #262c37;
+  background: #13161c;
+}
+
+.replay-controls button,
+.replay-controls select {
+  font: inherit;
+  color: inherit;
+  background: #1f2530;
+  border: 1px solid #343c4a;
+  border-radius: 4px;
+  padding: 3px 10px;
+}
+
+.replay-play {
+  min-width: 70px;
+}
+
+.replay-timeline {
+  flex: 1 1 auto;
+  min-width: 80px;
+  accent-color: #f2b134;
+}
+
+.replay-readout {
+  min-width: 90px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
