@@ -13,6 +13,11 @@ Blocks the live parts of v0.5 (Clef spike), v3.1 (real Worker smoke),
 v4.4 (guard) and v4.5 (deploy). Everything else proceeds with mocks and
 fakes. To unblock: run `wrangler login` in a terminal, or export
 `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` with Workers AI access.
+Observed at v0.4: with an `[ai]` binding in `wrangler.toml`, `wrangler dev`
+tries to refresh the token, fails (400) and exits 1 without listening;
+`wrangler dev --local` starts but AI calls still go remote and would fail.
+So the binding stays commented out until a token exists, and v0.5 must
+switch between Clef and the mock on an explicit variable, not on `env.AI`.
 
 ## I-002 Anthropic API key absent — blocked-on-nami
 
@@ -94,3 +99,11 @@ Cost if wrong: an extra key silently dropped. Separately, a Worker that
 imports the zod schemas bundles at about 110 KB minified (33 KB gzipped),
 above the plan's 50 KB "budget snapshot" for v0.4; accepted, the budget
 is advisory and the gzipped size is what ships.
+
+## I-010 Worker accepts any content-type — open (v4.4)
+
+A cross-site `text/plain` POST needs no CORS preflight, so CORS alone does
+not stop another site from spending Nami's Workers AI budget through a
+visitor's browser. Requiring `content-type: application/json` (415
+otherwise) forces a preflight and is a one-line guard; v4.4 adds it with
+the rate limit. Cost if wrong: none, it only rejects non-JSON callers.
