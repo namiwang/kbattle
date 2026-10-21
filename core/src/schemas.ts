@@ -3,14 +3,15 @@
 // and is declared nowhere else.
 //
 // Strictness:
-// - Strict, unknown keys rejected at every level: Plan, and the /decide wire,
-//   DecideRequest and DoerAnswer. These cross a trust boundary (browser → Worker
-//   → Clef, LLM → browser); a key nobody expects is an error, never forwarded.
-// - Non-strict (z.object, unknown keys dropped on parse): MatchLog, its config,
+// - Strict, unknown keys rejected at every level: DecideRequest, the /decide body
+//   (browser → Worker → Clef). It is the Worker's abuse boundary: a key nobody
+//   expects is an error, never forwarded.
+// - Non-strict (z.object, unknown keys dropped on parse): DoerAnswer and Plan,
+//   which validate third-party responses (Clef, the thinker model), so a harmless
+//   extra key does not fault every call (ISSUES I-009); and MatchLog, its config,
 //   prompts and events, and MapSpec, so a field added later does not make an
-//   older viewer reject a newer file. The answers and plan inside Doer and
-//   Thinker events reuse the strict schemas: they are copies of values that
-//   already passed them.
+//   older viewer reject a newer file. Doer and Thinker events reuse the
+//   DoerAnswers and Plan schemas.
 //
 // Units and conventions (§6.1): meters, y down, degrees clockwise-positive with
 // 0° = +x, ticks. In zod 4, z.number() already rejects NaN and ±Infinity.
@@ -113,11 +114,11 @@ export const DecideRequestSchema = z.strictObject({
 export type DecideRequest = z.infer<typeof DecideRequestSchema>;
 
 /** Clef's answer to a noul question: P(yes). */
-export const NoulAnswerSchema = z.strictObject({ type: z.literal("noul"), noul: Probability });
+export const NoulAnswerSchema = z.object({ type: z.literal("noul"), noul: Probability });
 export type NoulAnswer = z.infer<typeof NoulAnswerSchema>;
 
 /** Clef's answer to a choice question: the pick, a probability per option, and a confidence. */
-export const ChoiceAnswerSchema = z.strictObject({
+export const ChoiceAnswerSchema = z.object({
   type: z.literal("choice"),
   choice: z.string(),
   probabilities: z.record(z.string(), Probability),
@@ -130,7 +131,7 @@ export type ChoiceAnswer = z.infer<typeof ChoiceAnswerSchema>;
  * move and turn picks typed to the fixed choices. Any key may be absent; target
  * is not asked when nobody is visible (I-005).
  */
-export const DoerAnswersSchema = z.strictObject({
+export const DoerAnswersSchema = z.object({
   move: ChoiceAnswerSchema.extend({ choice: MoveChoiceSchema }).optional(),
   turn: ChoiceAnswerSchema.extend({ choice: TurnChoiceSchema }).optional(),
   fire: NoulAnswerSchema.optional(),
@@ -140,19 +141,17 @@ export const DoerAnswersSchema = z.strictObject({
 export type DoerAnswers = z.infer<typeof DoerAnswersSchema>;
 
 /** Doer response, Worker → browser: Clef's response as-is. Bots and fakes may omit `usage`. */
-export const DoerAnswerSchema = z.strictObject({
+export const DoerAnswerSchema = z.object({
   model: z.string().min(1),
   answers: DoerAnswersSchema,
-  usage: z
-    .strictObject({ input_tokens: z.number().int().min(0), output_tokens: z.number().int().min(0) })
-    .optional(),
+  usage: z.object({ input_tokens: z.number().int().min(0), output_tokens: z.number().int().min(0) }).optional(),
 });
 export type DoerAnswer = z.infer<typeof DoerAnswerSchema>;
 
 // ---- Thinker: LLM → browser (§5.4) ----
 
 /** The thinker's structured output: plan text for the doer, and a scratchpad it rewrites each call (row 12). */
-export const PlanSchema = z.strictObject({
+export const PlanSchema = z.object({
   text: z.string().min(1).max(2000),
   scratchpad: z.string().max(4000),
 });
