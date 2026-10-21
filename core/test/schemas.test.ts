@@ -457,6 +457,11 @@ describe("Event: the replay's discriminated union", () => {
     expect(issuePaths(EventSchema, thinkerFault)).toEqual([]);
   });
 
+  it("parses a Tick with near-miss rows [target, fromX, fromY] and round-trips (ISSUES I-016)", () => {
+    const tick = { ...events.Tick, near: [["a1", 7, 50], ["a1", 12.25, 48.5]] };
+    expect(roundTrip(EventSchema, tick)).toEqual(tick);
+  });
+
   it("accepts a MatchEnd with an empty ranking (cancelled run) and a Thinker with any input", () => {
     expect(issuePaths(EventSchema, { kind: "MatchEnd", tick: 3, ranking: [] })).toEqual([]);
     expect(issuePaths(EventSchema, { ...events.Thinker, input: "free text" })).toEqual([]);
@@ -483,6 +488,9 @@ describe("Event: the replay's discriminated union", () => {
     ["Thinker without input", without(events.Thinker, "input"), ["input"]],
     ["a Tick agent row without hp", { ...events.Tick, agents: [["a0", 7, 50, 0]] }, ["agents", 0]],
     ["a Tick bullet row with a non-numeric x", { ...events.Tick, bullets: [["b0", "40", 50]] }, ["bullets", 0, 1]],
+    ["a Tick near row without the shooter's y", { ...events.Tick, near: [["a1", 7]] }, ["near", 0]],
+    ["a Tick near row with a non-numeric x", { ...events.Tick, near: [["a1", "7", 50]] }, ["near", 0, 1]],
+    ["a Tick near row with an empty target", { ...events.Tick, near: [["", 7, 50]] }, ["near", 0, 0]],
     ["a fractional tick", { ...events.Shot, tick: 1.5 }, ["tick"]],
     ["a negative tick", { ...events.Shot, tick: -1 }, ["tick"]],
     ["a Hit with no damage", { ...events.Hit, damage: 0 }, ["damage"]],
@@ -494,6 +502,30 @@ describe("Event: the replay's discriminated union", () => {
 describe("MatchLog: the replay file", () => {
   it("parses a log and round-trips", () => {
     expect(roundTrip(MatchLogSchema, matchLog)).toEqual(matchLog);
+  });
+
+  // ISSUES I-014: the viewer indexes 0..lastTick, so a crafted tick of 1e8 would hang the tab.
+  it("accepts event ticks from 0 up to config.durationTicks", () => {
+    const last = { kind: "MatchEnd", tick: matchLog.config.durationTicks, ranking: ["a0", "a1"] };
+    expect(issuePaths(MatchLogSchema, { ...matchLog, events: [...matchLog.events, last] })).toEqual([]);
+  });
+
+  it.each([
+    ["one tick after config.durationTicks", 6001],
+    ["a tick of 1e8", 1e8],
+  ])("rejects an event at %s, at that event's tick (ISSUES I-014)", (_name, tick) => {
+    const late = { ...events.Shot, tick };
+    const value = { ...matchLog, events: [...matchLog.events, late] };
+    expect(issuePaths(MatchLogSchema, value)).toEqual([["events", matchLog.events.length, "tick"]]);
+  });
+
+  it("reports every event past config.durationTicks, each at its own path", () => {
+    const short = { ...matchLog, config: { ...matchLog.config, durationTicks: 100 } };
+    // Event ticks 0, 12, 11, 25, 140 (Death), 11, 7, 140 (MatchEnd): two are past 100.
+    expect(issuePaths(MatchLogSchema, short)).toEqual([
+      ["events", 4, "tick"],
+      ["events", 7, "tick"],
+    ]);
   });
 
   it("drops an unknown top-level field instead of rejecting it (non-strict)", () => {

@@ -102,6 +102,46 @@ describe("@kbattle/core entry point", () => {
     expect(core.DoerAnswerSchema.parse(await bot.decide(ctx)).model).toBe("bot:camper");
   });
 
+  it("exposes the v1.5 match loop: runMatch with bot providers, the log writer and its Tick rows", async () => {
+    const config: core.MatchConfig = {
+      mapId: "arena-2",
+      seed: 3,
+      durationTicks: 30,
+      slots: [
+        { kind: "bot", bot: "wanderer" },
+        { kind: "bot", bot: "camper" },
+      ],
+    };
+    const prompts: core.Prompts = { thinkerSystem: "", doerInstructions: { move: "", turn: "", fire: "", target: "" } };
+    const providers: core.ProviderFactory = core.botProviders(config.seed);
+    const deps: core.RunMatchDeps = { providers, prompts };
+    const log: core.MatchLog = await core.runMatch(config, deps);
+    expect(core.MatchLogSchema.parse(log)).toEqual(log);
+    expect(core.eventsOfKind(log, "MatchEnd")[0]?.ranking).toHaveLength(2);
+    const world = core.spawn(config, core.getMap("arena-2"));
+    const writer: core.LogWriter = core.createLogWriter(config, prompts);
+    writer.spawn(world);
+    expect(writer.log().events).toEqual([...core.spawnEvents(world), core.tickEvent(world)]);
+    expect(core.rankAgents(world.agents)).toEqual(["a0", "a1"]);
+  });
+
+  it("exposes the v1.6 determinism harness: a replay of a match is the same bytes", async () => {
+    const config: core.MatchConfig = {
+      mapId: "arena-1",
+      seed: 5,
+      durationTicks: 60,
+      slots: [
+        { kind: "bot", bot: "camper" },
+        { kind: "bot", bot: "wanderer" },
+      ],
+    };
+    const prompts: core.Prompts = { thinkerSystem: "", doerInstructions: { move: "", turn: "", fire: "", target: "" } };
+    const log = await core.runMatch(config, { providers: core.botProviders(config.seed), prompts });
+    const replayer: core.DecisionProvider = core.makeReplayingProvider(log, "a1");
+    expect(replayer.pollEvents?.(1)).toEqual([]);
+    expect(JSON.stringify(await core.replayMatch(log))).toBe(JSON.stringify(log));
+  });
+
   it("exports each boundary type as z.infer of its schema", () => {
     expectTypeOf<core.MatchLog>().toEqualTypeOf<z.infer<typeof core.MatchLogSchema>>();
     expectTypeOf<core.DoerAnswer>().toEqualTypeOf<z.infer<typeof core.DoerAnswerSchema>>();
