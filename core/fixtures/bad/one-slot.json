@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "config": {
+    "mapId": "arena-1",
+    "seed": 1,
+    "durationTicks": 200,
+    "slots": [
+      {
+        "kind": "prompted"
+      }
+    ]
+  },
+  "seed": 1,
+  "prompts": {
+    "thinkerSystem": "You are a patient fighter. Keep to open lanes, engage at long range, and never chase a target behind cover.",
+    "doerInstructions": {
+      "move": "Follow the plan. Stop once you are at the range it names.",
+      "turn": "Face the target when you have one; otherwise keep your facing.",
+      "fire": "Fire when the target is close to the center of your view.",
+      "target": "Pick the closest visible enemy."
+    }
+  },
+  "events": [
+    {
+      "kind": "Spawn",
+      "tick": 0,
+      "agent": "a0",
+      "pos": {
+        "x": 4,
+        "y": 50
+      },
+      "facing": 0
+    },
+    {
+      "kind": "Spawn",
+      "tick": 0,
+      "agent": "a1",
+      "pos": {
+        "x": 96,
+        "y": 50
+      },
+      "facing": 180
+    },
+    {
+      "kind": "Tick",
+      "tick": 0,
+      "agents": [
+        [
+          "a0",
+          4,
+          50,
+          0,
+          100
+        ],
+        [
+          "a1",
+          96,
+          50,
+          180,
+          100
+        ]
+      ],
+      "bullets": []
+    },
+    {
+      "kind": "Doer",
+      "tick": 1,
+      "agent": "a0",
+      "ok": true,
+      "answers": {
+        "move": {
+          "type": "choice",
+          "choice": "forward",
+          "probabilities": {
+            "forward": 0.9,
+            "back": 0.025,
+            "left": 0.025,
+            "right": 0.025,
+            "stop": 0.025
+          },
+          "confidence": 0.9
+        },
+        "turn": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "left": 0.05,
+            "right": 0.05,
+            "none": 0.85,
+            "face_target": 0.05
+          },
+          "confidence": 0.85
+        },
+        "fire": {
+          "type": "noul",
+          "noul": 0.02
+        },
+        "escalate": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      }
+    },
+    {
+      "kind": "Tick",
+      "tick": 1,
+      "agents": [
+        [
+          "a0",
+          4.25,
+          50,
+          0,
+          100
+        ],
+        [
+          "a1",
+          95.75,
+          50,
+          180,
+          100
+        ]
+      ],
+      "bullets": []
+    }
+  ]
+}

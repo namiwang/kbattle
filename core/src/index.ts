@@ -7,3 +7,6 @@ export * from "./angles";
 export * from "./units";
 export * from "./constants";
 export * from "./types";
+export * from "./schemas";
+export * from "./maps";
+export * from "./log";

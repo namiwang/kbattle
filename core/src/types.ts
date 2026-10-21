@@ -1,24 +1,33 @@
 // Internal sim types (DESIGN.md §5.3: plain TS interfaces inside the process).
-// Boundary types (MatchConfig, Slot, Plan, DoerAnswer, DecideRequest, MatchLog,
-// Event) are zod schemas with z.infer types, defined once in v0.3.
+// Types of data that enters from outside (MatchConfig, Slot, Plan, DoerAnswer,
+// DecideRequest, MatchLog, Event, and MapSpec, which is loaded from JSON) are
+// z.infer types in ./schemas, defined once there.
 // Units (§6.1): meters, y down, degrees clockwise-positive with 0° = +x, ticks.
 
+import type { MapSpec } from "./schemas";
 import type { Vec2 } from "./vec2";
 
 /** `a0`…`a15` in slot order (§6.1). */
 export type AgentId = string;
 
-/** Doer `move` answer (§5.4), relative to facing. */
-export type MoveChoice = "forward" | "back" | "left" | "right" | "stop";
+// Each string union below is derived from a frozen list, so zod enums
+// (schemas.ts) are built from the same list instead of repeating it.
 
-/** Doer `turn` answer (§5.4). `face_target` with no target means `none`. */
-export type TurnChoice = "left" | "right" | "none" | "face_target";
+/** Doer `move` choices (§5.4), relative to facing; also the `move` criteria keys. */
+export const MOVE_CHOICES = Object.freeze(["forward", "back", "left", "right", "stop"] as const);
+export type MoveChoice = (typeof MOVE_CHOICES)[number];
+
+/** Doer `turn` choices (§5.4). `face_target` with no target means `none`. */
+export const TURN_CHOICES = Object.freeze(["left", "right", "none", "face_target"] as const);
+export type TurnChoice = (typeof TURN_CHOICES)[number];
 
 /** What was heard (§6.2). */
-export type SoundKind = "shot" | "steps";
+export const SOUND_KINDS = Object.freeze(["shot", "steps"] as const);
+export type SoundKind = (typeof SOUND_KINDS)[number];
 
-/** Coarse hearing distance (§6.2); band edges are HEARING_BANDS_M. */
-export type HearingBand = "near" | "mid" | "far";
+/** Coarse hearing distance (§6.2), nearest first; band edges are HEARING_BANDS_M. */
+export const HEARING_BANDS = Object.freeze(["near", "mid", "far"] as const);
+export type HearingBand = (typeof HEARING_BANDS)[number];
 
 /** What an agent does every tick until its next doer answer replaces it (§5.4). */
 export interface Action {
@@ -35,20 +44,6 @@ export const STOP_ACTION: Readonly<Action> = Object.freeze({
   fire: false,
   target: null,
 });
-
-/** Simple polygon that blocks movement, bullets and line of sight (§6.2). */
-export interface Obstacle {
-  vertices: Vec2[];
-}
-
-/** Hand-authored arena, fully known to every agent (§6.2). */
-export interface MapSpec {
-  id: string;
-  width: number; // m
-  height: number; // m
-  obstacles: Obstacle[];
-  spawns: Vec2[];
-}
 
 export interface Agent {
   id: AgentId;
