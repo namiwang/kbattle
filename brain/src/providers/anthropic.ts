@@ -3,14 +3,17 @@
 // never as an exception (§5.5, principle 4):
 //
 //   401, 403                       auth          (fatal: stop the match, row 29)
+//   402                            billing       (fatal: no credit, ISSUES I-012)
+//   404                            not_found     (fatal: model not available, I-012)
 //   429                            rate_limit    (caller backs off)
-//   other HTTP error status        server        (5xx; also 400, 402, 404...: see `status`)
+//   other HTTP error status        server        (5xx; also 400, 413...: see `status`)
 //   stop_reason "refusal"          refusal       (row 16)
 //   not JSON, or not a Plan        invalid_output
 //   aborted, or connection timeout timeout
 //   connection failed              network
 //
-// Every kind but auth keeps the last plan; deciding that is the caller's job.
+// `fatal` marks the kinds that stop the match; every other kind keeps the last
+// plan. Acting on either is the caller's job.
 import Anthropic, {
   APIConnectionError,
   APIConnectionTimeoutError,
@@ -20,8 +23,14 @@ import Anthropic, {
 } from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { THINKER_MODEL } from "@kbattle/core";
-import { PlanSchema } from "../schemas";
-import type { ThinkerError, ThinkerProvider, ThinkerResult } from "../types";
+import { PlanReplySchema, PlanSchema } from "../schemas";
+import {
+  thinkerError,
+  type ThinkerError,
+  type ThinkerErrorKind,
+  type ThinkerProvider,
+  type ThinkerResult,
+} from "../types";
 
 export interface AnthropicThinkerOptions {
   apiKey: string;
@@ -31,10 +40,29 @@ export interface AnthropicThinkerOptions {
   fetch?: ClientOptions["fetch"];
 }
 
+/**
+ * The `thinking` parameter that turns thinking off for `model`, or undefined to
+ * leave it out (ISSUES I-013). §5.6 wants a low-effort call, but which value turns
+ * thinking off is model-specific, and a wrong one is a 400 on every call: Haiku 5.5
+ * takes `disabled` (at effort low to high), Sonnet 5.5 answers `disabled` with a 400
+ * and takes `between_tools` (its lowest setting, effort high or below), Opus 5.5
+ * cannot turn thinking off at all (effort low is the only lever). Leaving the
+ * field out is accepted by every model, so unknown models get that.
+ */
+export function thinkingParamFor(model: string): Anthropic.ThinkingConfigParam | undefined {
+  return THINKING_OFF.get(model);
+}
+
+const THINKING_OFF = new Map<string, Anthropic.ThinkingConfigParam>([
+  ["claude-haiku-5-5", { type: "disabled" }],
+  ["claude-sonnet-5-5", { type: "between_tools" }],
+]);
+
 // Structured output (§5.4): the API constrains the reply to Plan's JSON schema.
 // The SDK helper derives it from the zod schema; limits the API cannot enforce
-// (minLength, maxLength) become description hints, and PlanSchema checks them.
-const { schema: PLAN_JSON_SCHEMA } = zodOutputFormat(PlanSchema);
+// (minLength, maxLength) become description hints. The hints carry the lengths
+// the harness prompt asks for (PlanReplySchema); PlanSchema checks the reply.
+const { schema: PLAN_JSON_SCHEMA } = zodOutputFormat(PlanReplySchema);
 
 export function makeAnthropicThinker({
   apiKey,
@@ -49,6 +77,9 @@ export function makeAnthropicThinker({
   // caller owns backoff on 429 (row 21); the SDK would otherwise retry silently.
   const client = new Anthropic({ apiKey, fetch, dangerouslyAllowBrowser: true, maxRetries: 0 });
 
+  // §5.6: low effort, and thinking off where the model allows it.
+  const thinking = thinkingParamFor(model);
+
   return {
     async complete({ system, messages, signal }): Promise<ThinkerResult> {
       let reply: unknown;
@@ -59,9 +90,7 @@ export function makeAnthropicThinker({
             max_tokens: maxTokens,
             system,
             messages,
-            // §5.6: low effort. Haiku 5.5 accepts thinking off at effort low..high;
-            // Sonnet 5.5 and Opus 5.5 reject it (400), so a model change revisits this.
-            thinking: { type: "disabled" },
+            ...(thinking === undefined ? {} : { thinking }),
             output_config: { effort: "low", format: { type: "json_schema", schema: PLAN_JSON_SCHEMA } },
           },
           { signal },
@@ -80,7 +109,7 @@ function readPlan(reply: unknown): ThinkerResult {
 
   if (reply.stop_reason === "refusal") {
     const reason = [reply.stop_details?.category, reply.stop_details?.explanation].filter(Boolean).join(": ");
-    return { ok: false, error: { kind: "refusal", message: `the model declined${reason ? ` (${reason})` : ""}` } };
+    return { ok: false, error: thinkerError("refusal", `the model declined${reason ? ` (${reason})` : ""}`) };
   }
 
   // Read blocks by type: a reply may hold other blocks before the text.
@@ -111,32 +140,45 @@ function isMessage(reply: unknown): reply is Anthropic.Message {
 }
 
 function invalidOutput(message: string): ThinkerResult {
-  return { ok: false, error: { kind: "invalid_output", message } };
+  return { ok: false, error: thinkerError("invalid_output", message) };
 }
 
 /** The fault for an error thrown by the SDK call (table at the top). */
 function toThinkerError(err: unknown): ThinkerError {
   if (err instanceof APIError && err.status !== undefined) {
-    const { status } = err;
-    const message = apiMessage(err);
-    if (status === 401 || status === 403) return { kind: "auth", status, message };
-    if (status === 429) return { kind: "rate_limit", status, message };
-    return { kind: "server", status, message };
+    return thinkerError(kindOfStatus(err.status), apiMessage(err), err.status);
   }
   // The caller aborts through input.signal when its own deadline passes.
   if (err instanceof APIUserAbortError || err instanceof APIConnectionTimeoutError) {
-    return { kind: "timeout", message: err.message };
+    return thinkerError("timeout", err.message);
   }
   if (err instanceof APIConnectionError) {
     const cause = err.cause instanceof Error ? ` (${err.cause.message})` : "";
-    return { kind: "network", message: `${err.message}${cause}` };
+    return thinkerError("network", `${err.message}${cause}`);
   }
   // The SDK parses a 200 body itself and lets JSON.parse's error through.
   if (err instanceof SyntaxError) {
-    return { kind: "invalid_output", message: `the response body is not JSON: ${err.message}` };
+    return thinkerError("invalid_output", `the response body is not JSON: ${err.message}`);
   }
   // Anything else broke in transport, e.g. the body stream failed mid-read.
-  return { kind: "network", message: err instanceof Error ? `${err.name}: ${err.message}` : String(err) };
+  return thinkerError("network", err instanceof Error ? `${err.name}: ${err.message}` : String(err));
+}
+
+/** The kind of an HTTP error status (table at the top). */
+function kindOfStatus(status: number): ThinkerErrorKind {
+  switch (status) {
+    case 401:
+    case 403:
+      return "auth";
+    case 402:
+      return "billing";
+    case 404:
+      return "not_found";
+    case 429:
+      return "rate_limit";
+    default:
+      return "server";
+  }
 }
 
 /** The API's own error text ("authentication_error: invalid x-api-key"), else the SDK's message. */
