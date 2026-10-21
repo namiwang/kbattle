@@ -157,3 +157,21 @@ off on its own schedule (§5.5). Also: `wrangler deploy --env live` names
 the Worker `kbattle-live`; v4.5 decides the production name. Cost if
 wrong: a rare 429 reported as 502 (client keeps the last answer either
 way).
+
+## I-016 Near misses are not in the log — resolved (v1.5)
+
+`incoming` in an observation includes bullets that passed within 2 m, but
+no log event records them, so the mind panel could only rebuild hits.
+Decision: v1.5 adds an optional `near` field to `Tick` events,
+`[targetId, fromX, fromY][]`, present only when non-empty, so the viewer
+rebuilds `lastTick.nearMisses`. DESIGN.md §5.3's event list is unchanged;
+`Tick` gains a field. Cost if wrong: a few bytes per contested tick.
+
+## I-017 Turn choices quantize to 90° per decision — open (tune at v3.4)
+
+With `TURN_RATE_DPS = 180` and a decision every 10 ticks (0.5 s), a
+`left`/`right` answer held for one decision turns exactly 90°, so without
+`face_target` a facing only ever changes by multiples of 90°. Candidates:
+lower `TURN_RATE_DPS` (120 → 60° per decision; 180° about-face in 1.5 s)
+or keep it and rely on `face_target`. Decide while tuning the default
+prompts in v3.4 by watching replays. Cost if wrong: coarse scanning.
