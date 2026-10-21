@@ -5,6 +5,7 @@
 // Units (§6.1): meters, y down, degrees clockwise-positive with 0° = +x, ticks.
 
 import type { MapSpec } from "./schemas";
+import type { RngState } from "./sim/rng";
 import type { Vec2 } from "./vec2";
 
 /** `a0`…`a15` in slot order (§6.1). */
@@ -68,10 +69,12 @@ export interface Bullet {
 
 export interface WorldState {
   tick: number;
+  durationTicks: number; // the match's length (MatchConfig), for perception's time left
   map: MapSpec;
   agents: Agent[]; // slot order
   bullets: Bullet[];
   nextBulletId: number; // n of the next `b<n>`
+  rng: RngState; // seeded from MatchConfig.seed; the spawn shuffle and bullet spread draw from it (R3)
 }
 
 /**

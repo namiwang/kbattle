@@ -34,6 +34,22 @@ describe("@kbattle/core entry point", () => {
     expect(core.lastTick(log)).toBe(core.eventsOfKind(log, "MatchEnd")[0]?.tick);
   });
 
+  it("exposes the sim: seeded RNG, spawn and step", () => {
+    const rng = core.createRng(1);
+    expect(core.nextFloat(rng).value).toBe(0.3678755429573357);
+    expect(core.nextUint32(rng).value).toBe(1580013426);
+    const config: core.MatchConfig = {
+      mapId: "arena-1",
+      seed: 1,
+      durationTicks: 100,
+      slots: [{ kind: "prompted" }, { kind: "bot", bot: "wanderer" }],
+    };
+    const world = core.spawn(config, core.getMap("arena-1"));
+    expect(world.agents.map((a) => a.id)).toEqual(["a0", "a1"]);
+    const result: core.StepResult = core.step(world, {});
+    expect(result.state.tick).toBe(1);
+  });
+
   it("exports each boundary type as z.infer of its schema", () => {
     expectTypeOf<core.MatchLog>().toEqualTypeOf<z.infer<typeof core.MatchLogSchema>>();
     expectTypeOf<core.DoerAnswer>().toEqualTypeOf<z.infer<typeof core.DoerAnswerSchema>>();
