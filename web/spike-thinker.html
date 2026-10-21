@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kbattle · thinker spike</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.4; }
+      label { display: block; margin-top: 1rem; font-weight: 600; }
+      input, textarea { display: block; width: 100%; box-sizing: border-box; margin-top: 0.25rem; font: inherit; }
+      textarea { font-family: ui-monospace, monospace; font-size: 0.85rem; }
+      input[type="number"] { width: 8rem; }
+      .hint { font-weight: 400; color: #555; }
+      button { margin-top: 1rem; font: inherit; padding: 0.4rem 1rem; }
+      pre { background: #f4f4f4; padding: 0.75rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+      #stopped { background: #fde8e8; color: #8a1111; border: 1px solid #e4a3a3; padding: 0.75rem; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Thinker spike</h1>
+    <p>
+      Milestone v0.6: one call to <code id="model"></code> with structured output, parsed as a
+      <code>Plan</code>. A throwaway page; the real key entry comes with the app.
+    </p>
+    <p>
+      <strong>Your key stays in this browser's localStorage and is sent only to api.anthropic.com.</strong>
+    </p>
+
+    <label for="key">Anthropic API key</label>
+    <input id="key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-..." />
+
+    <label for="system">System prompt <span class="hint">(a stand-in for the harness prompt)</span></label>
+    <textarea id="system" rows="8"></textarea>
+
+    <label for="perception">Perception payload <span class="hint">(sent as the user message)</span></label>
+    <textarea id="perception" rows="16"></textarea>
+
+    <label for="max-tokens">max_tokens <span class="hint">(10 cuts the reply off: the invalid-JSON path)</span></label>
+    <input id="max-tokens" type="number" min="1" value="600" />
+
+    <button id="run" type="button">run spike</button>
+    <p id="stopped" role="alert" hidden></p>
+
+    <h2>Current plan</h2>
+    <pre id="plan"></pre>
+
+    <h2>Log</h2>
+    <pre id="log"></pre>
+
+    <script type="module" src="/src/spike-thinker.ts"></script>
+  </body>
+</html>
