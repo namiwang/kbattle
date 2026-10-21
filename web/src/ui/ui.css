@@ -1,0 +1,320 @@
+/* The page around the replay (v4.1): Key, Mind and Match sections in the replay's dark theme. */
+
+.ui-page {
+  color: #d5dbe3;
+  font: 14px/1.5 system-ui, sans-serif;
+}
+
+/* Author display rules would otherwise beat the hidden attribute. */
+.ui-section [hidden] {
+  display: none !important;
+}
+
+.ui-header,
+.ui-section,
+.ui-replay-head {
+  box-sizing: border-box;
+  width: min(920px, calc(100% - 32px));
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ui-header {
+  padding: 28px 0 4px;
+}
+
+.ui-header h1 {
+  margin: 0;
+  font-size: 22px;
+  color: #f4f6fa;
+}
+
+.ui-header p {
+  margin: 4px 0 0;
+  color: #9aa4b2;
+}
+
+.ui-section {
+  margin-top: 16px;
+  padding: 16px 20px 18px;
+  background: #13161c;
+  border: 1px solid #262c37;
+  border-radius: 8px;
+}
+
+.ui-page h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #f4f6fa;
+}
+
+.ui-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ui-section label,
+.ui-doer legend {
+  font-weight: 600;
+  color: #e4e8ee;
+}
+
+.ui-lead {
+  margin: -4px 0 14px;
+  color: #b3bcc8;
+}
+
+.ui-hint,
+.ui-note {
+  margin: 4px 0 0;
+  color: #9aa4b2;
+  font-size: 12.5px;
+}
+
+.ui-note {
+  color: #c9d1db;
+}
+
+.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ui-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ui-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ui-count,
+.ui-seconds,
+.ui-unit {
+  color: #9aa4b2;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- controls (scoped to the sections: the replay below keeps its own) ---- */
+
+.ui-section input,
+.ui-section textarea,
+.ui-section select {
+  box-sizing: border-box;
+  min-width: 0;
+  font: inherit;
+  color: inherit;
+  background: #0e1014;
+  border: 1px solid #343c4a;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.ui-section textarea {
+  width: 100%;
+  min-height: 9em;
+  resize: vertical;
+}
+
+.ui-section input:focus-visible,
+.ui-section textarea:focus-visible,
+.ui-section select:focus-visible,
+.ui-button:focus-visible {
+  outline: 2px solid #f2b134;
+  outline-offset: 1px;
+}
+
+.ui-section input:disabled {
+  opacity: 0.5;
+}
+
+.ui-section [aria-invalid="true"] {
+  border-color: #d0606b;
+}
+
+.ui-section ::placeholder {
+  color: #5f6a79;
+}
+
+.ui-button {
+  font: inherit;
+  color: inherit;
+  white-space: nowrap;
+  background: #1f2530;
+  border: 1px solid #343c4a;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.ui-button:hover:not(:disabled) {
+  border-color: #56606e;
+}
+
+.ui-primary {
+  color: #17130a;
+  font-weight: 600;
+  background: #f2b134;
+  border-color: #f2b134;
+}
+
+.ui-primary:hover:not(:disabled) {
+  background: #f5c25e;
+  border-color: #f5c25e;
+}
+
+.ui-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---- key ---- */
+
+.ui-key .ui-inline {
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.ui-key input {
+  flex: 1 1 260px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.ui-key-status {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+}
+
+/* ---- mind ---- */
+
+.ui-doer {
+  margin: 18px 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.ui-doer legend {
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.ui-doer-row {
+  display: grid;
+  grid-template-columns: 5em 1fr;
+  gap: 4px 12px;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.ui-doer-row label {
+  padding-top: 7px;
+}
+
+.ui-doer-field input {
+  width: 100%;
+}
+
+/* ---- match ---- */
+
+.ui-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px 18px;
+}
+
+.ui-grid input,
+.ui-grid select {
+  width: 100%;
+}
+
+.ui-grid .ui-inline input {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+.ui-grid output {
+  padding: 7px 0;
+  color: #c9d1db;
+}
+
+.ui-swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: 1px;
+}
+
+.ui-match > .ui-hint {
+  margin-top: 12px;
+}
+
+.ui-nokey {
+  padding: 8px 10px;
+  color: #c9d1db;
+  background: #1a2230;
+  border-left: 3px solid #3fc1e8;
+  border-radius: 4px;
+}
+
+.ui-run {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #262c37;
+}
+
+.ui-run .ui-hint {
+  margin: 0;
+}
+
+.ui-result {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #9fdcaa;
+  background: #101d17;
+  border: 1px solid #24503a;
+  border-radius: 6px;
+}
+
+.ui-result.is-error {
+  color: #f4c7cc;
+  background: #2a1519;
+  border-color: #8c3b44;
+}
+
+/* ---- replay ---- */
+
+.ui-replay {
+  margin-top: 28px;
+  border-top: 1px solid #262c37;
+}
+
+.ui-replay-head {
+  padding: 14px 0 2px;
+}
+
+/* The viewer fills the window once scrolled to. */
+.ui-replay-host {
+  height: 100vh;
+  min-height: 420px;
+}
