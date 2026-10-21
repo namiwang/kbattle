@@ -1,15 +1,21 @@
-// Web app entry. For now the page is the replay viewer, opened on the sample log
+// Web app entry: the one page of DESIGN.md §7. The Key, Mind and Match sections
+// (v4.1) over the replay viewer, which opens on the sample log
 // (core/fixtures/sample-log.json); Upload, a drop or Download replace or save it.
-// P4 composes the full page (DESIGN.md §7).
 
 import sampleLogUrl from "../../core/fixtures/sample-log.json?url";
 import type { KbattleDebug } from "./replay/debug";
 import { createReplayPage } from "./replay/page";
+import { createShell } from "./ui/shell";
+import { createStore } from "./ui/state";
+import { browserStorage } from "./ui/storage";
 
 async function main(): Promise<void> {
   const host = document.querySelector<HTMLElement>("#app");
   if (!host) throw new Error("index.html has no #app element");
-  const page = createReplayPage(host);
+  const store = createStore(browserStorage());
+  store.load();
+  const shell = createShell(host, store);
+  const page = createReplayPage(shell.replayHost);
 
   // Reads whichever viewer is on screen, so it follows uploads.
   const debug: KbattleDebug = {
@@ -27,6 +33,7 @@ async function main(): Promise<void> {
     },
     toPx: (v) => page.viewer?.transform.toPx(v) ?? { x: Number.NaN, y: Number.NaN },
     drawnAgents: () => page.viewer?.drawnAgents() ?? [],
+    validateForm: () => shell.validateForm(),
   };
   window.__kbattle = debug;
 

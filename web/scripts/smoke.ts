@@ -1,9 +1,11 @@
-// Headless browser smoke for the replay viewer. Not part of `pnpm test`; run
+// Headless browser smoke for the page. Not part of `pnpm test`; run
 // `pnpm --filter web smoke`. Starts Vite on port 5174 (or opens KBATTLE_URL),
 // loads the page in Playwright's chromium, waits for window.__kbattle.ready,
 // checks canvas pixels against the sample log and the map, resizes the window,
 // then drives the playback controls (keyboard, buttons, timeline drag, every
-// speed) and checks the scene against the log at each stop. Then the files
+// speed) and checks the scene against the log at each stop. Then the UI shell
+// (v4.1): key, prompts and match form survive a reload, Clear key and no-key
+// mode, the form check through window.__kbattle.validateForm(). Then the files
 // (v2.5): uploads through the file input (good, schema-bad, not JSON), checks
 // that each re-mount leaves no listener, observer or WebGL context behind,
 // downloads and re-opens the log, drops a file, and times a 5 MB upload.
@@ -321,6 +323,127 @@ async function checkPlayback(page: Page): Promise<void> {
   await frames2(page);
   const restarted = (await state(page)).tick;
   check("play at the last tick starts over from 0", restarted < 40, `tick ${restarted}`);
+}
+
+// ---- UI shell (v4.1): key, mind, match form, localStorage ----
+
+const STORED = Object.freeze({ key: "kbattle:v1:anthropic-key", prompts: "kbattle:v1:prompts", config: "kbattle:v1:config" });
+const SMOKE_KEY = "sk-ant-smoke-not-a-real-key";
+
+async function stored(page: Page): Promise<Record<string, string | null>> {
+  return page.evaluate((keys) => Object.fromEntries(keys.map((k) => [k, localStorage.getItem(k)])), Object.values(STORED));
+}
+
+/** Runs the check behind Run match through the debug hook; returns the text it shows. */
+async function validateForm(page: Page): Promise<string> {
+  return page.evaluate(() => window.__kbattle?.validateForm() ?? "window.__kbattle missing");
+}
+
+const parsed = (text: string | null | undefined): Record<string, unknown> => (text ? (JSON.parse(text) as Record<string, unknown>) : {});
+
+async function checkUiShell(page: Page): Promise<void> {
+  const key = page.getByLabel("Anthropic API key");
+  const thinker = page.getByLabel("Thinker system prompt");
+  const move = page.getByLabel("Move", { exact: true });
+  const map = page.getByLabel("Map", { exact: true });
+  const seed = page.getByLabel("Seed", { exact: true });
+  const slots = page.getByLabel("Slots", { exact: true });
+  const prompted = page.getByLabel("Prompted slots");
+  const doerOnly = page.getByLabel("Doer-only slots");
+  const duration = page.getByLabel("Duration");
+  const bots = page.locator("#ui-bots");
+  const run = page.getByRole("button", { name: "Run match" });
+  const saveKey = page.getByRole("button", { name: "Save key" });
+  const result = page.locator(".ui-result");
+  const text = async (locator: Locator) => ((await locator.textContent()) ?? "").trim();
+
+  // First visit: nothing stored, so the defaults; no key, so no prompted slots.
+  const first = await stored(page);
+  check("first visit: nothing in localStorage", Object.values(first).every((v) => v === null), JSON.stringify(first));
+  check("the key field says where the key goes", await page.getByText("Stored in this browser only; sent only to api.anthropic.com.").isVisible());
+  check("first visit: the default prompts are filled in", (await thinker.inputValue()).length > 0 && (await move.inputValue()).length > 0);
+  const form = {
+    map: await map.inputValue(),
+    seed: await seed.inputValue(),
+    slots: await slots.inputValue(),
+    doerOnly: await doerOnly.inputValue(),
+    duration: await duration.inputValue(),
+    seconds: await text(page.locator(".ui-seconds")),
+  };
+  check(
+    "first visit: the default form, arena-1, seed 1, 8 slots, 0 doer-only, 6000 ticks shown as 300 s",
+    isDeepStrictEqual(form, { map: "arena-1", seed: "1", slots: "8", doerOnly: "0", duration: "6000", seconds: "= 300 s" }),
+    JSON.stringify(form),
+  );
+  check(
+    "no key: prompted slots disabled at 0, so 8 bots, and a hint offers doer-only slots",
+    (await prompted.isDisabled()) && (await prompted.inputValue()) === "0" && (await text(bots)) === "4 wanderers, 4 campers" && (await page.locator(".ui-nokey").isVisible()),
+    `bots "${await text(bots)}"`,
+  );
+
+  // Type a key and save it, edit the prompts, set 8 slots / 1 prompted.
+  await key.fill(SMOKE_KEY);
+  await saveKey.click();
+  check("a saved key enables the prompted input and hides the hint", (await prompted.isEnabled()) && (await page.locator(".ui-nokey").isHidden()));
+  const prompt = "Smoke test: hold the north wall and shoot first.";
+  await thinker.fill(prompt);
+  await move.fill("Smoke: strafe left and right.");
+  await seed.fill("4242");
+  await slots.fill("8");
+  await prompted.fill("1");
+  check("the prompt counter follows the text", (await text(page.locator("#ui-thinker-count"))) === `${prompt.length} / 8000`, await text(page.locator("#ui-thinker-count")));
+  check("8 slots with 1 prompted leaves 7 bots", (await text(bots)) === "4 wanderers, 3 campers", await text(bots));
+  const saved = await stored(page);
+  check(
+    "localStorage holds the key as text, the prompts and the form as JSON, under kbattle:v1:*",
+    saved[STORED.key] === SMOKE_KEY && parsed(saved[STORED.prompts]).thinkerSystem === prompt && parsed(saved[STORED.config]).seed === 4242,
+    JSON.stringify(saved),
+  );
+
+  // Reload: everything comes back.
+  await page.reload();
+  await page.waitForFunction(() => window.__kbattle?.ready === true, undefined, { timeout: 20_000 });
+  check("reload keeps the key", (await key.inputValue()) === SMOKE_KEY);
+  check("reload keeps the prompts", (await thinker.inputValue()) === prompt && (await move.inputValue()) === "Smoke: strafe left and right.");
+  const after = { seed: await seed.inputValue(), slots: await slots.inputValue(), prompted: await prompted.inputValue(), enabled: await prompted.isEnabled() };
+  check("reload keeps seed 4242, 8 slots, 1 prompted (enabled)", isDeepStrictEqual(after, { seed: "4242", slots: "8", prompted: "1", enabled: true }), JSON.stringify(after));
+
+  // Clear key: gone from the field and from localStorage; prompted slots off.
+  await page.getByRole("button", { name: "Clear key" }).click();
+  check("Clear key empties the field and removes the key from localStorage", (await key.inputValue()) === "" && (await stored(page))[STORED.key] === null);
+  check("without a key the prompted input is disabled and shows 0", (await prompted.isDisabled()) && (await prompted.inputValue()) === "0");
+
+  // Run match waits for v4.2; the check it will run is reachable through the debug hook.
+  check("Run match is disabled", (await run.getAttribute("disabled")) !== null);
+  const ok = await validateForm(page);
+  check('validateForm() says "Config OK" and shows it under Run match', ok === "Config OK" && (await text(result)) === "Config OK", JSON.stringify(ok));
+
+  // The key back brings the prompted slot back; 9 prompted of 8 is a readable error.
+  await key.fill(SMOKE_KEY);
+  await saveKey.click();
+  check("saving the key again brings back the 1 prompted slot", (await prompted.isEnabled()) && (await prompted.inputValue()) === "1");
+  await page.screenshot({ path: join(outDir, "ui-shell.png"), fullPage: true });
+  await prompted.fill("9");
+  const error = await validateForm(page);
+  const want = "1 problem:\nprompted: 9 prompted slots do not fit in 8 slots";
+  check("9 prompted of 8 slots: a readable error under Run match", error === want && (await result.textContent()) === want, JSON.stringify(error));
+  check("the prompted input is marked invalid", (await prompted.getAttribute("aria-invalid")) === "true");
+  await page.locator(".ui-match").screenshot({ path: join(outDir, "ui-shell-error.png") });
+  await prompted.fill("1");
+  check("a fixed form is OK again", (await validateForm(page)) === "Config OK" && (await prompted.getAttribute("aria-invalid")) !== "true");
+
+  // Reset to defaults: the default prompts again, in the fields and in storage.
+  await page.getByRole("button", { name: "Reset to defaults" }).click();
+  const reset = parsed((await stored(page))[STORED.prompts]);
+  check(
+    "Reset to defaults restores the default prompts",
+    (await thinker.inputValue()) !== prompt && (await thinker.inputValue()).length > 0 && reset.thinkerSystem === (await thinker.inputValue()),
+  );
+
+  // Random picks another seed and saves it.
+  await page.getByRole("button", { name: "Random" }).click();
+  const randomSeed = Number(await seed.inputValue());
+  check("Random sets a whole seed and saves it", Number.isInteger(randomSeed) && parsed((await stored(page))[STORED.config]).seed === randomSeed, String(randomSeed));
 }
 
 // ---- files (v2.5) ----
@@ -660,6 +783,10 @@ async function main(): Promise<void> {
     await frames2(page);
     await checkPlayback(page);
     await page.screenshot({ path: join(outDir, "page.png") });
+    // The UI shell reloads the page, so it runs before the files, which check that an upload
+    // does not; the marker goes back after it.
+    await checkUiShell(page);
+    await page.evaluate("window.__smokeMarker = true");
     await checkFiles(page);
 
     check("zero console errors", errors.length === 0, errors.join(" | "));
