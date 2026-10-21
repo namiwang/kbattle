@@ -1,8 +1,13 @@
+import type { AiBinding } from "./decision/clef";
 import { decide } from "./routes/decide";
 
 export interface Env {
   // Static assets binding (web/dist). Only fetch is used, which keeps test fakes small.
   ASSETS: Pick<Fetcher, "fetch">;
+  /** [vars]: which doer answers /decide. "clef" is Workers AI (needs AI); anything else, or nothing, is the mock. */
+  DOER_BACKEND?: string;
+  /** Workers AI, bound only under `--env live` (wrangler.toml, ISSUES I-001). */
+  AI?: AiBinding;
 }
 
 /** Browser origins allowed to call /decide cross-origin: the Vite dev server. The deployed app is same-origin. */
@@ -18,7 +23,7 @@ export default {
       const response = withCors(
         request,
         request.method === "POST"
-          ? await decide(request)
+          ? await decide(request, env)
           : new Response(null, { status: 204, headers: PREFLIGHT_HEADERS }),
       );
       // One line per request, never the body: method, path, status, duration, declared size.
