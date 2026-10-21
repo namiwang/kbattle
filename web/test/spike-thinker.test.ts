@@ -23,7 +23,7 @@ describe("spike page state", () => {
   it("keeps the last plan and logs the fault on invalid output", () => {
     const fault: ThinkerResult = {
       ok: false,
-      error: { kind: "invalid_output", message: "the reply is not JSON (stop_reason: max_tokens)" },
+      error: { kind: "invalid_output", fatal: false, message: "the reply is not JSON (stop_reason: max_tokens)" },
     };
     const state = applyResult(applyResult(initialSpikeState, ok(PLAN_A), 900), fault, 300);
 
@@ -33,10 +33,21 @@ describe("spike page state", () => {
     expect(state.log[1]).toContain("kept the last plan");
   });
 
+  it("stops the spike on any fatal error, such as 402 billing (ISSUES I-012)", () => {
+    const fault: ThinkerResult = {
+      ok: false,
+      error: { kind: "billing", fatal: true, status: 402, message: "billing_error: insufficient credit" },
+    };
+    const state = applyResult(applyResult(initialSpikeState, ok(PLAN_A), 900), fault, 120);
+
+    expect(state.stopped).toContain("402");
+    expect(state.plan).toEqual(PLAN_A);
+  });
+
   it("stops the spike with a visible error on auth", () => {
     const fault: ThinkerResult = {
       ok: false,
-      error: { kind: "auth", status: 401, message: "authentication_error: invalid x-api-key" },
+      error: { kind: "auth", fatal: true, status: 401, message: "authentication_error: invalid x-api-key" },
     };
     const state = applyResult(applyResult(initialSpikeState, ok(PLAN_A), 900), fault, 120);
 

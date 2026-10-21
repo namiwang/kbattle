@@ -116,7 +116,7 @@ which then ignores the port and starts on 5173. Use
 inside Playwright `page.evaluate` callbacks break under tsx (esbuild's
 `__name` helper is missing in the page); pass a string script instead.
 
-## I-012 Which thinker errors stop the match — resolved (Nami may override)
+## I-012 Which thinker errors stop the match — resolved, implemented in v3.2 (Nami may override)
 
 Row 29 stops the match on 401/403. v0.6 found two neighbours that leave
 the match silently stuck on its first plan: 402 (no credit on the key) and
@@ -125,15 +125,17 @@ the match silently stuck on its first plan: 402 (no credit on the key) and
 keeps the last plan. Cost if wrong: a match stops that could have limped
 on with a stale plan.
 
-## I-013 Anthropic request shape is model-specific — open (v3.2, v3.5)
+## I-013 Anthropic request shape is model-specific — half resolved (v3.2 done; v3.5 re-checks)
 
 With `@anthropic-ai/sdk` 0.135.0 the provider sends
 `output_config: { effort: "low", format: { type: "json_schema" } }` and
 `thinking: { type: "disabled" }`. The agent reports that disabling
 thinking is accepted by Haiku 5.5 but rejected (400) by Sonnet 5.5 and
-Opus 5.5, which would turn every call into a `server` fault. v3.2 must
-make the thinking parameter conditional on the model, and v3.5's model
-choice must re-run the fault tests. The 600-token `max_tokens` is below
+Opus 5.5, which would turn every call into a `server` fault. v3.2 made the
+thinking parameter model-specific (`thinkingParamFor`: Haiku 5.5 →
+disabled, Sonnet 5.5 → `between_tools`, Opus 5.5 → omitted, which means
+Opus always thinks inside the 600-token `max_tokens`); v3.5 must re-run
+the fault tests and size `max_tokens` for the chosen model. The 600-token `max_tokens` is below
 what `Plan` allows, so the harness prompt must ask for short output.
 Spike bundle is 419 KB (102 KB gzipped), mostly the SDK.
 

@@ -31,7 +31,7 @@ export function applyResult(state: SpikeState, result: ThinkerResult, ms: number
   }
   const { kind, status, message } = result.error;
   const fault = `${kind}${status === undefined ? "" : ` ${status}`} after ${ms} ms: ${message}`;
-  if (kind === "auth") {
+  if (result.error.fatal) {
     return { ...state, stopped: fault, log: [...state.log, `${fault}; spike stopped (row 29)`] };
   }
   return { ...state, log: [...state.log, `${fault}; kept the last plan (§5.5)`] };
