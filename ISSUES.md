@@ -83,3 +83,14 @@ README.md` says not to write one for routine work. Decision: a note is
 written when a milestone deviated from its plan text, measured something,
 or made a decision; routine milestones are recorded by their commits and
 by this file. Cost if wrong: a few missing notes, recoverable from git.
+
+## I-009 Strictness of third-party response schemas, Worker bundle size — resolved
+
+v0.3 made every wire schema strict. `DecideRequest` stays strict (it is
+the abuse boundary of the Worker). `DoerAnswer` and `Plan` validate
+responses from Clef and from the thinker model, so a harmless extra key
+would fault every call; v0.4 changes them to strip unknown keys instead.
+Cost if wrong: an extra key silently dropped. Separately, a Worker that
+imports the zod schemas bundles at about 110 KB minified (33 KB gzipped),
+above the plan's 50 KB "budget snapshot" for v0.4; accepted, the budget
+is advisory and the gzipped size is what ships.
