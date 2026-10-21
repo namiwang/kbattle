@@ -8,13 +8,17 @@
     "build": "vite build",
     "test": "vitest run --passWithNoTests",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts",
+    "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
     "@kbattle/brain": "workspace:*",
-    "@kbattle/core": "workspace:*"
+    "@kbattle/core": "workspace:*",
+    "pixi.js": "8.22.0"
   },
   "devDependencies": {
+    "@types/node": "^22.20.5",
+    "playwright": "1.63.0",
     "vite": "^8.3.4"
   }
 }
