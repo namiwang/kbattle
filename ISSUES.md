@@ -177,3 +177,13 @@ With `TURN_RATE_DPS = 180` and a decision every 10 ticks (0.5 s), a
 lower `TURN_RATE_DPS` (120 → 60° per decision; 180° about-face in 1.5 s)
 or keep it and rely on `face_target`. Decide while tuning the default
 prompts in v3.4 by watching replays. Cost if wrong: coarse scanning.
+
+## I-018 Log size with full probability maps — resolved (v3.1)
+
+Bot matches stay under 1.8 MB, but a synthetic worst case (16 agents alive
+for 6,000 ticks, Clef-shaped answers with full probability maps) reaches
+6.65 MB, above the 5 MB budget. Decision: the browser doer client rounds
+probabilities and confidence to 4 decimals before returning answers, so
+the live run and the replay derive actions from the same numbers and
+byte-identical replay holds. Cost if wrong: a probability within 0.00005
+of a threshold is rounded onto it (irrelevant in practice).
