@@ -136,3 +136,12 @@ make the thinking parameter conditional on the model, and v3.5's model
 choice must re-run the fault tests. The 600-token `max_tokens` is below
 what `Plan` allows, so the harness prompt must ask for short output.
 Spike bundle is 419 KB (102 KB gzipped), mostly the SDK.
+
+## I-014 Event ticks are unbounded in the log schema — open (v1.5)
+
+`MatchLogSchema` caps `config.durationTicks` at 60,000 but not event
+ticks, so a crafted file with a tick of 1e8 makes the viewer's per-tick
+index hang the tab. v1.5 adds a refinement: every event tick is an
+integer within `0..config.durationTicks`, and the writer guarantees it
+(cancelled runs end early, never late). Cost if wrong: a hostile file
+still parses; the viewer could add its own guard.
