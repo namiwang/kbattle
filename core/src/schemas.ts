@@ -229,15 +229,20 @@ const SpawnEvent = z.object({
 /**
  * Positions after the step of `tick`, so the renderer never runs the sim.
  * agents: [id, x, y, facing, hp] for agents alive after this tick; a dead agent
- * is left out of every later Tick. bullets: [id, x, y]; a bullet that hit
- * something stops appearing. The log writer (v1.5) rounds x and y to 2 decimals
- * and facing to 1; the schema does not enforce that.
+ * is left out of this and every later Tick. bullets: [id, x, y]; a bullet that
+ * hit something stops appearing. near: [target, fromX, fromY] for each bullet
+ * that passed within INCOMING_RADIUS_M of a living agent this tick without
+ * hitting it, from = the shooter's position, so a replay can rebuild incoming
+ * fire (ISSUES I-016); present only when there is one. The log writer
+ * (core/src/sim/log.ts) rounds x and y to 2 decimals and facing to 1; the schema
+ * does not enforce that.
  */
 const TickEvent = z.object({
   kind: z.literal("Tick"),
   tick: TickNumber,
   agents: z.array(z.tuple([AgentId, z.number(), z.number(), z.number(), z.number()])),
   bullets: z.array(z.tuple([BulletId, z.number(), z.number()])),
+  near: z.array(z.tuple([AgentId, z.number(), z.number()])).optional(),
 });
 
 const ShotEvent = z.object({ kind: z.literal("Shot"), tick: TickNumber, agent: AgentId, bullet: BulletId });
@@ -305,7 +310,11 @@ export const EventSchema = z.discriminatedUnion("kind", [
 ]);
 export type Event = z.infer<typeof EventSchema>;
 
-/** The replay file (principle 7): one match, enough to watch it and to reproduce it. */
+/**
+ * The replay file (principle 7): one match, enough to watch it and to reproduce
+ * it. Every event happens within the match: its tick is at most
+ * config.durationTicks (a viewer indexes ticks 0..last, ISSUES I-014).
+ */
 export const MatchLogSchema = z
   .object({
     version: z.literal(1),
@@ -314,7 +323,14 @@ export const MatchLogSchema = z
     prompts: PromptsSchema,
     events: z.array(EventSchema),
   })
-  .refine((log) => log.seed === log.config.seed, { path: ["seed"], message: "seed must equal config.seed" });
+  .refine((log) => log.seed === log.config.seed, { path: ["seed"], message: "seed must equal config.seed" })
+  .superRefine((log, ctx) => {
+    const last = log.config.durationTicks;
+    log.events.forEach((event, i) => {
+      if (event.tick <= last) return;
+      ctx.addIssue({ code: "custom", path: ["events", i, "tick"], message: `tick is after config.durationTicks (${last})` });
+    });
+  });
 export type MatchLog = z.infer<typeof MatchLogSchema>;
 
 /** The five boundary schemas by name (§5.3): `schemas.MatchLog.parse(json)`. */
