@@ -47,8 +47,8 @@ describe("spawn: the world at tick 0", () => {
     }
   });
 
-  it("starts with empty per-tick facts: no shots, hits or near misses yet (R6)", () => {
-    expect(state.lastTick).toEqual({ shots: [], hits: [], nearMisses: [] });
+  it("starts with an empty perception window: no steps, so no shots, hits or near misses yet (R6, R15)", () => {
+    expect(state.recent).toEqual([]);
   });
 
   it("faces every agent toward the arena center", () => {

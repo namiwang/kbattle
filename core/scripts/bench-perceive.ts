@@ -6,18 +6,20 @@
 //
 // Worlds: 16 agents on arena-1 (4 obstacles) and on arena-1 plus four more
 // boxes (8 obstacles); "played" = spawned then 300 ticks of seeded random
-// actions (bullets, shots, hits, near misses in lastTick), "dense" = all 16
-// alive in a 50 m ring facing its center, so nearly every pair needs a
-// line-of-sight test, with every agent firing and walking this tick.
+// actions (bullets, and shots, hits and near misses in the perception window),
+// "dense" = all 16 alive in a 50 m ring facing its center, so nearly every
+// pair needs a line-of-sight test, all walking, and every agent's shot plus
+// hits and near misses spread over the window's DOER_INTERVAL_TICKS steps (R15).
 
 import { headingTo } from "../src/angles";
+import { DOER_INTERVAL_TICKS } from "../src/constants";
 import { getMap } from "../src/maps";
 import type { MapSpec, Slot } from "../src/schemas";
 import { perceive } from "../src/sim/perceive";
 import { createRng, nextFloat, type RngState } from "../src/sim/rng";
 import { step } from "../src/sim/step";
 import { spawn } from "../src/sim/world";
-import { MOVE_CHOICES, TURN_CHOICES, type Action, type WorldState } from "../src/types";
+import { MOVE_CHOICES, TURN_CHOICES, type Action, type TickFacts, type WorldState } from "../src/types";
 
 const arena1 = getMap("arena-1");
 const box = (x: number, y: number) => ({
@@ -56,12 +58,12 @@ function dense(map: MapSpec): WorldState {
     const pos = { x: 50 + 25 * Math.cos(angle) + 0.3 * i, y: 50 + 25 * Math.sin(angle) };
     return { ...a, pos, facing: headingTo(pos, center), moved: true };
   });
-  const lastTick = {
-    shots: agents.map((a) => ({ agent: a.id, pos: a.pos })),
+  const recent: TickFacts[] = Array.from({ length: DOER_INTERVAL_TICKS }, (_, step) => ({
+    shots: agents.filter((_, i) => i % DOER_INTERVAL_TICKS === step).map((a) => ({ agent: a.id, pos: a.pos })),
     hits: agents.slice(0, 4).map((a, i) => ({ target: a.id, from: agents[i + 8]!.pos })),
     nearMisses: agents.slice(4, 8).map((a, i) => ({ target: a.id, from: agents[i + 10]!.pos })),
-  };
-  return { ...base, agents, lastTick };
+  }));
+  return { ...base, agents, recent };
 }
 
 function bench(label: string, state: WorldState): void {

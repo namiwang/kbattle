@@ -56,11 +56,9 @@ describe("@kbattle/core entry point", () => {
     const map = core.getMap("arena-1");
     expect(core.collision.hasLineOfSight({ x: 35, y: 24 }, { x: 65, y: 24 }, map.obstacles)).toBe(false);
     expect(core.collision.segmentCircleT({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 5, y: 0 }, 1)).toBeCloseTo(0.4, 12);
-    const facts: core.TickFacts = core.spawn(
-      { mapId: "arena-1", seed: 1, durationTicks: 10, slots: [{ kind: "doer" }, { kind: "doer" }] },
-      map,
-    ).lastTick;
-    expect(facts).toEqual({ shots: [], hits: [], nearMisses: [] });
+    const world = core.spawn({ mapId: "arena-1", seed: 1, durationTicks: 10, slots: [{ kind: "doer" }, { kind: "doer" }] }, map);
+    const facts: core.TickFacts[] = core.step(world, {}).state.recent;
+    expect([world.recent, facts]).toEqual([[], [{ shots: [], hits: [], nearMisses: [] }]]);
   });
 
   it("exposes the v1.3 perception: perceive on a world or on the PerceptionState subset", () => {

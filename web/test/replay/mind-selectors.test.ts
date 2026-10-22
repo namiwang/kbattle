@@ -388,11 +388,11 @@ describe("perceptionLines", () => {
     return perceptionLines(perceive(state, agent), state.agents.find((a) => a.id === agent)?.alive ?? false);
   };
 
-  it("tick 115: self, a1 straight ahead, the hit's source as a bearing", () => {
+  it("tick 115: self, a1 straight ahead, its shot of tick 111 heard (the window, R15), the hit's source as a bearing", () => {
     expect(at(115)).toEqual({
       self: "26.50, 50.00 · facing 0.0° · HP 80 · kills 0 · 4.3 s left",
       visible: ["a1 · 0° · 41 m · moving"],
-      heard: [],
+      heard: ["shot · 0° · mid"],
       incoming: ["0°"],
     });
   });

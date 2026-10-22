@@ -24,15 +24,17 @@
     ],
     "nextBulletId": 44,
     "rng": { "s": 3 },
-    "lastTick": {
-      "shots": [
-        { "agent": "a0", "pos": { "x": 5, "y": 20 } },
-        { "agent": "a1", "pos": { "x": 75, "y": 20 } },
-        { "agent": "a2", "pos": { "x": 90, "y": 20 } },
-        { "agent": "a4", "pos": { "x": 35, "y": 25 } }
-      ],
-      "hits": [],
-      "nearMisses": []
-    }
+    "recent": [
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [{ "agent": "a0", "pos": { "x": 5, "y": 20 } }, { "agent": "a1", "pos": { "x": 75, "y": 20 } }, { "agent": "a2", "pos": { "x": 90, "y": 20 } }, { "agent": "a4", "pos": { "x": 35, "y": 25 } }], "hits": [], "nearMisses": [] }
+    ]
   }
 }

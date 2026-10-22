@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { AGENT_HP, BULLET_DAMAGE, INCOMING_RADIUS_M } from "../../src/constants";
+import { AGENT_HP, BULLET_DAMAGE, DOER_INTERVAL_TICKS, INCOMING_RADIUS_M } from "../../src/constants";
 import { step, type StepEvent } from "../../src/sim/step";
-import type { Action, Agent, WorldState } from "../../src/types";
+import type { Action, Agent, TickFacts, WorldState } from "../../src/types";
 import {
   circleInsideArena,
   circleOverlapsPolygon,
@@ -20,6 +20,9 @@ import { bulletWallGolden, GOLDEN_DIR } from "./golden-scenarios";
 import { arena1, makeAgent, makeBullet, makeWorld } from "./helpers";
 
 // Geometry under the sim (R4, R5, R7). Segments are p0 → p1 with t in [0, 1].
+
+/** The facts of the step that produced `state`: the newest entry of its perception window (R6, R15). */
+const newest = (state: WorldState): TickFacts | undefined => state.recent.at(-1);
 
 const square = [
   { x: 0, y: 0 },
@@ -279,8 +282,8 @@ describe("bullets against agents", () => {
     expect(events).toEqual([{ kind: "Hit", tick: 2, bullet: "b0", target: "a1", damage: BULLET_DAMAGE }]);
     expect(agent(state, "a1").hp).toBe(AGENT_HP - BULLET_DAMAGE);
     expect(state.bullets).toEqual([]);
-    expect(state.lastTick.hits).toEqual([{ target: "a1", from: { x: 40, y: 50 } }]);
-    expect(state.lastTick.nearMisses).toEqual([]); // the hit target is not also near-missed
+    expect(newest(state)?.hits).toEqual([{ target: "a1", from: { x: 40, y: 50 } }]);
+    expect(newest(state)?.nearMisses).toEqual([]); // the hit target is not also near-missed
   });
 
   it("the fifth hit emits Death with the killer, kills the target at that tick and counts the kill", () => {
@@ -363,17 +366,17 @@ describe("near misses (R4 step 5, R6)", () => {
     expect(INCOMING_RADIUS_M).toBe(2);
     const { state, events } = step(pass(1.5), {});
     expect(events).toEqual([]);
-    expect(state.lastTick.nearMisses).toEqual([{ target: "a1", from: { x: 10, y: 50 } }]);
-    expect(step(pass(2), {}).state.lastTick.nearMisses).toHaveLength(1); // exactly 2 m counts
+    expect(newest(state)?.nearMisses).toEqual([{ target: "a1", from: { x: 10, y: 50 } }]);
+    expect(newest(step(pass(2), {}).state)?.nearMisses).toHaveLength(1); // exactly 2 m counts
   });
 
   it("one passing farther away does not", () => {
-    expect(step(pass(2.5), {}).state.lastTick.nearMisses).toEqual([]);
+    expect(newest(step(pass(2.5), {}).state)?.nearMisses).toEqual([]);
   });
 
   it("the shooter is never near-missed by its own bullet", () => {
     const world = makeWorld({ agents: [makeAgent(0, { x: 50, y: 50 }, 0, { action: shoot })] });
-    expect(step(world, {}).state.lastTick.nearMisses).toEqual([]);
+    expect(newest(step(world, {}).state)?.nearMisses).toEqual([]);
   });
 
   it("only the part of the path travelled before a wall counts", () => {
@@ -385,12 +388,20 @@ describe("near misses (R4 step 5, R6)", () => {
     });
     const { state } = step(world, {});
     expect(state.bullets).toEqual([]);
-    expect(state.lastTick.nearMisses).toEqual([]);
+    expect(newest(state)?.nearMisses).toEqual([]);
   });
 
-  it("lastTick describes only the tick just stepped", () => {
-    const first = step(pass(1.5), {}).state;
-    expect(first.lastTick.nearMisses).toHaveLength(1);
-    expect(step(first, {}).state.lastTick).toEqual({ shots: [], hits: [], nearMisses: [] });
+  it("the window keeps the newest DOER_INTERVAL_TICKS steps, oldest first; older ones drop out (R15)", () => {
+    const empty: TickFacts = { shots: [], hits: [], nearMisses: [] };
+    const missed: TickFacts = { ...empty, nearMisses: [{ target: "a1", from: { x: 10, y: 50 } }] };
+    let state = step(pass(1.5), {}).state;
+    expect(state.recent).toEqual([missed]); // step 1: the window holds that step alone
+    state = step(state, {}).state;
+    expect(state.recent).toEqual([missed, empty]); // step 2 is the newest, step 1 still in the window
+    for (let t = 3; t <= DOER_INTERVAL_TICKS; t++) state = step(state, {}).state;
+    expect(state.recent).toHaveLength(DOER_INTERVAL_TICKS);
+    expect(state.recent[0]).toEqual(missed); // step 1 is the oldest of steps 1..10
+    state = step(state, {}).state;
+    expect(state.recent).toEqual(Array.from({ length: DOER_INTERVAL_TICKS }, () => empty)); // step 11 pushed step 1 out
   });
 });

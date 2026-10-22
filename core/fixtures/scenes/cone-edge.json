@@ -12,6 +12,17 @@
     "bullets": [],
     "nextBulletId": 0,
     "rng": { "s": 1 },
-    "lastTick": { "shots": [], "hits": [], "nearMisses": [] }
+    "recent": [
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] },
+      { "shots": [], "hits": [], "nearMisses": [] }
+    ]
   }
 }

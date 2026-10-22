@@ -94,7 +94,7 @@ describe("firing in a step", () => {
     expect(start.x).toBeCloseTo(muzzle.x, 12);
     expect(start.y).toBeCloseTo(muzzle.y, 12);
     expect(len(bullet!.vel)).toBeCloseTo(3, 12);
-    expect(state.lastTick.shots).toEqual([{ agent: "a0", pos: { x: 50, y: 50 } }]);
+    expect(state.recent).toEqual([{ shots: [{ agent: "a0", pos: { x: 50, y: 50 } }], hits: [], nearMisses: [] }]);
   });
 
   it("draws the spread from state.rng, one draw per shot", () => {
@@ -133,7 +133,7 @@ describe("firing in a step", () => {
     const muzzle = add(a0.pos, scale(fromAngle(39), 0.6));
     expect(start.x).toBeCloseTo(muzzle.x, 12);
     expect(start.y).toBeCloseTo(muzzle.y, 12);
-    expect(state.lastTick.shots).toEqual([{ agent: "a0", pos: a0.pos }]);
+    expect(state.recent.at(-1)?.shots).toEqual([{ agent: "a0", pos: a0.pos }]);
   });
 
   it("several shooters fire in slot order with ascending bullet ids", () => {

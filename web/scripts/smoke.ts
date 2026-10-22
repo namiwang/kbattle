@@ -31,6 +31,7 @@ import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import {
   botProviders,
+  DOER_INTERVAL_TICKS,
   eventsOfKind,
   getMap,
   MATCH_DURATION_TICKS,
@@ -1662,23 +1663,27 @@ async function realMatchLog(): Promise<MatchLog> {
 }
 
 /**
- * Where the fire on `agent` came from at `tick`, read straight off the log, not through
- * stateFromTick: the owner of each bullet that hit it where this tick's row puts the owner, then
- * the row's `near` entries for it. Null when an owner is gone from the row (the log has no
- * position for it then).
+ * Where the fire on `agent` that perceive reports at `tick` came from, read straight off the log,
+ * not through stateFromTick. Perception holds the last DOER_INTERVAL_TICKS steps (R15), so: for
+ * each tick of that window, oldest first, the owner of each bullet that hit it where that tick's
+ * row puts the owner; then, again oldest first, the rows' `near` entries for it. Null when an
+ * owner is gone from its row (the log has no position for it then).
  */
 function fireFrom(index: LogIndex, tick: number, agent: string): Vec2[] | null {
-  const row = index.byTick(tick);
-  const sources: Vec2[] = [];
-  for (const event of index.eventsAt(tick)) {
-    if (event.kind !== "Hit" || event.target !== agent) continue;
-    const owner = index.shots.get(event.bullet)?.agent;
-    const at = row.agents.find(([id]) => id === owner);
-    if (!at) return null;
-    sources.push({ x: at[1], y: at[2] });
+  const hits: Vec2[] = [];
+  const near: Vec2[] = [];
+  for (let s = Math.max(1, tick - DOER_INTERVAL_TICKS + 1); s <= tick; s++) {
+    const row = index.byTick(s);
+    for (const event of index.eventsAt(s)) {
+      if (event.kind !== "Hit" || event.target !== agent) continue;
+      const owner = index.shots.get(event.bullet)?.agent;
+      const at = row.agents.find(([id]) => id === owner);
+      if (!at) return null;
+      hits.push({ x: at[1], y: at[2] });
+    }
+    for (const [target, x, y] of row.tick === s ? (row.near ?? []) : []) if (target === agent) near.push({ x, y });
   }
-  for (const [target, x, y] of row.tick === tick ? (row.near ?? []) : []) if (target === agent) sources.push({ x, y });
-  return sources;
+  return [...hits, ...near];
 }
 
 async function checkRealMatch(page: Page, baseline: Leaks): Promise<void> {

@@ -69,10 +69,10 @@ export interface Bullet {
 }
 
 /**
- * What happened during the last step that perception reads and the state keeps
- * nowhere else (sim ruling R6): tick t's shots, hits and near misses, rewritten
- * by every step, so `perceive(state, agent)` at tick t stays pure. `from` is the
- * shooter's position at tick t, which perception reports as a bearing.
+ * What happened during one step that perception reads and the state keeps
+ * nowhere else (sim rulings R6, R15): step t's shots, hits and near misses.
+ * `pos` and `from` are where the shooter stood at tick t (after its move), which
+ * perception reports as a bearing.
  */
 export interface TickFacts {
   shots: { agent: AgentId; pos: Vec2 }[]; // who fired, standing where
@@ -88,7 +88,13 @@ export interface WorldState {
   bullets: Bullet[];
   nextBulletId: number; // n of the next `b<n>`
   rng: RngState; // seeded from MatchConfig.seed; the spawn shuffle and bullet spread draw from it (R3)
-  lastTick: TickFacts; // what happened during the step that produced `tick`
+  /**
+   * The perception window (R15): the facts of the newest steps, oldest first, at
+   * most DOER_INTERVAL_TICKS of them; the last entry is the step that produced
+   * `tick`, and spawn starts it empty. Every slot decides once per
+   * DOER_INTERVAL_TICKS ticks (R1), so each fact reaches exactly one decision.
+   */
+  recent: TickFacts[];
 }
 
 /**

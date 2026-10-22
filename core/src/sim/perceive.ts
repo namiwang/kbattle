@@ -1,25 +1,34 @@
 // What one agent knows at one tick (DESIGN.md §3 principle 3, §6.2 Perception;
-// sim rulings R6, R7). perceive is pure: it reads the state and nothing else,
-// writes nothing, and builds a fresh Observation every call. The match loop
-// asks it for each deciding agent, and the replay's mind panel recomputes it
-// from the log (§5.3), so it reads only what a replay can rebuild.
+// sim rulings R6, R7, R15). perceive is pure: it reads the state and nothing
+// else, writes nothing, and builds a fresh Observation every call. The match
+// loop asks it for each deciding agent, and the replay's mind panel recomputes
+// it from the log (§5.3), so it reads only what a replay can rebuild.
+//
+// Shots, hits and near misses come from the perception window, state.recent:
+// the last DOER_INTERVAL_TICKS steps. Every slot decides once per
+// DOER_INTERVAL_TICKS ticks (R1), so each of them reaches exactly one decision,
+// the first after it, however the step it happened in falls on the cadence.
 //
 // - Vision: living enemies within VISION_RANGE_M, |bearing| ≤ VISION_CONE_DEG / 2,
 //   and in line of sight (the center-to-center segment touches no obstacle edge).
 //   Range and line of sight are the ones face_target uses (step.ts), edges included.
-// - Hearing, through walls: other agents' shots this tick within
-//   HEAR_SHOT_RANGE_M, and living enemies that moved this tick within
-//   HEAR_STEPS_RANGE_M, each as a bearing and a band (near < 20 m, mid < 45 m,
-//   far beyond; HEARING_BANDS_M). Ranges are inclusive.
-// - Incoming: this tick's hits and near misses on the agent, as the bearing of
-//   the shooter's position (TickFacts.from); hits first.
+// - Hearing, through walls: other agents' shots in the window within
+//   HEAR_SHOT_RANGE_M, as the bearing and distance from where the shooter stood
+//   when it fired to where the agent stands now (a shooter dead since is still
+//   heard), and living enemies that moved this tick within HEAR_STEPS_RANGE_M;
+//   each as a bearing and a band (near < 20 m, mid < 45 m, far beyond;
+//   HEARING_BANDS_M). Ranges are inclusive.
+// - Incoming: the window's hits and near misses on the agent, as the bearing of
+//   the shooter's position (TickFacts.from): hits, then near misses, each oldest
+//   first. A bullet that passed close over two steps, or passed close and then
+//   hit, is two entries.
 // - Self: position, facing, HP, kills, time remaining.
 //
 // Rounding: bearings to whole degrees, distances to whole meters, secondsLeft
 // to one decimal (R7); self position to 2 decimals and facing to 1, as the
 // log's Tick rows (R10). Ranges, the cone and bands are tested on unrounded
 // values. Order: visible nearest first; heard shots before steps, each nearest
-// first; ties keep slot (or lastTick) order. A dead agent perceives only itself.
+// first; ties keep slot (or window) order. A dead agent perceives only itself.
 
 import { bearingTo, normalizeDeg } from "../angles";
 import {
@@ -30,7 +39,7 @@ import {
   VISION_CONE_DEG,
   VISION_RANGE_M,
 } from "../constants";
-import type { Agent, AgentId, HearingBand, Observation, WorldState } from "../types";
+import type { Agent, AgentId, HearingBand, Observation, TickFacts, WorldState } from "../types";
 import { dist, type Vec2 } from "../vec2";
 import { hasLineOfSight } from "./collision";
 import { roundTo } from "./round";
@@ -39,11 +48,13 @@ import { roundTo } from "./round";
  * The parts of the world perception reads. A WorldState is one; the mind panel
  * can build one from a log: positions, facing and HP from a Tick row, `alive`
  * from presence in it, kills from Death events, `moved` from consecutive Tick
- * rows, and lastTick from that tick's Shot and Hit events and its Tick row's
- * `near` (ISSUES I-016).
+ * rows, and the window from the Shot and Hit events and Tick rows' `near` of
+ * the last DOER_INTERVAL_TICKS ticks (ISSUES I-016).
  */
-export type PerceptionState = Pick<WorldState, "tick" | "durationTicks" | "map" | "lastTick"> & {
+export type PerceptionState = Pick<WorldState, "tick" | "durationTicks" | "map"> & {
   readonly agents: readonly PerceivedAgent[];
+  /** The perception window, oldest step first (WorldState.recent, R15). */
+  readonly recent: readonly TickFacts[];
 };
 
 /** The agent fields perception reads. */
@@ -80,10 +91,12 @@ export function perceive(state: PerceptionState, agentId: AgentId): Observation 
   }
 
   const shots: { d: number; entry: Heard }[] = [];
-  for (const shot of state.lastTick.shots) {
-    if (shot.agent === me.id) continue;
-    const d = dist(me.pos, shot.pos);
-    if (d <= HEAR_SHOT_RANGE_M) shots.push({ d, entry: { kind: "shot", bearing: bearing(shot.pos), dist: band(d) } });
+  for (const facts of state.recent) {
+    for (const shot of facts.shots) {
+      if (shot.agent === me.id) continue;
+      const d = dist(me.pos, shot.pos);
+      if (d <= HEAR_SHOT_RANGE_M) shots.push({ d, entry: { kind: "shot", bearing: bearing(shot.pos), dist: band(d) } });
+    }
   }
   const steps: { d: number; entry: Heard }[] = [];
   for (const other of state.agents) {
@@ -92,15 +105,18 @@ export function perceive(state: PerceptionState, agentId: AgentId): Observation 
     if (d <= HEAR_STEPS_RANGE_M) steps.push({ d, entry: { kind: "steps", bearing: bearing(other.pos), dist: band(d) } });
   }
 
-  const incoming = [...state.lastTick.hits, ...state.lastTick.nearMisses]
-    .filter((fact) => fact.target === me.id)
-    .map((fact) => ({ bearing: bearing(fact.from) }));
+  const hits: Observation["incoming"] = [];
+  const nearMisses: Observation["incoming"] = [];
+  for (const facts of state.recent) {
+    for (const hit of facts.hits) if (hit.target === me.id) hits.push({ bearing: bearing(hit.from) });
+    for (const miss of facts.nearMisses) if (miss.target === me.id) nearMisses.push({ bearing: bearing(miss.from) });
+  }
 
   return {
     self,
     visible: nearestFirst(seen),
     heard: [...nearestFirst(shots), ...nearestFirst(steps)],
-    incoming,
+    incoming: [...hits, ...nearMisses],
   };
 }
 
