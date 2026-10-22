@@ -1,470 +1,372 @@
-# kbattle — Design
+# Decision Arena — Design
 
-Status: v3.0 draft, 2026-10-21. Scope: tech demo / proof of concept.
+Status: v4.0 draft, 2026-10-22. Scope: tech demo / proof of concept, restructured as a platform.
 
-v3.0 consolidates v2.0 with two outside sources: the RaidRank design docs
-(`research/ai-extraction-fps/en`, a sibling project with code-authored
-agents and server-side async simulation) and the AI-agents-in-games survey
-(`research/ai-agents-in-games.md`). It adds nothing to the game. It adds
-the principles behind the decisions, the conventions a builder would
-otherwise guess, a fault table, the replay "mind panel", and an abuse guard
-for the Worker. §2 remains the decision log. `ASSUMED` marks my calls where
-no answer was given, `FLAG` marks decisions still owed, `[Qn]` points at a
-question asked in chat.
+v4.0 renames kbattle to Decision Arena and turns the one game into the
+first of several arenas. It keeps the PoC question, the fault model, the
+determinism contract and almost all of the code built under v3.0; it
+changes who owns what. v3.0 is in git history (`git show bae7c0f:DESIGN.md`).
+`ASSUMED` marks my calls where no answer was given, `[Qn]` points at a
+question still owed by Nami.
 
 ## 1. Intent
 
-LLM-driven agents play a simplified top-down battle royale. Humans do not
-play; they author an agent's mind and watch the replay.
+Players author agents that play games against scripted bots, run by
+language models of different speeds, and watch the replay to see what
+each agent perceived, what it planned and what it chose. Humans do not
+play; they write, run, watch, edit, run again.
 
-The loop: write prompts → run a match in the browser → watch the replay →
-edit the prompts → run again. Public URL, no accounts.
-
-Why: to learn whether prompt-authored minds, running on a cheap per-tick
-decision model plus an occasional LLM planner, produce play that is visibly
-different from prompt to prompt and better than scripted bots. If yes,
-kbattle grows a ladder. If no, the PoC answered the question cheaply.
+Why the restructure: the shooter was baked into the core, the two models
+had two different code paths, and the name said "battle". The platform
+is the product; the shooter is its first arena, racing a cheap second one
+because its action space is three choices.
 
 ### Goals
 
-- A stranger with an API key writes a thinker prompt, runs a match and
-  watches it without reading code.
-- At any tick the replay shows what an agent perceived, what its thinker
-  last said, and what its doer chose.
-- Prompt changes produce visibly different play.
-- Cost and wall-clock per match are measured numbers, recorded here at P3.
+- A stranger with an API key picks an arena, writes an agent, runs a
+  match and watches it without reading code.
+- Adding an arena touches nothing in the platform: one package, one
+  contract.
+- Every model, from Cloudflare's decision model to a dummy written in
+  TypeScript, is used through one interface, so demos and tests run
+  without keys on the same path as real agents.
+- The PoC question survives the move: prompts and model choices produce
+  visibly different play, better than the bots, at a measured cost.
 
-### Non-goals for the PoC
+### Non-goals for v4.0
 
-Zone, loot, items, armor, meds, ammo, grenades, squads, comms, stances,
-vehicles, live streaming, accounts, ladder, server-side match runner,
-self-hosted models, more than one provider per role.
+Cadence and budget redesign (deferred, see §12), duo and squad modes and
+agent-to-agent talk, the extraction and racing arenas themselves (only
+the contracts must leave room for them), ladder, accounts, server-side
+runner, self-hosting, zone, loot, items.
 
 ### Anti-goals (failure even if it works)
 
-- Prompts do not matter: two different minds play the same way.
-- Prompted agents lose to the scripted bots in every match.
-- The viewer cannot see why an agent did something.
-- A default match takes longer than about 15 minutes of wall-clock.
-- Strangers run up Nami's Workers AI bill.
-- A user's key leaves their browser for anything but the provider.
+- The platform abstraction makes the shooter slower, harder to test or
+  less deterministic than it is today.
+- A contract leaks one arena's assumptions (2D positions, bullets,
+  facing) into the platform.
+- Two shooter arenas duplicate the sim instead of sharing it.
+- Players cannot tell what a role does or which model answers it.
+- The replay stops showing why an agent did something.
 
-## 2. Decision log
+## 2. Vocabulary
 
-Rows 1 to 22 are Nami's decisions from v1 and v2. Rows 23 onward are
-v3.0 additions; each is `ASSUMED` until confirmed.
+| Term | Meaning |
+|------|---------|
+| **Decision Arena** | The product. |
+| **arena** | One game with its own rules and ending: battle royale, extraction, racing. An arena has modes and maps. |
+| **mode** | The team shape inside an arena. `solo` only, for now. |
+| **map** | A hand-authored world for an arena (the shooter's `arena-1` becomes `map-1`). |
+| **agent** | What a player authors for one arena and what stands in the match: its models in their roles plus its prompts and instructions. `a0`…`a15` in a match are agents. In a future duo mode a player fields several agents that can talk. |
+| **model** | Anything that answers structured questions: a Cloudflare model, an Anthropic model, or a dummy, which is TypeScript code (always "go", random, a scripted bot). Models differ in speed, cost and what question types they can answer, not in kind. |
+| **role** | A model's place in an agent. `ASSUMED` two roles: the **actor**, sync, asked the arena's action questions every interval; the **planner**, async, rewriting the agent's plan and scratchpad. |
+| **bot** | An agent whose roles are dummies with scripted behaviour. The quality floor. |
+| **match** | One run of agents in an arena, mode and map with a seed: config, log, replay. |
+| **log** | The one artifact of a match: arena events plus every model call. |
+
+## 3. Decision log
+
+Rows 1 to 34 are v3.0's; the ones that still hold are carried, the
+others superseded as noted. Rows 35 onward are v4.0.
 
 | # | Topic | Decision |
 |---|-------|----------|
-| 1 | Scope | Tech demo / PoC with a public URL. Kept simple, no accounts. |
-| 2 | Who pays | Thinker: the user's own API key, entered in the browser. Doer: Nami's Workers AI binding, reached through the Worker. |
-| 3 | Live vs replay | Replay now. The renderer reads the match log, so live streaming later means streaming the same log. |
-| 4 | End loop | Sandbox matches now; ladder later. |
-| 5 | World | 2D continuous plane, top-down, obstacles block line of sight. |
-| 6 | Match size | 4 to 16 solo agents, configurable. |
-| 7 | Mechanics | HP, death, move, rotate, shoot. No zone, pickups or items. |
-| 8 | Combat | Real simulated bullets: projectiles with velocity, travel time, collision. |
-| 9 | Perception | Vision cone with LOS; hearing (shots, footsteps); own status plus the full static map; incoming-fire bearing. |
-| 10 | Tick | Physics at 50 ms. |
-| 11 | Doer | A decision model (Clef class). Eligible every tick; its last answer persists until replaced. Fixed questions: move, turn, fire, target, escalate. |
-| 12 | Thinker | An LLM with a user-authored system prompt. Writes plan text (injected into the doer state) and a scratchpad it rewrites each call. Runs when the doer escalates or a max interval passes. |
-| 13 | User surface | Thinker system prompt and per-question doer instructions. Not cadence, budgets or model choice. |
-| 14 | Escalation | Every doer call carries an `escalate` question. The doer decides; the runtime only debounces. |
-| 15 | Comms | None. |
-| 16 | Refusals | Treated like invalid output: keep the last plan, log it. |
-| 17 | Stack | TypeScript pnpm monorepo, PixiJS renderer, Cloudflare for everything server-side. |
-| 18 | Models | Hard-coded constants, one per role, behind adapter interfaces so switching is a config change. Doer = `@cf/cloudflare/clef-flash`. `FLAG` thinker model `[Q2]`; candidates and per-match cost in §9. |
-| 19 | Where it runs | The browser runs the match. Server side is one Worker now; R2, Durable Objects and D1 only post-PoC. |
-| 20 | Match end | Last agent alive, or `MATCH_DURATION_TICKS` elapsed. `ASSUMED` ranking: survival, then kills, then HP. Zone is the first post-PoC mechanic. |
-| 21 | Rate limits | Not a design driver. One interval constant plus backoff on 429. |
-| 22 | Self-hosting | Never, not even as a fallback. |
-| 23 | Slots | `ASSUMED` A match is a list of slots; each slot is the user's prompted mind or a scripted bot. One prompt profile in the UI; the config says how many slots use it. Default run: 8 slots, 1 prompted, 7 bots. `[Q5]` |
-| 24 | Conventions | `ASSUMED` Screen convention everywhere: meters, y down, angles in degrees clockwise-positive with 0° = +x. Relative bearings in (−180, 180], positive = to the right. Ticks are the only time unit inside the sim. |
-| 25 | Probability answers | `ASSUMED` A `noul` answer becomes an action by threshold: fire at ≥ 0.5, escalate at ≥ 0.7. Constants, not user-editable. |
-| 26 | Doer cadence | `ASSUMED` `DOER_INTERVAL_TICKS = 10` (one decision per 500 ms of sim time). Every tick stays possible by constant; see §9 for why 10. |
-| 27 | Mind panel | `ASSUMED` The replay viewer shows, for a selected agent at the current tick, its perception, its current plan text, its last doer answers, and timeline markers for thinker calls and faults. |
-| 28 | Worker guard | `ASSUMED` `/decide` is protected by a Cloudflare rate-limiting rule per IP and a daily Workers AI spend cap. No auth, no tokens. `[Q3]` |
-| 29 | Key failure | `ASSUMED` A 401/403 from the thinker provider stops the match and shows the error. Every other thinker failure keeps the last plan (row 16). |
-| 30 | Artifact | `ASSUMED` This file is the design; the task-level implementation plan is a separate document written after this one is approved. `[Q1]` |
-| 31 | Sim clock | `ASSUMED` The doer is lockstep: a tick that is due for doer answers waits for them (or their timeout). The thinker is asynchronous: its plan lands at whatever tick it returns on, and the event records both ticks. A tick never advances faster than real time (`TICK_MIN_WALL_MS = 50`), so thinker latency in sim time equals wall latency instead of being multiplied by sim speed. `[Q6]` |
-| 32 | Doer-only slot | `ASSUMED` A third slot kind, `doer`: the default doer instructions and a fixed plan text, no thinker. It is the control for "is it the thinker or the doer that matters" and lets a visitor without a key run a non-bot match. |
-| 33 | Bot cadence | `ASSUMED` Scripted bots decide every `DOER_INTERVAL_TICKS` like everyone else, so the quality floor is not a reaction-time advantage. |
-| 34 | Clef fallback | `ASSUMED` If the P0 spike shows clef-flash cannot serve the §5.4 shape, or is not available on the account, the doer moves to OpenAI Decisions on the user's key, the Worker shrinks to static hosting, and rows 2, 28 and §5.7 lapse. No Workers AI text model prompted for JSON: the decision-model premise is the point. `[Q4]` |
+| 1–8 | Scope, who pays, replay, sandbox, world, size, mechanics, combat | Carried unchanged for the battle royale arena. |
+| 9–10 | Perception, tick | Carried for the shooter kit; perception covers the last decision interval (v3 ruling R15). |
+| 11–14 | Doer, thinker, user surface, escalation | Superseded by rows 36–40. |
+| 15–17 | Comms, refusals, stack | Carried. |
+| 18 | Models | Superseded by row 38: a catalog, chosen per role by the player. |
+| 19–22 | Where it runs, match end, rate limits, self-hosting | Carried; match end and ranking belong to each arena. |
+| 23 | Slots | Carried: a match is a list of slots, each the player's agent, a doer-only agent or a bot; defaults 8 slots, 1 player agent, 7 bots. |
+| 24–26 | Conventions, probability thresholds, actor cadence | Carried (`DOER_INTERVAL_TICKS` becomes `ACTOR_INTERVAL_TICKS`). |
+| 27 | Mind panel | Carried as the **agent panel**: every role's calls, not two fixed kinds. |
+| 28–29 | Worker guard, key failure | Carried. |
+| 30 | Artifact | Carried: this file plus one short design per arena; `plan/` re-planned after v4.0 is approved. |
+| 31–33 | Sim clock, doer-only slot, bot cadence | Carried: the actor is lockstep, the planner is asynchronous; a doer-only agent is an agent with no planner. |
+| 34 | Clef fallback | Carried for the Cloudflare adapter. |
+| 35 | Name | Decision Arena. Package scope `@decision-arena`. `ASSUMED` the git repo and directory are renamed by Nami; nothing in the code depends on the directory name. `[Q7]` |
+| 36 | Arenas | Battle royale and extraction are two arenas sharing a shooter kit (physics, perception, bots, maps format). Racing is an arena that shares only the platform. Modes are team shapes; `solo` now. |
+| 37 | One model interface | Every model answers structured questions through one contract (§5.3). The Cloudflare decision model is one adapter of it, Anthropic another, dummies a third. No special "decision model" path. |
+| 38 | Models are chosen | The player picks a model per role from a catalog (§5.3). `ASSUMED` catalog at launch: `cloudflare/clef-flash`, `cloudflare/clef`, `anthropic/claude-haiku-5-5`, `anthropic/claude-sonnet-5-5`, and the dummies. Retires v3 row 13's "not model choice". `[Q8]` |
+| 39 | Roles | `ASSUMED` An agent has one sync actor role and an optional async planner role. Sync means the tick waits for the answer up to the timeout; async means the answer lands at the first tick after it arrives and writes to memory. A role's model must support the question types that role is asked; dummies support everything. `[Q10]` |
+| 40 | Cadence | Unchanged from v3 until the budget design: actor every `ACTOR_INTERVAL_TICKS`, planner on escalate after `PLANNER_MIN_GAP_TICKS`, forced after `PLANNER_MAX_GAP_TICKS`. §12 records the token-budget direction discussed and deferred. |
+| 41 | Agents are per arena | An agent belongs to one arena; the prompts, instructions and action questions are the arena's. |
+| 42 | Arena contract | An arena is a package implementing §5.2. The platform knows no arena by name; a registry lists them. |
+| 43 | Log envelope | `MatchLog` version 2: `{ version, arena, mode, config, agents, events }`. Platform events are `Call` and `MatchEnd`; `Tick` carries an arena-defined payload; every other event kind is the arena's. §5.5. |
+| 44 | First slice | `ASSUMED` The battle royale arena running through the new contracts with dummy agents and the replay, byte-identical logs to today's, before any real model is wired. `[Q11]` |
+| 45 | Timing | `ASSUMED` The restructure happens now, before the remaining brains work, so the real models are wired once against the contracts. `[Q11]` |
 
-## 3. Principles
+## 4. Principles
 
-These are the rules behind §2, drawn from what worked across the agent
-integrations in `research/ai-agents-in-games.md` (Mantella, Tales from the
-RimWorld, Living in Calradia, the benchmark environments) and from the
-RaidRank runtime model. A builder facing an undecided question should pick
-the answer that keeps all eight true.
+v3.0's eight hold; they read the same with the new words. Two are added.
 
-1. **The model proposes, the sim decides.** The doer picks from fixed
-   choices; the sim clamps, resolves and is the only writer of world state.
-2. **Fixed, typed action space.** Users author words (a system prompt and
-   per-question instructions), never actions, choices or code.
-3. **Perception is a rule.** An agent knows only what `core.perceive`
-   gives it: cone and LOS vision, hearing, incoming fire, own status, the
-   static map. Nothing else leaks into a prompt.
-4. **Every call is logged.** Each doer and thinker call is an event with
-   its input, output and outcome. Failures are events, not exceptions.
-5. **Fallback is "keep doing that".** A failed or late answer never
-   changes the sim's behavior: the last answer stands. The doer waits only
-   up to its timeout; the thinker never holds a tick (row 31).
-6. **Memory is the scratchpad.** The only persistent agent state is the
-   text the thinker rewrites each call. No vector store, no summaries.
-7. **The match is one file.** The replay JSON is the only artifact; sharing
-   is sending the file; the renderer never runs the sim.
-8. **Nothing to operate.** No accounts, no database, no code execution,
-   one Worker. Add machinery only when the demo earns it.
-
-## 4. Prior art and positioning
-
-| Family | Examples | What kbattle takes | What it leaves |
-|--------|----------|--------------------|----------------|
-| Programming games | Screeps, Battlecode, CodinGame (RaidRank `biz/competitor-analysis.md`) | Tick model: all agents act, then the sim resolves. Replay as the feedback surface. Fixed seeds for comparison. | Code-authored agents, sandboxes, server-side queues, ladders. |
-| RaidRank (sibling design) | `research/ai-extraction-fps/en` | Game-data vocabulary (Vec2, degrees, ticks, sound as data), fault model, replay requirements (timeline, decision markers, fault markers), the sandbox loop. | Budget modes (sim time is decoupled from wall time here), extraction, loot, vehicles, stances, Rails monolith. |
-| LLM game agents | Mantella, Tales from the RimWorld, Calradia, Convai, Gigax | Propose/validate boundary, typed actions, logged calls, deterministic fallback, knowledge boundaries. | Voice, NPC dialogue, generated-code skills. |
-| LLM arenas | Agent Arena, LLM Skirmish, Arena42 (per the RaidRank competitor doc) | Evidence that spectating LLM agents is a product. | Benchmark framing, hosted agents. |
-
-One line: kbattle is the prompt-authored, browser-run, replay-first cousin
-of RaidRank. RaidRank asks "how good is your code"; kbattle asks "how good
-is your prompt".
+1. The model proposes, the sim decides.
+2. Fixed, typed action space; players author words, never actions or code.
+3. Perception is a rule: an agent knows only what the arena's `perceive` gives it.
+4. Every call is logged, with input, output, outcome and usage.
+5. Fallback is "keep doing that".
+6. Memory is the scratchpad: plan text and scratchpad, rewritten by the planner.
+7. The match is one file.
+8. Nothing to operate.
+9. **An arena is a plugin.** The platform ships without a game; it cannot name one.
+10. **A model is a model.** Speed, cost and supported question types are data, not code paths.
 
 ## 5. Architecture
 
 ### 5.1 Packages
 
-| Package | Role |
-|---------|------|
-| `core/` | Types, deterministic sim, perception, scripted bots, maps, and the match loop (tick, collect actions, step, append to log). Pure TypeScript: no I/O, no model calls. Runs in Node and the browser. |
-| `brain/` | Thinker and doer drivers plus the two provider adapters. The only package that makes network calls. |
-| `web/` | Vite app: prompt editors, key entry (localStorage), match config, runs the match, PixiJS replay with mind panel, download and upload of replay JSON. |
-| `worker/` | One Cloudflare Worker: serves `web/` as static assets and exposes `POST /decide` → Workers AI `clef-flash`. |
-
-Split further only when a package becomes hard to test.
-
-### 5.2 Runtime
-
-- The match runs on the browser main thread as an async loop. Model calls
-  are awaited fetches, so the UI stays responsive. Move to a Web Worker
-  only if the UI stutters.
-- Tick rule (row 31): a tick advances when every doer answer due this
-  tick is in or timed out, and at least `TICK_MIN_WALL_MS` of wall time
-  has passed since the previous tick. Thinker results are applied at the
-  start of the first tick after they arrive. So a match runs at real time
-  when the doer is fast, slower when it is not, never faster.
-- Concurrency is bounded by provider rate limits, not the browser; both
-  endpoints speak HTTP/2. See §9 for what the rate limit does to match
-  size.
-- Replays are one JSON file. Sharing is downloading the file.
-- Local dev: `wrangler dev` for the Worker, Vite for the app.
-- Only `worker/` and the adapters in `brain/` touch Cloudflare or provider
-  APIs.
-
-### 5.3 Types, validation and the log
-
-Plain TS interfaces inside the process. Zod only where data enters from
-outside, each schema with its type derived via `z.infer`:
-
-| Boundary | Schema |
-|----------|--------|
-| Doer response, Worker → browser | `DoerAnswer` |
-| Thinker response, LLM → browser | `Plan = { text, scratchpad }` |
-| `/decide` body, browser → Worker | `DecideRequest` |
-| Replay file, disk → browser | `MatchLog` |
-| User config, forms and links | `MatchConfig` |
-
-Internal types: `MapSpec`, `WorldState`, `Agent`, `Bullet`, `Obstacle`,
-`Observation`, `Action`, `Event`.
-
 ```
-MatchConfig = { mapId, seed, durationTicks, slots: Slot[] }
-Slot        = { kind: "prompted" } | { kind: "doer" } | { kind: "bot", bot: "wanderer" | "camper" }
-
-MatchLog = { version, config, seed, prompts, events[] }
-
-Event =
-  | Spawn    { tick, agent, pos, facing }
-  | Tick     { tick, agents: [id, x, y, facing, hp][], bullets: [id, x, y][] }
-  | Shot     { tick, agent, bullet }
-  | Hit      { tick, bullet, target, damage }
-  | Death    { tick, agent, killer }
-  | Doer     { tick, agent, answers, ok, error? }
-  | Thinker  { tick, requestedTick, agent, input, plan, ok, error? }
-  | MatchEnd { tick, ranking }
+platform/core      contracts (Arena, Model, Agent), match loop, memory, log envelope, RNG, replaying model
+platform/models    adapters: cloudflare (through the Worker), anthropic, dummy; the catalog; fault mapping
+platform/web       page shell (keys, arena picker, agent editor, match config, run, replay shell, agent panel, files)
+platform/worker    Cloudflare Worker: static assets, POST /ask → Workers AI, guard
+kits/shooter       the 2D shooter engine: vec2, angles, physics step, bullets, collision, perception, bots, map format, Pixi renderer parts
+arenas/battle-royale   the shooter arena that exists today: rules, ending, ranking, maps, defaults, events, renderer
+arenas/extraction      later; shooter kit + extraction rules
+arenas/racing          later; its own kit or none
 ```
 
-`Tick` carries positions, so the renderer never runs the sim. A bullet that
-hits an obstacle simply stops appearing in `Tick`. Escalation is an answer
-inside `Doer`; failures are a flag on the call events. `Thinker.tick` is
-the tick the plan was applied, `requestedTick` the tick it was asked for;
-the mind panel draws both. `prompts` holds the
-thinker system prompt and doer instructions that produced the match, so a
-replay is reproducible and comparable. Doer state is not logged (about
-200 MB per match); `core.perceive(state, agent)` is pure, so the mind
-panel recomputes it from `Tick`. Expect 3 to 5 MB per 16-agent match.
+`ASSUMED` pnpm workspace globs `platform/*`, `kits/*`, `arenas/*`;
+package names `@decision-arena/core`, `@decision-arena/models`,
+`@decision-arena/web`, `@decision-arena/worker`,
+`@decision-arena/kit-shooter`, `@decision-arena/arena-battle-royale`.
+Libraries stay consumed as TypeScript source (v3 ruling).
 
-### 5.4 The two-model brain
+Dependency rule: `platform/*` never imports from `kits/*` or `arenas/*`
+except `platform/web`, which imports the arena registry to render; the
+registry is the one file that names arenas.
 
-```
-                  every DOER_INTERVAL_TICKS                on escalate / max gap
-observation ───▶  DOER (decision model)  ──escalate?──▶  THINKER (LLM)
-   │               state = perception + plan text          in: system prompt (user),
-   │               questions: move, turn, fire,                scratchpad, perception,
-   │                          target, escalate                 digest of events since last call
-   │               out: one typed answer per question      out: plan text, scratchpad
-   ▼
- action (persists until the next doer answer) ───▶ sim.step every 50 ms
-```
+### 5.2 Arena contract (`platform/core`)
 
-Doer request in Clef's shape (questions keyed by id; `noul` is a
-probability, `choice` takes a criteria map). Verify the exact wire shape
-against the Workers AI docs in P0.
-
-```json
-{
-  "model": "clef-flash",
-  "state": {
-    "self": { "pos": [x, y], "facing": deg, "hp": 72 },
-    "visible": [{ "id": "a3", "bearing": -12, "dist": 38, "moving": true }],
-    "heard": [{ "kind": "shot", "bearing": 140, "dist": "far" }],
-    "incoming": [{ "bearing": 95 }],
-    "plan": "Hold the east wall, engage anyone crossing the gap, retreat north under 40 HP."
-  },
-  "questions": {
-    "move":     { "type": "choice", "instructions": "<user-editable>", "criteria": { "forward": "...", "back": "...", "left": "...", "right": "...", "stop": "..." } },
-    "turn":     { "type": "choice", "instructions": "<user-editable>", "criteria": { "left": "...", "right": "...", "none": "...", "face_target": "..." } },
-    "fire":     { "type": "noul",   "instructions": "<user-editable>" },
-    "target":   { "type": "choice", "instructions": "<user-editable>", "criteria": { "a3": "...", "a7": "...", "none": "..." } },
-    "escalate": { "type": "noul",   "instructions": "fixed by kbattle: the plan no longer fits the situation" }
-  }
+```ts
+interface Arena<Config, State, Obs, Answers, Ev> {
+  id: string;                       // "battle-royale"
+  title: string;
+  modes: readonly string[];         // ["solo"]
+  config: ZodType<Config>;          // mapId, seed, durationTicks, slots, mode, arena-specific fields
+  maps: readonly string[];          // ids; getMap(id) returns the arena's map
+  questions(obs: Obs, memory: Memory): Questions;   // the actor's typed questions for this observation (§5.3)
+  spawn(config: Config, rng: RngState): State;
+  perceive(state: State, agent: AgentId): Obs;      // pure
+  actionFrom(answers: Answers, obs: Obs, previous: Action): Action; // answers → the sim's action, thresholds inside
+  step(state: State, actions: Record<AgentId, Action>): { state: State; events: Ev[] };
+  tick(state: State): unknown;      // the Tick payload the renderer reads (positions, hp, …)
+  ended(state: State): { ranking: AgentId[] } | null;
+  events: ZodType<Ev>;              // discriminated union of the arena's event kinds
+  bots: Record<string, (seed: number, slot: number) => Model>;   // dummies
+  defaults: AgentDefaults;          // planner prompt, actor instructions per question, fixed plan for planner-less agents
+  observationText(obs: Obs): string;   // for the planner's message
+  renderer: ArenaRenderer;          // §5.6
 }
 ```
 
-Rules:
+The platform loop (today's `runMatch`, generalized) owns: slots and
+agents, the interval constants, asking the actor and planner, memory,
+timeouts and aborts, validation and rounding of answers, the log, the
+replaying model, `MatchEnd` and cancellation. The arena owns everything
+in the table above. The loop never reads an arena's state.
 
-- The doer runs every `DOER_INTERVAL_TICKS` ticks, starting at tick 1,
-  one call per agent per due tick, each with `DOER_TIMEOUT_MS`. Answers
-  persist until replaced. Bots and `doer` slots follow the same cadence
-  (rows 32, 33).
-- The thinker's system prompt is a fixed harness prompt (the game, the
-  observation format, the JSON output) followed by the user's prompt. The
-  user never sees or edits the harness part.
-- `noul` answers become actions by threshold (row 25). `face_target` with
-  `target = none` means `none`.
-- `target` choices are built per call from visible enemy ids.
-- Escalation is honored when no thinker call is in flight for that agent
-  and `THINKER_MIN_GAP_TICKS` have passed. `THINKER_MAX_GAP_TICKS` forces
-  a call if the doer never escalates.
-- The thinker returns a JSON object validated by the `Plan` schema (use
-  the provider's structured-output feature where it exists). Anything else
-  is a failure per §5.5.
-- Doer instructions are per question, text only, length-capped. Users
-  cannot add questions or change choices.
-- Clef-flash has a 24,576-token context and truncates `state`, so the
-  state is ordered most-important-first. Budget: under 600 tokens for the
-  doer state, under 1,500 for the thinker input. The event digest for the
-  thinker is text: hits taken, kills, shots heard, enemies seen since the
-  last call, newest first, cut to fit.
-- The app ships default prompts: one thinker system prompt and one
-  instruction per doer question, good enough that the default run is
-  watchable. Writing them is part of P3.
+The shooter's current `WorldState`, `step`, `perceive`, bots, maps and
+collision code move to `kits/shooter` unchanged; `arenas/battle-royale`
+wraps them into the contract and keeps the ranking rule (survival, kills,
+HP) and the ending (last alive or duration).
 
-### 5.5 Fault model
+### 5.3 Model contract and catalog (`platform/core`, `platform/models`)
 
-Every row is logged as a `Doer` or `Thinker` event with `ok: false` and
-`error`. Nothing in this table stops the sim except the last row.
+```ts
+type Question =
+  | { type: "choice"; instructions: string; criteria: Record<string, string> }   // 2..255 options
+  | { type: "noul";   instructions: string; criteria?: { true?: string; false?: string } }  // P(yes)
+  | { type: "text";   instructions: string; maxChars: number };
 
-| Fault | Doer | Thinker |
-|-------|------|---------|
-| Timeout, network error, 5xx | Keep last answer | Keep last plan |
-| 429 | Back off (exponential, capped), keep last answer. If chronic, raise `DOER_INTERVAL_TICKS`. | Back off, keep last plan |
-| Invalid JSON or schema failure | Keep last answer | Keep last plan |
-| Refusal (`stop_reason: refusal`) | n/a | Keep last plan |
-| Call due while one is in flight | Cannot happen: the tick waits for the doer up to `DOER_TIMEOUT_MS` | Debounce: one in flight per agent, later escalations dropped |
-| 401/403 (bad key) | n/a (Nami's binding) | Stop the match, show the error (row 29) |
+type Answer =
+  | { type: "choice"; choice: string; probabilities: Record<string, number>; confidence: number }
+  | { type: "noul";   noul: number }
+  | { type: "text";   text: string };
 
-### 5.6 Adapters and constants
+interface Model {
+  id: string;                                   // "cloudflare/clef-flash", "dummy/random", "bot/wanderer"
+  supports: ReadonlySet<Question["type"]>;      // a decision model has no "text"
+  ask(req: { system?: string; state: unknown; questions: Record<string, Question>; signal: AbortSignal }): Promise<Reply>;
+}
+type Reply = { ok: true; answers: Record<string, Answer>; usage: Usage; model: string }
+           | { ok: false; error: ModelError };   // kind: timeout | network | server | rate_limit | invalid_output | refusal | auth | billing | not_found; fatal: boolean
+```
 
-- `ThinkerProvider.complete(system, messages) → Plan`. One implementation
-  (Anthropic, called from the browser with the SDK's
-  `dangerouslyAllowBrowser: true`; low effort, small `max_tokens`).
-- `DecisionProvider.decide(state, questions) → DoerAnswer`. One
-  implementation: the Worker. Switch the constant to `@cf/cloudflare/clef`
-  if flash plays badly. Jev (same shape as Clef) and OpenAI Decisions
-  (`noul` → `predicate`) are later adapters.
-- Tests use scripted bots from `core/` and a fake `DecisionProvider` and
-  `ThinkerProvider`.
-- All constants in one file: `THINKER_MODEL`, `DOER_MODEL`,
-  `MATCH_DURATION_TICKS`, `DOER_INTERVAL_TICKS`, `DOER_TIMEOUT_MS`,
-  `TICK_MIN_WALL_MS`, `THINKER_MIN_GAP_TICKS`, `THINKER_MAX_GAP_TICKS`,
-  `FIRE_THRESHOLD`, `ESCALATE_THRESHOLD`.
+- The **cloudflare** adapter sends `questions` as they are (the Clef wire
+  shape is this contract) through `POST /ask` on the Worker, which adds
+  the model name and the binding. It rejects `text` questions.
+- The **anthropic** adapter turns the question set into one JSON-schema
+  structured output (one property per question: an enum for `choice`, a
+  number 0–1 for `noul`, a string for `text`), fills `probabilities` with
+  1 for the chosen option, and maps faults as today.
+- The **dummy** adapter wraps a TypeScript function `(state, questions) =>
+  answers`; `dummy/random`, `dummy/first`, and every bot are dummies.
+  Usage is estimated at four characters per token so a dummy's calls
+  are logged like any other.
+- The **replaying** model answers from a recorded log (determinism).
+- Catalog: `platform/models/catalog.ts` lists ids, provider, which key
+  they need, supported types, and list prices for the cost report.
 
-### 5.7 Worker and abuse guard
+`ASSUMED` The planner is asked one `text` question for the plan and one
+for the scratchpad, with the same `Plan` limits as today; the actor is
+asked the arena's questions plus the platform's fixed `escalate` noul.
+A model that does not support `text` cannot be a planner; the editor
+greys it out.
 
-`POST /decide` costs Nami money on every call. Protection for the PoC
-(row 28): a Cloudflare rate-limiting rule keyed by IP, sized for one
-match at a time per IP, plus a daily spend cap on Workers AI. Accept that
-a determined abuser can still spend the daily cap. If that happens, the
-next step is a per-match token issued by the Worker with a per-token call
-budget, not accounts.
+### 5.4 Agent spec
 
-## 6. Game design
+```ts
+AgentSpec = {
+  arena: string;
+  roles: { actor: { model: string }; planner?: { model: string } };
+  prompts: { planner: string; actor: Record<QuestionId, string> };   // user-editable text only
+}
+```
 
-### 6.1 Conventions (row 24)
+Validated with zod at the boundary (form, file, log). A bot slot is
+`{ kind: "bot", bot: "wanderer" }` and expands to an agent whose actor
+is the bot dummy and whose planner is absent. A doer-only slot (v3 row
+32) is an agent with the default actor instructions, the fixed default
+plan and no planner.
 
-- `Vec2 { x, y }` in meters, y down (PixiJS convention, so the renderer
-  draws without flipping).
-- Angles in degrees, clockwise-positive, 0° = +x. `facing` is absolute.
-- Bearings in observations are relative to `facing`, normalized to
-  (−180, 180], positive = to the right.
-- Ticks are the time unit inside the sim; constants written in m/s or
-  seconds are converted once at load.
-- Ids: agents `a0`…`a15` in slot order, bullets `b<n>` ascending.
-- Seeded RNG for spawn and spread. Same seed and the same recorded
-  answers, replayed at their recorded ticks, reproduce the same log.
-  Tests prove this in Node with fake providers; cross-engine determinism
-  is not required because the renderer reads `Tick`.
+Keys: one per provider that needs one (Anthropic today), stored in
+localStorage, sent only to that provider. Cloudflare models go through
+Nami's Worker (v3 row 2). The editor hides models whose key is missing.
 
-### 6.2 World and rules
+### 5.5 Log envelope
 
-- **Arena.** Rectangular continuous map with polygonal obstacles, fully
-  known to every agent. Spawns spread around the edge. `ASSUMED` about
-  100 by 100 m so contact happens within a minute without a zone. Two
-  hand-authored maps as JSON in `core/`.
-- **Agent.** Position, facing, HP 100, one weapon with fixed stats (bullet
-  speed, damage, fire interval, spread). Fixed move speed relative to
-  facing, fixed turn rate.
-- **Actions per tick.** Move direction, turn direction, fire. The sim
-  clamps everything; the doer only picks discrete choices.
-- **Bullets.** Spawned at the muzzle with facing plus seeded spread,
-  travel per tick, removed on hitting an obstacle or an agent (damage).
-  Travel time and leading a moving target are real.
-- **Perception**, computed by the sim per agent per tick:
-  - Vision: enemies inside a cone (`ASSUMED` 90°, 60 m) with clear LOS.
-  - Hearing: shots within 80 m, footsteps within 15 m, as bearing plus a
-    coarse distance band.
-  - Incoming: bearing of bullets that hit or passed within 2 m this tick.
-  - Self: position, facing, HP, kills, time remaining.
-- **Bots.** Two scripted minds, used as the quality floor and in tests:
-  `wanderer` (roam, face and shoot anything visible) and `camper` (hold a
-  corner, shoot anything visible, relocate when hit). They decide on the
-  doer cadence (row 33) and emit the same `Action` shape.
-- **Match end.** Last agent alive, or `MATCH_DURATION_TICKS` (`ASSUMED`
-  6,000 = 5 min sim time). Ranking: survival, kills, HP.
-- **Out of scope.** See §1 non-goals.
+```ts
+MatchLog = { version: 2, arena, mode, config, agents: AgentSpec[] /* by slot */, events: Event[] }
+Event =
+  | Call     { tick, requestedTick, agent, role: "actor" | "planner", model, ok, questions?, answers?, error?, usage?, input? }
+  | Tick     { tick, data: unknown /* arena-defined, validated by the arena */ }
+  | MatchEnd { tick, ranking }
+  | <arena event kinds, validated by arena.events>
+```
 
-## 7. User surface
+`Call` replaces `Doer` and `Thinker`; `requestedTick` equals `tick` for
+sync calls. `Tick.data` is what the renderer and the agent panel read
+(for the shooter: today's rows plus `near`). Rounding, bounds on ticks,
+cancellation, the event order inside a tick, and byte-identical replay
+carry over from v3.
 
-One page, no routes needed:
+### 5.6 Replay shell and renderer contract (`platform/web`)
 
-1. **Key.** Paste a provider key; stored in localStorage; the page says it
-   is sent only to the provider.
-2. **Mind.** The thinker system prompt (textarea) and one instruction per
-   doer question (five short fields, length-capped). Defaults filled in.
-3. **Match.** Map, seed, slot count, how many slots are prompted, how many
-   are doer-only, duration. Default per row 23. Without a key, prompted
-   slots are unavailable and doer-only slots are offered instead.
-4. **Run.** Progress by tick with call counts and failures. Cancel.
-5. **Replay.** PixiJS top-down: play, pause, scrub, speed, follow an agent,
-   bullet trails, perception overlay if cheap. The **mind panel** (row 27)
-   for the selected agent: perception at this tick, current plan text,
-   last doer answers with probabilities, and a timeline with markers for
-   thinker calls and faults.
-6. **Files.** Download the replay JSON; upload one to watch it. The file
-   carries its prompts, so "what did I write for this run" is answered.
+The shell owns playback (clock, scrub, speeds, keyboard), the timeline
+with call and fault markers, the agent panel (perception text from
+`arena.perceive` on a state the arena rebuilds from `Tick.data`, plan,
+last answers with probabilities for every role, faults), files, and the
+follow selector. The arena supplies:
 
-The iteration loop RaidRank calls the sandbox loop is: keep the seed,
-change the prompt, run again, compare the two replays side by side in two
-tabs. Nothing more is built for it in the PoC.
+```ts
+interface ArenaRenderer {
+  mount(stage: PixiStage, log: MatchLog): { render(tick): void; destroy(): void; followTargets(): AgentId[]; center(agent): Vec2 | null };
+  stateAt(log, tick): unknown;          // for arena.perceive and overlays
+  overlays?: Record<string, Overlay>;   // "vision cone", "trails"
+}
+```
 
-## 8. Phases
+Today's `web/src/replay/*` splits accordingly: coords, stage, clock,
+controls, files, errors, mind panel and markers stay in the shell;
+map, agents, bullets, camera centering, overlay and `stateFromTick`
+move to the shooter kit's renderer.
+
+### 5.7 Page
+
+One page: a key section per provider; an arena picker; the agent editor
+for that arena (role → model dropdowns from the catalog, the planner
+prompt, one instruction per actor question); match config (mode, map,
+seed, slots as today, duration); run with counters per role; the replay
+below with download, upload and "edit this agent". Agents and configs
+are stored per arena under `decision-arena:v1:*`.
+
+### 5.8 Worker
+
+Unchanged in role. `POST /decide` becomes `POST /ask` with the same
+validation, mock and Clef backends, CORS, size and content-type guards,
+and the per-IP rate limit when it lands. The request names the model by
+catalog id; the Worker maps it to the Workers AI model name and refuses
+ids outside the catalog.
+
+## 6. Migration map
+
+| Today (`kbattle`) | v4.0 | Change |
+|-------------------|------|--------|
+| `core/src/{vec2,angles,units,constants}.ts` | `kits/shooter` (vec2, angles, units, shooter constants) and `platform/core` (interval, timeout, thresholds) | split |
+| `core/src/sim/{world,step,collision,weapons,perceive,actions,rng}.ts` | `kits/shooter/sim/*`; `rng.ts` to `platform/core` | move; `actionFromAnswers` becomes `arena.actionFrom` |
+| `core/src/sim/{match,log,providers,replay-provider}.ts` | `platform/core/match/*`, generalized over the Arena and Model contracts | rewrite of the glue, same behaviour and tests |
+| `core/src/bots/*`, `core/maps/*`, `core/src/maps.ts` | `kits/shooter/bots/*` as dummies; maps renamed `map-1`, `map-2` | move, rename |
+| `core/src/schemas.ts` | platform schemas (`Question`, `Answer`, `AgentSpec`, `MatchLog` v2, `Call`) in `platform/core`; shooter state, questions and events in `arenas/battle-royale` | split |
+| `brain/src/providers/anthropic.ts`, `thinker-client.ts`, `event-digest.ts`, `thinker-prompt.ts` | `platform/models/anthropic.ts`; the planner message builder and digest in `platform/core/planner/*`, taking `arena.observationText` | move, generalize |
+| `worker/*` | `platform/worker`, route `/ask` | rename |
+| `web/src/replay/*`, `web/src/ui/*` | `platform/web` shell + `kits/shooter/render/*` | split |
+| `core/fixtures/sample-log.json`, goldens | regenerated as version 2 logs; goldens unchanged in content | regenerate |
+| `DESIGN.md`, `plan/`, `ISSUES.md` | this file; `arenas/battle-royale/DESIGN.md` for the shooter specifics (sections 6 of v3.0); `plan/` re-planned; ISSUES carried | rewrite |
+
+Parity gate for the move: the 873 tests pass in their new homes, the
+16-bot log of `run-match` is byte-identical to today's apart from the
+envelope fields, and the replay smoke passes against it.
+
+## 7. Phases of the revamp
 
 | Phase | Deliverable | Exit |
 |-------|-------------|------|
-| P0 Foundations | `core/` types and conventions, the five boundary schemas, a hand-written sample log, Worker skeleton, thinker adapter spike | Sample log validates. `clef-flash` answers a sample request through the Worker; the wire shape in §5.4 is confirmed or corrected, and its real rate limit and latency are measured and written into §9 (or row 34 fires). The thinker answers a structured call from a browser origin with a pasted key. |
-| P1 Sim | `core/` sim, perception, bots, maps, match loop, tests | A 16-bot match runs faster than real time in Node. Same seed gives an identical log. Bullets, LOS, hearing, incoming fire and both bots have tests. |
-| P2 Replay | PixiJS replay and mind panel in `web/`, reading a log file | Play, pause, scrub, follow, bullet trails. Mind panel shows perception, plan and doer answers for a sample log. Thinker and fault markers on the timeline. |
-| P3 Brains | `brain/`, both adapters, default prompts, match runs in the browser | A prompted agent beats bots in some matches. Two different prompts play visibly differently, and a prompted agent plays differently from a doer-only one. Cost and wall-clock per default match recorded in §9. |
-| P4 Public | Key entry, editors, config, run, watch, files, Worker guard, deploy | A stranger with a key writes prompts and watches a match without reading code. Rate limit and spend cap verified. |
+| R0 Contracts and moves | New workspace layout, contracts in `platform/core`, shooter code moved into the kit and the battle royale arena, registry | Everything builds; the parity gate holds with dummies and bots. |
+| R1 Shell and renderer split | Replay shell generic, shooter renderer behind `ArenaRenderer`, agent panel reads `Call` events | Smoke passes on a version-2 log; follow, overlay, panel as today. |
+| R2 Models | Model contract, catalog, cloudflare and anthropic adapters, planner glue, agent editor with role → model choice | A dummy planner and a dummy actor run a match from the page; the real adapters pass today's fault tests. |
+| R3 PoC | The remaining P3/P4 goals of v3.0 (default agents, cost measurement, anti-goal check, guard, deploy) against the new structure | v3.0 §8 P3 and P4 exits. |
 
-The task-level breakdown is in `plan/roadmap.md` (row 30): 28 milestones,
-`v0.1` to `v4.5`, one file per phase, progress notes under `plan/progress/`.
+The task-level plan is written after this document is approved.
 
-## 9. Cost and time (verify at P0 and P3)
+## 8. Cost and time
 
-Doer cost assumes clef-flash at about $0.000023 per ~600-token call (v2
-estimate). Thinker cost uses Anthropic list prices as of 2026-10-06
-(input / output per million tokens: Opus 5.5 $4 / $20, Sonnet 5.5
-$2 / $10, Haiku 5.5 $0.10 / $0.50) at 1,500 in / 300 out per call. Rate
-limit: v2 cited a documented 300 rpm for Workers AI text generation; P0
-measures the real figure for clef-flash. Only doer calls hit that limit;
-thinker calls go to the user's provider.
+Unchanged from v3.0 §9 for the battle royale arena; the catalog carries
+list prices so the cost report is computed, not typed.
 
-Per 5-minute match (6,000 ticks), doer every 10 ticks:
+## 9. Risks
 
-| Run | Doer calls | Doer cost | Doer time at 300 rpm | Thinker calls | Thinker cost (Opus / Sonnet / Haiku) |
-|-----|-----------|-----------|----------------------|---------------|---------------------------------------|
-| Default: 8 slots, 1 prompted, 7 bots | 600 | ~$0.01 | 2 min | ~60 | $0.75 / $0.38 / $0.02 |
-| 8 slots, all prompted | 4,800 | ~$0.11 | 16 min | ~500 | $6 / $3 / $0.15 |
-| 16 slots, all prompted | 9,600 | ~$0.22 | 32 min | ~1,000 | $12 / $6 / $0.30 |
-| 16 slots, all prompted, doer every tick | 96,000 | ~$2.20 | 5.3 h | ~1,000 | same |
+- **Abstraction tax.** The arena contract could slow the hot loop or
+  make tests indirect. Mitigation: the loop calls the arena through plain
+  functions, no events or callbacks per tick; the parity gate measures
+  wall time.
+- **Leaky contract.** A shooter notion sneaking into `platform/core`.
+  Mitigation: the racing arena's shape is sketched in its design before
+  R0 ends, as a second reader of every contract.
+- **Model choice confuses players.** Mitigation: defaults preselected,
+  dummies labelled, unsupported combinations greyed out.
+- **Two shooter arenas drift apart.** Mitigation: extraction is a rule
+  set over the kit, and the kit has its own tests.
+- v3.0 §10's risks carry: doer quality, prompts that do not matter, rate
+  limits, stalls, wall-clock, abuse, tab lifetime, keys.
 
-Wall-clock is the larger of the doer time above and 5 minutes (the tick
-floor, row 31). So at 300 rpm the default run takes about 5 minutes and
-the 15-minute anti-goal allows about 2 prompted slots at cadence 10, or
-16 at cadence 64. If P0 measures a higher limit, the table shrinks
-accordingly; if the limit is real, match size for the public demo is
-capped by it and row 21 is revisited at P3. Prompt caching on the harness
-prompt lowers thinker input cost. Workers AI's free 10,000 neurons per
-day cover a handful of default runs; expect the paid plan for a public
-URL.
+## 10. Left to the builder
 
-## 10. Risks
+- Exact zod shapes for the contracts and the version-2 envelope; the
+  registry's shape; how `Tick.data` is typed per arena.
+- Directory details inside each package, test layout, scripts.
+- The order of moves inside R0 and how to keep the suite green at every
+  commit (git `mv` first, contract adoption second is the suggestion).
+- The Pixi stage interface handed to renderers.
+- Which of today's web tests become shell tests and which kit tests.
 
-- **Doer quality.** A decision model with a 600-token state may play
-  badly. Tune instructions and state wording early; bots are the floor;
-  switch to `clef` by constant if needed.
-- **Prompts that do not matter.** The anti-goal. P3's exit requires two
-  prompts to play visibly differently; if they do not, the thinker's plan
-  must reach the doer more strongly (richer `plan` field, more frequent
-  thinker calls) before anything else is built.
-- **Rate limit.** Caps doer cadence. Accepted: raise `DOER_INTERVAL_TICKS`.
-- **Escalation storms.** Min gap and one-in-flight, from P3.
-- **Stalls.** No zone. Small map and the time limit cover the PoC.
-- **Wall-clock.** A default match should finish in under 15 minutes. If
-  not, lower the prompted-slot default before touching cadence; §9 has
-  the arithmetic.
-- **Clef unavailable or wrong shape.** Row 34. P0 answers it first so P1
-  and P2 proceed either way.
-- **Abuse.** Row 28 and §5.7.
-- **Tab lifetime.** Closing the tab kills the match. Accepted for the PoC.
-- **Keys.** localStorage only, sent only to the provider. Say so on the
-  page.
+## 11. Open items
 
-## 11. Post-PoC pointers
+- `[Q7]` Repo and directory rename: done by Nami, when?
+- `[Q8]` Model catalog at launch and whether `clef` (27B) is offered.
+- `[Q10]` Role names: actor and planner, or fast and slow?
+- `[Q11]` Confirm timing (now) and the first slice (battle royale through the contracts with dummies).
+- `[Q2]`–`[Q6]` from v3.0 stand where not superseded; v0.5 and v0.6 live spikes still need credentials.
 
-In order, and only if the demo earns it. Each has a ready reference.
+## 12. Deferred: cadence and budget
 
-1. **Zone.** Lift `ZonePhase` and the center-selection rule from RaidRank
-   `simulation/game-data.md` §9.1. Adds two events and a `zone` field in
-   `Tick`.
-2. **Share links.** Replay JSON on R2 behind the Worker.
-3. **Server-side runner.** One Durable Object per match, streaming the
-   same log; live view is the replay viewer reading a growing log.
-4. **Ladder.** D1, a fixed thinker model paid by the house, per-match
-   thinker-call budget per agent for fairness (RaidRank's planner tokens,
-   `game-data.md` §18), placement rating (RaidRank `progression/`).
-5. **Pre-match thinker call.** Spawn-zone choice as the first thinker
-   decision (RaidRank `game-data.md` §8.4).
-6. **Loot and items.** Last; RaidRank `game-data.md` §8.6 and the BR
-   mechanics reference.
-
-## 12. Open items
-
-- `FLAG` thinker model `[Q2]`.
-- `[Q1]` artifact shape, `[Q3]` Worker guard, `[Q4]` Clef fallback,
-  `[Q5]` default slots, `[Q6]` tick floor; see chat.
-- `ASSUMED` §6 numbers (map size, cone, ranges, duration, thresholds) are
-  placeholders to tune in P1 and P3.
+Discussed on 2026-10-22 and deferred so the core loop lands first. The
+direction: replace interval, min gap and max gap with a token budget per
+role and a bucket that refills at `budget ÷ duration` per tick; a role is
+asked when it can afford roughly its last call, the planner also when
+its bucket is full. Usage is provider-reported (Anthropic, Cloudflare and
+OpenAI all return it), estimated for dummies, and only authoritative when
+the house runs the match. Rewards concise prompts, derives cadence,
+leaves "keep the last answer" as the fallback. Open: one pool per agent
+or one budget per role; raw tokens or price-weighted credits.
