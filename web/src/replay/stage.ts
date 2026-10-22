@@ -1,9 +1,12 @@
 // The Pixi canvas of the replay: one Application sized to its host element, and
 // a `world` container in map meters that the meters-to-pixels transform places
 // and scales (DESIGN.md §6.1: y down, so no flip). Resizing the window refits
-// the transform; the aspect never changes.
+// the transform; the aspect never changes. With a camera center set (follow,
+// camera.ts) the world keeps the fitted zoom and puts that point mid-canvas.
 
+import type { Vec2 } from "@kbattle/core";
 import { Application, Container } from "pixi.js";
+import { cameraTransform } from "./camera";
 import { makeTransform, type Transform } from "./coords";
 import { COLORS, STAGE_PAD_PX } from "./theme";
 
@@ -11,8 +14,10 @@ export interface Stage {
   readonly app: Application;
   /** Everything drawn in map meters goes in here. */
   readonly world: Container;
-  /** The transform the world uses right now. */
+  /** The transform the world uses right now: the fitted arena, or that zoom centered on the camera center. */
   readonly transform: Transform;
+  /** Puts map point `center` at the middle of the canvas at the fitted zoom; null shows the whole arena. */
+  setCenter(center: Vec2 | null): void;
   /** Called after every resize with the new transform. */
   onResize(listener: (transform: Transform) => void): void;
   /** Stops watching the host, then destroys the Pixi app, its scene and its canvas. */
@@ -37,16 +42,18 @@ export async function createStage(host: HTMLElement, mapW: number, mapH: number)
   const world = new Container({ label: "world" });
   app.stage.addChild(world);
 
-  const fit = (): Transform => {
-    const t = makeTransform(mapW, mapH, app.screen.width, app.screen.height, STAGE_PAD_PX);
+  let center: Vec2 | null = null;
+  const place = (): Transform => {
+    const { width, height } = app.screen;
+    const t = cameraTransform(makeTransform(mapW, mapH, width, height, STAGE_PAD_PX), center, width, height);
     world.position.set(t.offsetX, t.offsetY);
     world.scale.set(t.scale);
     return t;
   };
-  let transform = fit();
+  let transform = place();
   const listeners: ((t: Transform) => void)[] = [];
   app.renderer.on("resize", () => {
-    transform = fit();
+    transform = place();
     for (const listener of listeners) listener(transform);
   });
 
@@ -55,6 +62,11 @@ export async function createStage(host: HTMLElement, mapW: number, mapH: number)
     world,
     get transform() {
       return transform;
+    },
+    setCenter(next) {
+      if (next === null ? center === null : center !== null && next.x === center.x && next.y === center.y) return;
+      center = next && { x: next.x, y: next.y };
+      transform = place();
     },
     onResize(listener) {
       listeners.push(listener);

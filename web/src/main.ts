@@ -33,6 +33,11 @@ async function main(): Promise<void> {
     },
     toPx: (v) => page.viewer?.transform.toPx(v) ?? { x: Number.NaN, y: Number.NaN },
     drawnAgents: () => page.viewer?.drawnAgents() ?? [],
+    get follow() {
+      return page.viewer?.follow ?? null;
+    },
+    drawnBullets: () => page.viewer?.drawnBullets() ?? { dots: [], trails: [] },
+    drawnOverlay: () => page.viewer?.drawnOverlay() ?? null,
     validateForm: () => shell.validateForm(),
   };
   window.__kbattle = debug;
