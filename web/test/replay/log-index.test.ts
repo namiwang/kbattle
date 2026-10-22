@@ -95,6 +95,43 @@ describe("indexLog on the sample log", () => {
     expect(index.kindOf("a7")).toBeUndefined();
     expect(index.kindOf("b1")).toBeUndefined();
   });
+
+  it("lists each agent's doer and thinker calls in tick order; agents without calls are absent", () => {
+    const doer = index.doerCalls.get("a0") ?? [];
+    expect(doer.map((e) => e.tick)).toEqual([1, 11, 21, 31, 41, 51, 61, 71, 81, 91, 101, 111, 121, 131, 141]);
+    expect(doer.filter((e) => !e.ok).map((e) => e.tick)).toEqual([41]);
+    expect(index.thinkerCalls.get("a0")?.map((e) => [e.requestedTick, e.tick, e.ok])).toEqual([
+      [1, 7, true],
+      [71, 78, false],
+    ]);
+    expect(doer[0]).toBe(index.eventsAt(1)[0]); // the log's own events, not copies
+    expect([...index.doerCalls.keys(), ...index.thinkerCalls.keys()]).toEqual(["a0", "a0"]);
+  });
+});
+
+describe("indexLog's call lists on a log out of tick order", () => {
+  it("sorts each agent's calls by tick, keeping log order within a tick", () => {
+    const answers = { fire: { type: "noul" as const, noul: 0.1 } };
+    const plan = { text: "hold", scratchpad: "" };
+    const index = indexLog(
+      craftedLog([
+        { kind: "Doer", tick: 11, agent: "a0", ok: true, answers },
+        { kind: "Doer", tick: 1, agent: "a0", ok: false, error: "timeout" },
+        { kind: "Doer", tick: 1, agent: "a1", ok: true, answers },
+        { kind: "Thinker", tick: 9, requestedTick: 2, agent: "a0", input: null, ok: true, plan },
+        { kind: "Thinker", tick: 5, requestedTick: 5, agent: "a0", input: null, ok: false, error: "refusal" },
+        { kind: "Doer", tick: 11, agent: "a0", ok: false, error: "server: 502" },
+      ]),
+    );
+    expect(index.doerCalls.get("a0")?.map((e) => [e.tick, e.ok])).toEqual([
+      [1, false],
+      [11, true],
+      [11, false],
+    ]);
+    expect(index.doerCalls.get("a1")?.map((e) => e.tick)).toEqual([1]);
+    expect(index.thinkerCalls.get("a0")?.map((e) => e.tick)).toEqual([5, 9]);
+    expect(index.thinkerCalls.has("a1")).toBe(false);
+  });
 });
 
 describe("indexLog on logs with missing Tick events", () => {

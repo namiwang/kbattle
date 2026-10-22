@@ -38,6 +38,7 @@ async function main(): Promise<void> {
     },
     drawnBullets: () => page.viewer?.drawnBullets() ?? { dots: [], trails: [] },
     drawnOverlay: () => page.viewer?.drawnOverlay() ?? null,
+    drawnMind: () => page.viewer?.drawnMind() ?? null,
     validateForm: () => shell.validateForm(),
   };
   window.__kbattle = debug;

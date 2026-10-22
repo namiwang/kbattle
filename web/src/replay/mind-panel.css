@@ -1,0 +1,254 @@
+/* The mind panel (v2.4). replay.css places it: beside the canvas on wide windows, below it on narrow ones. */
+
+.replay-mind {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 12px 14px;
+  background: #13161c;
+  font-size: 12px;
+  line-height: 1.45;
+  /* Its size comes from the grid track, never from its content; updates relayout only the panel. */
+  contain: strict;
+}
+
+.replay-mind [hidden] {
+  display: none !important;
+}
+
+.replay-mind-empty {
+  margin: 0;
+  padding: 16px 2px;
+  color: #9aa4b2;
+}
+
+.replay-mind-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.replay-mind-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.replay-mind-title {
+  margin: 0;
+  font-size: 14px;
+  color: #f4f6fa;
+}
+
+.replay-mind-meta {
+  color: #9aa4b2;
+  font-variant-numeric: tabular-nums;
+}
+
+.replay-mind-section {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #262c37;
+}
+
+.replay-mind-section h4 {
+  margin: 0 0 3px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9aa4b2;
+}
+
+.replay-mind-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 1px 10px;
+  margin: 0;
+}
+
+.replay-mind-facts dt {
+  color: #9aa4b2;
+}
+
+.replay-mind-facts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.replay-mind-entry {
+  display: block;
+}
+
+.replay-mind-none {
+  color: #5f6a7a;
+}
+
+.replay-mind-plan-text {
+  margin: 0;
+  color: #f4f6fa;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.replay-mind-caption {
+  margin: 2px 0 0;
+  color: #9aa4b2;
+}
+
+.replay-mind-fault {
+  margin: 4px 0 0;
+  padding: 2px 6px;
+  border-left: 2px solid #ff4d4d;
+  background: #2a1519;
+  color: #f4c7cc;
+  overflow-wrap: anywhere;
+}
+
+.replay-mind-q {
+  margin-top: 5px;
+}
+
+.replay-mind-q-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.replay-mind-q-name {
+  font-weight: 600;
+}
+
+.replay-mind-q-sum {
+  color: #9aa4b2;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.replay-mind-bar {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr) 46px;
+  align-items: center;
+  gap: 6px;
+  color: #9aa4b2;
+}
+
+.replay-mind-bar.is-chosen,
+.replay-mind-bar.is-crossed {
+  color: #f4f6fa;
+}
+
+.replay-mind-bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.replay-mind-bar-track {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: #262c37;
+}
+
+.replay-mind-bar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 3px;
+  background: #56606e;
+}
+
+.replay-mind-bar.is-chosen .replay-mind-bar-fill,
+.replay-mind-bar.is-crossed .replay-mind-bar-fill {
+  background: #f2b134;
+}
+
+/* The threshold a noul is compared with (row 25). */
+.replay-mind-bar-threshold {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  background: #f4f6fa;
+}
+
+.replay-mind-bar-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- markers under the timeline: same width as the timeline, inset like its thumb ---- */
+
+.replay-mind-markers {
+  /* Half Chromium's 16 px range thumb: the thumb's center is this far in at the first and last tick. */
+  --inset: 8px;
+  position: relative;
+  height: 14px;
+}
+
+/* Two classes: beats the controls row's own button look (.replay-controls button). */
+.replay-mind-markers .replay-mind-marker {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--inset) + (100% - 2 * var(--inset)) * var(--at));
+  width: 12px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.replay-mind-marker::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+}
+
+/* Thinker calls: a filled dot where the plan was applied, a hollow one where it was asked for. */
+.replay-mind-marker.is-applied::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #b48cff;
+}
+
+.replay-mind-marker.is-requested::before {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid #b48cff;
+  border-radius: 50%;
+  background: #13161c;
+}
+
+/* Failed calls, doer and thinker: a red tick. */
+.replay-mind-marker.is-fault::before {
+  width: 2px;
+  height: 14px;
+  background: #ff4d4d;
+}
+
+.replay-mind-marker:focus-visible {
+  outline: 1px solid #f2b134;
+}
+
+.replay-mind-link {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--inset) + (100% - 2 * var(--inset)) * var(--from));
+  width: calc((100% - 2 * var(--inset)) * (var(--to) - var(--from)));
+  height: 1px;
+  background: #b48cff;
+  pointer-events: none;
+}

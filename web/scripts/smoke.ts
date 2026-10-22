@@ -16,6 +16,12 @@
 // then on a real 16-bot match (the one core's scripts/run-match.ts writes):
 // incoming-fire ticks against the log's hits and near-miss rows, a death,
 // resizing while following, and re-mounting with everything on.
+// Before the files, the v2.4 mind panel: following a0 it shows the log's plan,
+// doer answers and perception for the tick on screen (against mindView computed
+// here), within one frame of every scrub and under 8 ms per update; the fault
+// line at the thinker refusal and "kept from tick" at the doer timeout; markers
+// under the timeline on the right ticks, linked requested/applied pairs, clicks
+// that seek; beside the canvas on wide windows, below it on narrow ones.
 // Screenshots and the downloaded file go to web/.smoke/. Exits 1 if any check
 // fails.
 
@@ -44,6 +50,7 @@ import { TRAIL_TICKS, type DrawnBullets } from "../src/replay/bullets";
 import { makeTransform } from "../src/replay/coords";
 import type { DrawnAgent, KbattleDebug } from "../src/replay/debug";
 import { indexLog, type LogIndex } from "../src/replay/log-index";
+import { answerSummary, formatProbability, markerShapes, markersFor, mindView, type DrawnMind, type MarkerShape } from "../src/replay/mind-selectors";
 import { overlayModel, type DrawnOverlay } from "../src/replay/overlay";
 import { stateFromTick } from "../src/replay/state-from-tick";
 import { BULLET, COLORS, KIND_COLORS, MARKER, OVERLAY, STAGE_PAD_PX } from "../src/replay/theme";
@@ -410,6 +417,8 @@ interface FrameSample {
   overlay: DrawnOverlay | null;
   agents: DrawnAgent[];
   center: Vec2;
+  /** The mind panel as drawn in that frame (v2.4). */
+  mind: DrawnMind | null;
 }
 
 /** Records the debug hook's view in `count` consecutive animation frames (a string script: tsx/__name, see checkPlayback). */
@@ -426,6 +435,7 @@ async function sampleFrames(page: Page, count: number): Promise<FrameSample[]> {
         overlay: k.drawnOverlay(),
         agents: k.drawnAgents(),
         center: { x: canvas.clientWidth / 2, y: canvas.clientHeight / 2 },
+        mind: k.drawnMind ? k.drawnMind() : null,
       });
       if (samples.length < ${count}) requestAnimationFrame(sample);
     };
@@ -817,11 +827,431 @@ async function checkUiShell(page: Page): Promise<void> {
   check("Random sets a whole seed and saves it", Number.isInteger(randomSeed) && parsed((await stored(page))[STORED.config]).seed === randomSeed, String(randomSeed));
 }
 
+// ---- mind panel (v2.4): perception, plan, doer answers, timeline markers ----
+
+const MIND_EMPTY = "Follow an agent to see its mind";
+/** The timeline's accent-color (replay.css), which Chromium paints its thumb with. */
+const TIMELINE_ACCENT = 0xf2b134;
+/** Half of Chromium's 16 px range thumb: its center runs from 8 px to width − 8 px (measured; mind-panel.css insets markers the same). */
+const THUMB_HALF_PX = 8;
+const firstPlan = eventsOfKind(log, "Thinker").find((e) => e.ok)?.plan?.text ?? "";
+
+async function drawnMind(page: Page): Promise<DrawnMind | null> {
+  return page.evaluate(() => window.__kbattle?.drawnMind?.() ?? null);
+}
+
+/** What the panel must show for `agent` at `tick` of the sample log, computed here in Node. */
+function expectedMind(tick: number, agent: string): DrawnMind {
+  return { ...mindView(sampleIndex, stateFromTick(sampleIndex, log, tick), agent), markers: markerShapes(markersFor(sampleIndex, agent)) };
+}
+
+/** The text of the first element matching `selector`, trimmed; null when there is none. Does not wait. */
+async function textOf(page: Page, selector: string): Promise<string | null> {
+  return page.evaluate((sel) => document.querySelector(sel)?.textContent?.trim() ?? null, selector);
+}
+
+interface Rect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+async function rectOf(page: Page, selector: string): Promise<Rect | null> {
+  return page.evaluate((sel) => {
+    const r = document.querySelector(sel)?.getBoundingClientRect();
+    return r ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom } : null;
+  }, selector);
+}
+
+async function canvasSize(page: Page): Promise<{ w: number; h: number; scale: number }> {
+  const box = await rectOf(page, ".replay-stage canvas");
+  return { w: (box?.right ?? 0) - (box?.left ?? 0), h: (box?.bottom ?? 0) - (box?.top ?? 0), scale: (await state(page)).scale };
+}
+
+interface MarkEl {
+  kind: string;
+  tick: number | null;
+  from: number | null;
+  to: number | null;
+  title: string;
+  left: number;
+  right: number;
+  center: number;
+}
+
+/** The marks under the timeline in DOM (drawing) order, with where they are on the page in CSS px. */
+async function markEls(page: Page): Promise<MarkEl[]> {
+  return page.evaluate(() =>
+    Array.from(document.querySelectorAll<HTMLElement>(".replay-mind-markers > *"), (el) => {
+      const r = el.getBoundingClientRect();
+      const d = el.dataset;
+      return {
+        kind: d.kind ?? "",
+        tick: d.tick === undefined ? null : Number(d.tick),
+        from: d.from === undefined ? null : Number(d.from),
+        to: d.to === undefined ? null : Number(d.to),
+        title: el.title,
+        left: r.left,
+        right: r.right,
+        center: r.left + r.width / 2,
+      };
+    }),
+  );
+}
+
+/** A shape as markEls reports its element. */
+const markOf = (s: MarkerShape) =>
+  s.kind === "link"
+    ? { kind: "link", tick: null, from: s.from, to: s.to, title: "" }
+    : { kind: s.kind, tick: s.tick, from: null, to: null, title: s.title };
+
+/** Where the timeline thumb's center is at `tick`, from the timeline's box (the formula; thumbX measures it). */
+async function timelineX(page: Page, tick: number): Promise<number> {
+  const box = await rectOf(page, ".replay-timeline");
+  if (!box) return Number.NaN;
+  return box.left + THUMB_HALF_PX + (tick / lastTick) * (box.right - box.left - 2 * THUMB_HALF_PX);
+}
+
+/** The thumb's center in page CSS px, read off a screenshot of the timeline: the top row of its accent-colored disc. */
+async function thumbX(page: Page): Promise<number> {
+  await page.mouse.move(0, 0); // no hover tint on the thumb
+  const png = await timeline(page).screenshot(); // scrolls it into view first
+  const left = (await rectOf(page, ".replay-timeline"))?.left ?? Number.NaN;
+  const span = await page.evaluate(
+    async ({ b64, want }) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${b64}`;
+      await img.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) throw new Error("no 2d context");
+      ctx.drawImage(img, 0, 0);
+      for (let y = 0; y < img.height; y++) {
+        const row = ctx.getImageData(0, y, img.width, 1).data;
+        const hits: number[] = [];
+        for (let x = 0; x < img.width; x++) {
+          const near = [0, 1, 2].every((c) => Math.abs((row[4 * x + c] ?? 0) - (want[c] ?? 0)) <= (c === 2 ? 60 : 40));
+          if (near) hits.push(x);
+        }
+        if (hits.length >= 4) return [hits[0] ?? 0, (hits.at(-1) ?? 0) + 1];
+      }
+      return null;
+    },
+    { b64: png.toString("base64"), want: rgb(TIMELINE_ACCENT) },
+  );
+  return span ? left + ((span[0] ?? 0) + (span[1] ?? 0)) / 2 : Number.NaN;
+}
+
+/** Scrubs to `tick` and returns the tick the mind panel shows once the next animation frame has run, all its callbacks done. */
+async function scrubNextFrame(page: Page, tick: number): Promise<number | null> {
+  return page.evaluate(`new Promise((resolve) => {
+    const input = document.querySelector(".replay-timeline");
+    input.value = "${tick}";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    requestAnimationFrame(() => setTimeout(() => {
+      const panel = document.querySelector(".replay-mind");
+      resolve(panel && panel.dataset.tick ? Number(panel.dataset.tick) : null);
+    }, 0));
+  })`);
+}
+
+interface BarsQuestion {
+  question: string;
+  summary: string;
+  /** threshold: where the threshold mark is along the bar, in percent; null for a choice's bars. */
+  bars: { label: string; value: string; on: boolean; threshold: number | null }[];
+}
+
+/** The doer answers as the panel draws them: per question its summary line and its bars. */
+async function drawnBars(page: Page): Promise<BarsQuestion[]> {
+  return page.evaluate(() =>
+    Array.from(document.querySelectorAll<HTMLElement>(".replay-mind-q"), (q) => ({
+      question: q.dataset.question ?? "",
+      summary: q.querySelector(".replay-mind-q-sum")?.textContent ?? "",
+      bars: Array.from(q.querySelectorAll<HTMLElement>(".replay-mind-bar"), (b) => ({
+        label: b.querySelector(".replay-mind-bar-label")?.textContent ?? "",
+        value: b.querySelector(".replay-mind-bar-value")?.textContent ?? "",
+        on: b.classList.contains("is-chosen") || b.classList.contains("is-crossed"),
+        threshold: b.querySelector<HTMLElement>(".replay-mind-bar-threshold") ? parseFloat(b.querySelector<HTMLElement>(".replay-mind-bar-threshold")?.style.left ?? "") : null,
+      })),
+    })),
+  );
+}
+
+/** The bars `rows` must draw: a bar per option (the pick on), or one P(yes) bar with its threshold mark (on when crossed). */
+function barsOf(rows: DrawnMind["doer"]["rows"]): BarsQuestion[] {
+  return rows.map((r) => ({
+    question: r.question,
+    summary: answerSummary(r),
+    bars:
+      r.type === "choice"
+        ? r.options.map((o) => ({ label: o.option, value: formatProbability(o.probability), on: o.chosen, threshold: null }))
+        : [{ label: "P(yes)", value: formatProbability(r.probability), on: r.crossed, threshold: r.threshold * 100 }],
+  }));
+}
+
+async function drawnPerception(page: Page): Promise<{ self: string | null; visible: string[]; heard: string[]; incoming: string[] }> {
+  return page.evaluate(() => ({
+    self: document.querySelector(".replay-mind-self")?.textContent ?? null,
+    visible: Array.from(document.querySelectorAll(".replay-mind-visible .replay-mind-entry"), (e) => e.textContent ?? ""),
+    heard: Array.from(document.querySelectorAll(".replay-mind-heard .replay-mind-entry"), (e) => e.textContent ?? ""),
+    incoming: Array.from(document.querySelectorAll(".replay-mind-incoming .replay-mind-entry"), (e) => e.textContent ?? ""),
+  }));
+}
+
+/** Pauses the replay if it plays. */
+async function pause(page: Page): Promise<void> {
+  if ((await playButton(page).textContent()) === "Pause") await playButton(page).click();
+  await frames2(page);
+}
+
+async function checkMindPanel(page: Page): Promise<void> {
+  const markers = page.locator(".replay-mind-markers > *");
+
+  // Follow free: the panel asks for an agent, the timeline has no markers.
+  await followSelect(page).selectOption("free");
+  await scrubTo(page, 0);
+  const free = {
+    panels: await page.locator(".replay-mind").count(),
+    empty: await textOf(page, ".replay-mind-empty"),
+    emptyShown: await page.locator(".replay-mind-empty").isVisible(),
+    marks: await markers.count(),
+    drawn: await drawnMind(page),
+  };
+  check(
+    `follow free: one mind panel saying "${MIND_EMPTY}", no markers under the timeline`,
+    isDeepStrictEqual(free, { panels: 1, empty: MIND_EMPTY, emptyShown: true, marks: 0, drawn: null }),
+    JSON.stringify(free),
+  );
+  const wideCanvas = await rectOf(page, ".replay-stage canvas");
+  const widePanel = await rectOf(page, ".replay-mind");
+  check(
+    "1000x700: the mind panel sits right of the canvas, beside it",
+    wideCanvas !== null && widePanel !== null && widePanel.left >= wideCanvas.right - 0.5 && widePanel.top < wideCanvas.bottom && widePanel.bottom > wideCanvas.top,
+    `canvas ${JSON.stringify(wideCanvas)}, panel ${JSON.stringify(widePanel)}`,
+  );
+
+  // Follow a0: its mind, the canvas keeps its size and zoom.
+  const freeSize = await canvasSize(page);
+  await followSelect(page).selectOption("a0");
+  await frames2(page);
+  const followSize = await canvasSize(page);
+  check("following a0 shows its mind without resizing the canvas or changing the zoom", isDeepStrictEqual(followSize, freeSize), `${JSON.stringify(freeSize)} -> ${JSON.stringify(followSize)}`);
+  const at0 = await drawnMind(page);
+  check("following a0 at tick 0: the panel is mindView's for a0 at tick 0 (no plan yet, no answers yet)", isDeepStrictEqual(at0, expectedMind(0, "a0")), JSON.stringify(at0)?.slice(0, 300));
+
+  // Markers: markerShapes for a0, positioned where the timeline puts their ticks.
+  const marks = await markEls(page);
+  const wantShapes = markerShapes(markersFor(sampleIndex, "a0"));
+  check(
+    "markers under the timeline are markerShapes' for a0: links 1→7 and 71→78, hollow dots at 1 and 71, filled dots at 7 and 78, red ticks at 41 and 78, each with its hover text",
+    wantShapes.length === 8 && isDeepStrictEqual(marks.map(({ kind, tick, from, to, title }) => ({ kind, tick, from, to, title })), wantShapes.map(markOf)),
+    JSON.stringify(marks.map((m) => `${m.kind}@${m.tick ?? `${m.from}-${m.to}`}`)),
+  );
+  const offsets = await Promise.all(marks.filter((m) => m.tick !== null).map(async (m) => +(m.center - (await timelineX(page, m.tick ?? 0))).toFixed(2)));
+  check("every marker is centered where the timeline puts its tick (within 1 px)", offsets.length === 6 && offsets.every((d) => Math.abs(d) <= 1), `offsets ${JSON.stringify(offsets)} px`);
+  const failed = log.events.filter((e) => (e.kind === "Doer" || e.kind === "Thinker") && e.agent === "a0" && !e.ok).map((e) => e.tick);
+  const faultTicks = marks.filter((m) => m.kind === "fault").map((m) => m.tick);
+  check("exit: fault markers appear exactly on the faulted ticks (41: doer timeout, 78: thinker refusal), one per ok:false event", isDeepStrictEqual(failed, [41, 78]) && isDeepStrictEqual(faultTicks, failed), JSON.stringify(faultTicks));
+  const pairs = eventsOfKind(log, "Thinker").filter((e) => e.agent === "a0" && e.requestedTick !== e.tick);
+  const linked = pairs.map((e) => {
+    const requested = marks.find((m) => m.kind === "requested" && m.tick === e.requestedTick);
+    const applied = marks.find((m) => m.kind === "applied" && m.tick === e.tick);
+    const link = marks.find((m) => m.kind === "link" && m.from === e.requestedTick && m.to === e.tick);
+    const ok = requested && applied && link && Math.abs(link.left - requested.center) <= 1 && Math.abs(link.right - applied.center) <= 1 && applied.center > requested.center;
+    return `${e.requestedTick}→${e.tick}: ${ok ? "linked" : "NOT linked"}`;
+  });
+  check("exit: each Thinker event with requestedTick ≠ tick draws a requested and an applied marker, a line running from one to the other", pairs.length === 2 && linked.every((l) => l.endsWith(": linked")), linked.join(", "));
+  for (const tick of failed) {
+    await scrubTo(page, tick);
+    const thumb = await thumbX(page);
+    const mark = (await markEls(page)).find((m) => m.kind === "fault" && m.tick === tick);
+    check(`the fault marker at tick ${tick} sits under the timeline thumb scrubbed to ${tick} (pixels)`, mark !== undefined && Math.abs(mark.center - thumb) <= 1.5, `marker ${mark?.center.toFixed(2)} px, thumb ${thumb.toFixed(2)} px`);
+  }
+
+  // The thinker refusal (tick 78): the fault line, the plan of tick 7 still in view.
+  await scrubTo(page, 0);
+  const shown78 = await scrubNextFrame(page, 78);
+  const at78 = await drawnMind(page);
+  check(
+    "scrubbed to tick 78 (thinker refusal): within one frame the panel is mindView's, with the fault line and the plan of tick 7",
+    shown78 === 78 && isDeepStrictEqual(at78, expectedMind(78, "a0")) && at78?.plan.fault === "Thinker fault at tick 78: refusal (stop_reason: refusal) — kept the plan from tick 7",
+    `panel at ${shown78}; plan ${JSON.stringify(at78?.plan)}`,
+  );
+  const dom78 = {
+    plan: await textOf(page, ".replay-mind-plan-text"),
+    caption: await textOf(page, ".replay-mind-plan-caption"),
+    fault: await textOf(page, ".replay-mind-plan-fault"),
+    faultShown: await page.locator(".replay-mind-plan-fault").isVisible(),
+    head: await textOf(page, ".replay-mind-head"),
+  };
+  check(
+    "tick 78 on screen: the plan text, 'applied at tick 7 (requested at 1)', the refusal on a visible fault line, a0 and the tick in the heading",
+    dom78.plan === firstPlan && dom78.caption === "applied at tick 7 (requested at 1)" && dom78.fault === at78?.plan.fault && dom78.faultShown && (dom78.head ?? "").includes("a0") && (dom78.head ?? "").includes("tick 78"),
+    JSON.stringify(dom78),
+  );
+  await page.locator(".replay").screenshot({ path: join(outDir, "mind-panel.png") });
+
+  // The doer timeout (tick 41): the answers of tick 31, "kept from tick 31", the fault text.
+  const shown41 = await scrubNextFrame(page, 41);
+  const at41 = await drawnMind(page);
+  const dom41 = {
+    caption: await textOf(page, ".replay-mind-doer-caption"),
+    fault: await textOf(page, ".replay-mind-doer-fault"),
+    faultShown: await page.locator(".replay-mind-doer-fault").isVisible(),
+  };
+  check(
+    "scrubbed to tick 41 (doer timeout): within one frame, 'kept from tick 31' and the timeout on a visible fault line",
+    shown41 === 41 && isDeepStrictEqual(at41, expectedMind(41, "a0")) &&
+      isDeepStrictEqual(dom41, { caption: "kept from tick 31", fault: "Doer fault at tick 41: timeout: no answer within 2000 ms", faultShown: true }),
+    `panel at ${shown41}; ${JSON.stringify(dom41)}`,
+  );
+  const bars41 = await drawnBars(page);
+  check(
+    "tick 41: the bars are the kept answers of tick 31: every option most likely first, the pick lit; fire and escalate against 50% and 70%",
+    isDeepStrictEqual(bars41, barsOf(expectedMind(41, "a0").doer.rows)) && bars41.length === 4,
+    JSON.stringify(bars41.map((q) => `${q.question}: ${q.summary}`)),
+  );
+
+  // Tick 77: the plan of tick 7 and no fault line; the answers of tick 71, with a target.
+  await scrubTo(page, 77);
+  const at77 = await drawnMind(page);
+  const bars77 = await drawnBars(page);
+  check(
+    "tick 77: no fault lines, the answers of tick 71 (move, turn, fire, target, escalate) drawn as bars",
+    isDeepStrictEqual(at77, expectedMind(77, "a0")) && !(await page.locator(".replay-mind-plan-fault").isVisible()) && !(await page.locator(".replay-mind-doer-fault").isVisible()) &&
+      isDeepStrictEqual(bars77, barsOf(at77?.doer.rows ?? [])) && isDeepStrictEqual(bars77.map((q) => q.question), ["move", "turn", "fire", "target", "escalate"]),
+    `${JSON.stringify(at77?.doer.caption)}; ${JSON.stringify(bars77.map((q) => q.summary))}`,
+  );
+
+  // Perception as lines: tick 115 (a1 ahead, the hit's source), tick 141 (a shot heard).
+  for (const tick of [115, 141]) {
+    await scrubTo(page, tick);
+    const lines = await drawnPerception(page);
+    const want = expectedMind(tick, "a0").perception.lines;
+    check(`tick ${tick}: the perception section shows core.perceive's view of a0, line by line`, isDeepStrictEqual(lines, { ...want }), JSON.stringify(lines));
+  }
+
+  // Re-rendered only when the tick or the agent changes: toggling the cone or trails redraws the scene, not the panel.
+  const lastRender = () => page.evaluate(() => performance.getEntriesByName("mind-render", "measure").at(-1)?.startTime ?? -1);
+  const rendered = await lastRender();
+  await coneBox(page).check();
+  await frames2(page);
+  await trailsBox(page).uncheck();
+  await frames2(page);
+  check("toggling the cone and trails leaves the panel alone (same tick, same agent: no mind-render)", rendered >= 0 && (await lastRender()) === rendered, `last mind-render at ${rendered}`);
+  await coneBox(page).uncheck();
+  await trailsBox(page).check();
+
+  // Clicking a marker seeks the clock to its tick (focus starts on the page, so space plays afterwards only if no marker took it).
+  await blur(page);
+  for (const [kind, tick] of [["applied", 7], ["fault", 41], ["requested", 71], ["fault", 78]] as const) {
+    const mark = page.locator(`.replay-mind-markers [data-kind="${kind}"][data-tick="${tick}"]`);
+    if ((await mark.count()) !== 1) {
+      check(`clicking the ${kind} marker at tick ${tick} seeks there`, false, "no such marker");
+      continue;
+    }
+    await mark.click();
+    await frames2(page);
+    const shown = { readout: await readout(page), panel: (await drawnMind(page))?.tick };
+    check(`clicking the ${kind} marker at tick ${tick} seeks there: readout "${tick} / ${lastTick}", the panel at ${tick}`, isDeepStrictEqual(shown, { readout: `${tick} / ${lastTick}`, panel: tick }), JSON.stringify(shown));
+  }
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(150);
+  const played = await playButton(page).textContent();
+  await page.keyboard.press("Space");
+  await frames2(page);
+  check("after clicking a marker, space still plays and pauses: the marker keeps no focus", played === "Pause" && (await playButton(page).textContent()) === "Play", `"${played}" after the first space`);
+
+  // Every tick: shown within one frame of its scrub, mind-render under 8 ms.
+  await pause(page);
+  await scrubTo(page, lastTick);
+  const scrubs = (await page.evaluate(`(async () => {
+    const input = document.querySelector(".replay-timeline");
+    const panel = document.querySelector(".replay-mind");
+    const out = [];
+    for (let t = 0; t <= ${lastTick}; t++) {
+      const before = performance.now();
+      input.value = String(t);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+      const m = performance.getEntriesByName("mind-render", "measure").at(-1);
+      out.push({ tick: t, shown: panel && panel.dataset.tick ? Number(panel.dataset.tick) : null, ms: m && m.startTime >= before ? m.duration : null });
+    }
+    return out;
+  })()`)) as { tick: number; shown: number | null; ms: number | null }[];
+  const late = scrubs.filter((s) => s.shown !== s.tick).map((s) => `${s.tick}->${s.shown}`);
+  check(`exit: scrubbing to every tick 0..${lastTick} in turn, the panel shows that tick within one frame`, scrubs.length === lastTick + 1 && late.length === 0, late.slice(0, 8).join(", "));
+  const ms = scrubs.map((s) => s.ms ?? Number.POSITIVE_INFINITY).sort((a, b) => a - b);
+  const mean = ms.reduce((sum, v) => sum + v, 0) / ms.length;
+  const p95 = ms[Math.min(ms.length - 1, Math.floor(0.95 * ms.length))] ?? Number.NaN;
+  const renderTiming = `${ms.length} scrubs: mean ${mean.toFixed(3)} ms, p95 ${p95.toFixed(3)}, max ${(ms.at(-1) ?? Number.NaN).toFixed(3)}`;
+  console.log(`  timing, mind panel update per scrub (User Timing mind-render): ${renderTiming}`);
+  check("budget: the mind panel updates in under 8 ms per scrub (User Timing mind-render)", (ms.at(-1) ?? Number.POSITIVE_INFINITY) < 8, renderTiming);
+
+  // Playing at 1x through the refusal: every frame's panel is mindView's for the tick on screen.
+  await speedSelect(page).selectOption("1");
+  await pause(page);
+  await scrubTo(page, 60);
+  await playButton(page).click();
+  const frames = await sampleFrames(page, 90);
+  await playButton(page).click();
+  const wrong = frames.filter((f) => !isDeepStrictEqual(f.mind, expectedMind(f.tick, "a0"))).map((f) => f.tick);
+  const ticks = new Set(frames.map((f) => f.tick));
+  check(
+    "playing at 1x following a0, every frame's mind panel is mindView's for the tick on screen",
+    wrong.length === 0 && ticks.size > 20 && ticks.has(78),
+    `${frames.length} frames, ticks ${frames[0]?.tick}..${frames.at(-1)?.tick}${wrong.length ? `; wrong at ${wrong.slice(0, 8).join(", ")}` : ""}`,
+  );
+
+  // Narrow window: the panel goes below the canvas; markers follow the narrower timeline.
+  const wideScale = (await state(page)).scale;
+  await page.setViewportSize({ width: 600, height: 900 });
+  await page.waitForFunction((before) => window.__kbattle?.scale !== before, wideScale);
+  await frames2(page);
+  const narrowCanvas = await rectOf(page, ".replay-stage canvas");
+  const narrowPanel = await rectOf(page, ".replay-mind");
+  check("600x900: the mind panel sits below the canvas", narrowCanvas !== null && narrowPanel !== null && narrowPanel.top >= narrowCanvas.bottom - 0.5, `canvas ${JSON.stringify(narrowCanvas)}, panel ${JSON.stringify(narrowPanel)}`);
+  await followSelect(page).selectOption("free");
+  await frames2(page);
+  const narrowFree = await canvasSize(page);
+  await followSelect(page).selectOption("a0");
+  await frames2(page);
+  check("600x900: following a0 does not resize the canvas either", isDeepStrictEqual(await canvasSize(page), narrowFree), JSON.stringify(narrowFree));
+  const narrowMarks = await markEls(page);
+  const narrowOffsets = await Promise.all(narrowMarks.filter((m) => m.tick !== null).map(async (m) => +(m.center - (await timelineX(page, m.tick ?? 0))).toFixed(2)));
+  check("600x900: every marker re-laid to where the narrower timeline puts its tick", narrowMarks.length === 8 && narrowOffsets.every((d) => Math.abs(d) <= 1), `offsets ${JSON.stringify(narrowOffsets)} px`);
+  await scrubTo(page, 78);
+  const thumb78 = await thumbX(page);
+  const fault78 = (await markEls(page)).find((m) => m.kind === "fault" && m.tick === 78);
+  check("600x900: the fault marker at 78 sits under the thumb scrubbed to 78 (pixels)", fault78 !== undefined && Math.abs(fault78.center - thumb78) <= 1.5, `marker ${fault78?.center.toFixed(2)} px, thumb ${thumb78.toFixed(2)} px`);
+  await page.locator(".replay").screenshot({ path: join(outDir, "mind-panel-narrow.png") });
+  await page.setViewportSize({ width: 1000, height: 700 });
+  await page.waitForFunction((before) => window.__kbattle?.scale === before, wideScale);
+  await frames2(page);
+
+  // Re-mount while the panel shows a0 at the refusal: nothing left behind, the new panel starts empty.
+  await scrubTo(page, 78);
+  const before = await leaks(page);
+  await upload(page, samplePath);
+  const after = await leaks(page);
+  const fresh = { follow: await followSelect(page).inputValue(), drawn: await drawnMind(page), empty: await textOf(page, ".replay-mind-empty"), marks: await markers.count() };
+  check(
+    "re-mounting while the panel shows a0 leaves nothing behind (one mind panel, listeners, observers, contexts), and the new panel starts on free, empty",
+    before.minds === 1 && isDeepStrictEqual(after, before) && isDeepStrictEqual(fresh, { follow: "free", drawn: null, empty: MIND_EMPTY, marks: 0 }),
+    `before ${JSON.stringify(before)}, after ${JSON.stringify(after)}, fresh ${JSON.stringify(fresh)}`,
+  );
+}
+
 // ---- files (v2.5) ----
 
 // Installed before the page's own scripts. Counts what a mounted viewer holds on to:
 // listeners on window and document, live ResizeObservers, live WebGL contexts, its
-// elements (canvas, .replay root, the .replay-view row of v2.3). After a
+// elements (canvas, .replay root, the .replay-view row of v2.3, the .replay-mind
+// panel of v2.4). After a
 // re-mount the counts must be what they were after the first mount. A string, not a
 // callback, for the tsx/__name reason given in checkPlayback.
 const LEAK_PROBE = `(() => {
@@ -881,6 +1311,7 @@ const LEAK_PROBE = `(() => {
       canvases: document.querySelectorAll("canvas").length,
       viewers: document.querySelectorAll(".replay").length,
       viewRows: document.querySelectorAll(".replay-view").length,
+      minds: document.querySelectorAll(".replay-mind").length,
     };
   };
 })()`;
@@ -892,6 +1323,7 @@ interface Leaks {
   canvases: number;
   viewers: number;
   viewRows: number;
+  minds: number;
 }
 
 async function leaks(page: Page): Promise<Leaks> {
@@ -975,8 +1407,8 @@ async function checkFiles(page: Page): Promise<Leaks> {
   // one global test WebGL context, so these counts are compared with the baseline, not with 1.
   const baseline = await leaks(page);
   check(
-    "one viewer mounted: one .replay, one view row, one canvas, one keydown listener on document",
-    baseline.viewers === 1 && baseline.viewRows === 1 && baseline.canvases === 1 && baseline.listeners["document:keydown"] === 1,
+    "one viewer mounted: one .replay, one view row, one mind panel, one canvas, one keydown listener on document",
+    baseline.viewers === 1 && baseline.viewRows === 1 && baseline.minds === 1 && baseline.canvases === 1 && baseline.listeners["document:keydown"] === 1,
     `${baseline.resizeObservers} ResizeObservers, ${baseline.webglContexts} live WebGL contexts`,
   );
 
@@ -1454,7 +1886,7 @@ async function checkRealMatch(page: Page, baseline: Leaks): Promise<void> {
   );
   const left = await leaks(page);
   check(
-    "re-mounting with follow, trails and the cone on leaves nothing behind (listeners, observers, WebGL contexts, canvases, view rows)",
+    "re-mounting with follow, trails and the cone on leaves nothing behind (listeners, observers, WebGL contexts, canvases, view rows, mind panels)",
     isDeepStrictEqual(left, baseline),
     JSON.stringify(left),
   );
@@ -1519,6 +1951,7 @@ async function main(): Promise<void> {
     // does not; the marker goes back after it.
     await checkUiShell(page);
     await page.evaluate("window.__smokeMarker = true");
+    await checkMindPanel(page);
     const baseline = await checkFiles(page);
     await checkBusyLog(page);
     await checkRealMatch(page, baseline);

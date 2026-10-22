@@ -4,6 +4,7 @@
 
 import type { Vec2 } from "@kbattle/core";
 import type { DrawnBullets } from "./bullets";
+import type { DrawnMind } from "./mind-selectors";
 import type { DrawnOverlay } from "./overlay";
 
 export interface DrawnAgent {
@@ -33,6 +34,8 @@ export interface KbattleDebug {
   drawnBullets(): DrawnBullets;
   /** The perception overlay as last drawn, or null while it is off or nobody is followed (v2.3). */
   drawnOverlay(): DrawnOverlay | null;
+  /** The mind panel and its timeline markers as last drawn, or null while nobody is followed (v2.4). */
+  drawnMind(): DrawnMind | null;
   /** Checks the form as Run match does, shows the result under the button and returns its text ("Config OK" or the problems). */
   validateForm(): string;
 }
