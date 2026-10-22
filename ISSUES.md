@@ -187,3 +187,12 @@ probabilities and confidence to 4 decimals before returning answers, so
 the live run and the replay derive actions from the same numbers and
 byte-identical replay holds. Cost if wrong: a probability within 0.00005
 of a threshold is rounded onto it (irrelevant in practice).
+
+## I-019 Death-step position is not logged — open (post-PoC)
+
+An agent that dies mid-step keeps its last Tick row in the replay, up to
+0.25 m from where it actually stood, so shots it fired in that step and
+hits by its bullets afterwards are rebuilt slightly off (worst observed:
+an incoming bearing 9° off at 1.64 m). Fix would be a position on the
+Death event, rounded like Tick rows. Accepted for the PoC. Cost if wrong:
+cosmetic in the mind panel.
