@@ -3,7 +3,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { botProviders } from "../../src/bots";
 import { MATCH_DURATION_TICKS } from "../../src/constants";
 import { eventsOfKind } from "../../src/log";
-import type { DoerAnswer, Event, MapSpec, MatchConfig, MatchLog, Prompts, Slot } from "../../src/schemas";
+import { MatchLogSchema, type DoerAnswer, type Event, type MapSpec, type MatchConfig, type MatchLog, type Prompts, type Slot } from "../../src/schemas";
 import { runMatch } from "../../src/sim/match";
 import type { DecisionContext, DecisionProvider } from "../../src/sim/providers";
 import { makeReplayingProvider, replayMatch } from "../../src/sim/replay-provider";
@@ -37,6 +37,9 @@ const OPEN: MapSpec = {
 };
 
 const bytes = (log: MatchLog) => JSON.stringify(log);
+
+/** A log as a viewer or a replay gets it from disk: written as JSON, read back, parsed (DESIGN.md §5.3, principle 7). */
+const throughFile = (log: MatchLog): MatchLog => MatchLogSchema.parse(JSON.parse(JSON.stringify(log)));
 
 function answer(move: "forward" | "stop"): DoerAnswer {
   const crisp = <T extends string>(choice: T) => ({ type: "choice" as const, choice, probabilities: { [choice]: 1 }, confidence: 1 });
@@ -132,6 +135,12 @@ describe("determinism harness: 16 bots on arena-1, seed 7 (v1.6 exit)", () => {
     expect(bytes(replayed)).toBe(bytes(recorded));
   });
 
+  it("written to a file and read back, the log replays into the same bytes (review M17)", async () => {
+    const file = throughFile(recorded);
+    expect(file).toEqual(recorded);
+    expect(bytes(await replayMatch(file))).toBe(bytes(recorded));
+  });
+
   it("the same config with live bots plays the same log again", async () => {
     const again = await runMatch(SIXTEEN, { providers: botProviders(SIXTEEN.seed), prompts: PROMPTS });
     expect(bytes(again)).toBe(bytes(recorded));
@@ -188,6 +197,44 @@ describe("determinism harness: faults, thinker events, cancels and clocks", () =
     ]);
     const replayed = await replayMatch(recorded, { map: OPEN });
     expect(bytes(replayed)).toBe(bytes(recorded));
+  });
+
+  it("a log with faults and thinker events, written to a file and read back, replays into the same bytes (review M17)", async () => {
+    const recorded = await runMatch(scripted, { map: OPEN, prompts: PROMPTS, doerTimeoutMs: 10, providers: scriptedProviders() });
+    expect(bytes(await replayMatch(throughFile(recorded), { map: OPEN }))).toBe(bytes(recorded));
+  });
+
+  it("so does a log from a sloppy provider: long decimals, extra keys, keys out of order, a thinker input that is not plain JSON (review M17)", async () => {
+    // What a live provider may hand over; the log keeps what the schemas read (R16), so the file,
+    // the replay and the live run agree.
+    const sloppy: DecisionProvider = {
+      decide: ({ tick }) =>
+        Promise.resolve({
+          model: "sloppy",
+          usage: { input_tokens: 100, output_tokens: 7 },
+          answers: {
+            escalate: { type: "noul", noul: 0.3333333333333333 },
+            fire: { noul: tick === 11 ? 0.7500000001 : 0.1, type: "noul" },
+            move: {
+              confidence: 0.4285714285714286,
+              probabilities: { forward: 0.4285714285714286, back: 0.14285714285714285, left: 0.14285714285714285, right: 0.14285714285714285, stop: 0.14285714285714285 },
+              choice: "forward",
+              type: "choice",
+              note: "an extra key",
+            },
+            extra: { type: "noul", noul: 1 },
+          },
+        } as unknown as DoerAnswer),
+      pollEvents: (tick) =>
+        tick === 4
+          ? [{ kind: "Thinker", tick, requestedTick: 1, agent: "a0", input: { at: new Date(0), digest: undefined, n: 1 }, ok: true, plan: { text: "Go.", scratchpad: "" }, debug: true } as unknown as Event]
+          : [],
+    };
+    const recorded = await runMatch(scripted, { map: OPEN, prompts: PROMPTS, providers: () => sloppy });
+    expect(eventsOfKind(recorded, "Shot").length).toBeGreaterThan(0); // the fire noul of tick 11 crossed the threshold
+    const file = throughFile(recorded);
+    expect(file).toEqual(recorded);
+    expect(bytes(await replayMatch(file, { map: OPEN }))).toBe(bytes(recorded));
   });
 
   it("replays a cancelled match by cancelling after the same tick", async () => {
