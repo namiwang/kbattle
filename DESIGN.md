@@ -1,6 +1,6 @@
 # Decision Arena — Design
 
-Status: v4.0 draft, 2026-10-22. Scope: tech demo / proof of concept, restructured as a platform.
+Status: v4.0, 2026-10-22, answers folded in, pending Nami's approval. Scope: tech demo / proof of concept, restructured as a platform.
 
 v4.0 renames kbattle to Decision Arena and turns the one game into the
 first of several arenas. It keeps the PoC question, the fault model, the
@@ -72,7 +72,7 @@ others superseded as noted. Rows 35 onward are v4.0.
 
 | # | Topic | Decision |
 |---|-------|----------|
-| 1–8 | Scope, who pays, replay, sandbox, world, size, mechanics, combat | Carried unchanged for the battle royale arena. |
+| 1–8 | Scope, who pays, replay, sandbox, world, size, mechanics, combat | Carried for the battle royale arena; "who pays" now reads: Workers AI models through Nami's Worker, external providers on the player's key through the gateway (row 49). |
 | 9–10 | Perception, tick | Carried for the shooter kit; perception covers the last decision interval (v3 ruling R15). |
 | 11–14 | Doer, thinker, user surface, escalation | Superseded by rows 36–40. |
 | 15–17 | Comms, refusals, stack | Carried. |
@@ -85,17 +85,21 @@ others superseded as noted. Rows 35 onward are v4.0.
 | 30 | Artifact | Carried: this file plus one short design per arena; `plan/` re-planned after v4.0 is approved. |
 | 31–33 | Sim clock, doer-only slot, bot cadence | Carried: the actor is lockstep, the planner is asynchronous; a doer-only agent is an agent with no planner. |
 | 34 | Clef fallback | Carried for the Cloudflare adapter. |
-| 35 | Name | Decision Arena. Package scope `@decision-arena`. `ASSUMED` the git repo and directory are renamed by Nami; nothing in the code depends on the directory name. `[Q7]` |
+| 35 | Name | Decision Arena. Package scope `@decision-arena`. Nami renames the git repo and directory when the plan starts; nothing in the code depends on the directory name. Work continues on `main` directly (the `poc` branch was fast-forwarded into it). |
 | 36 | Arenas | Battle royale and extraction are two arenas sharing a shooter kit (physics, perception, bots, maps format). Racing is an arena that shares only the platform. Modes are team shapes; `solo` now. |
 | 37 | One model interface | Every model answers structured questions through one contract (§5.3). The Cloudflare decision model is one adapter of it, Anthropic another, dummies a third. No special "decision model" path. |
-| 38 | Models are chosen | The player picks a model per role from a catalog (§5.3). `ASSUMED` catalog at launch: `cloudflare/clef-flash`, `cloudflare/clef`, `anthropic/claude-haiku-5-5`, `anthropic/claude-sonnet-5-5`, and the dummies. Retires v3 row 13's "not model choice". `[Q8]` |
-| 39 | Roles | `ASSUMED` An agent has one sync actor role and an optional async planner role. Sync means the tick waits for the answer up to the timeout; async means the answer lands at the first tick after it arrives and writes to memory. A role's model must support the question types that role is asked; dummies support everything. `[Q10]` |
-| 40 | Cadence | Unchanged from v3 until the budget design: actor every `ACTOR_INTERVAL_TICKS`, planner on escalate after `PLANNER_MIN_GAP_TICKS`, forced after `PLANNER_MAX_GAP_TICKS`. §12 records the token-budget direction discussed and deferred. |
+| 38 | Models are chosen | The player picks a model per role from a catalog (§5.3) limited to models reachable through Cloudflare AI Gateway: Workers AI models (paid by Nami through the Worker) and external providers (paid by the player's key, passed through the gateway). Launch list in §5.3. Retires v3 row 13's "not model choice". |
+| 39 | Roles | An agent has one sync **actor** role and an optional async **planner** role (names confirmed). Sync means the tick waits for the answer up to the model's timeout; async means the answer lands at the first tick after it arrives and writes to memory. A role's model must support the question types that role is asked; dummies support everything. |
+| 40 | Cadence and timeouts | No budget mechanics for now. Actor every `ACTOR_INTERVAL_TICKS = 10`; the planner is asynchronous, never holds a tick, and runs less often than in v3: on escalate after `PLANNER_MIN_GAP_TICKS` (`ASSUMED` 100, 5 s) and forced after `PLANNER_MAX_GAP_TICKS` (`ASSUMED` 400, 20 s). Every model has a `timeoutMs` in the catalog; a sync call past its timeout is a fault that keeps the last answer. Any model may be an actor: the editor shows the projected wall-clock of a match from the catalog's latency figures and warns when it exceeds 15 minutes. §12 records the token-budget direction discussed and deferred. |
 | 41 | Agents are per arena | An agent belongs to one arena; the prompts, instructions and action questions are the arena's. |
 | 42 | Arena contract | An arena is a package implementing §5.2. The platform knows no arena by name; a registry lists them. |
 | 43 | Log envelope | `MatchLog` version 2: `{ version, arena, mode, config, agents, events }`. Platform events are `Call` and `MatchEnd`; `Tick` carries an arena-defined payload; every other event kind is the arena's. §5.5. |
-| 44 | First slice | `ASSUMED` The battle royale arena running through the new contracts with dummy agents and the replay, byte-identical logs to today's, before any real model is wired. `[Q11]` |
-| 45 | Timing | `ASSUMED` The restructure happens now, before the remaining brains work, so the real models are wired once against the contracts. `[Q11]` |
+| 44 | First slice | The battle royale arena running through the new contracts with dummy agents and the replay, logs identical to today's apart from the envelope, before any real model is wired. The parity gate is a test, not a manual check. |
+| 45 | Timing | Now, before the remaining brains work, so the real models are wired once against the contracts. |
+| 46 | Second and third readers | `arenas/racing/DESIGN.md` and `arenas/extraction/DESIGN.md` are one-page sketches written as my calls, so every contract is checked against three arenas before R0 ends. Their needs are in §5.2: per-arena tick length and actor interval, a match outcome that is a ranking plus optional per-agent results, and `active(state)` for agents that leave the world alive. |
+| 47 | Old logs | Version-2 logs replace version 1 with no migration; uploading a version-1 file gets a clear "old format" message; the sample log and goldens are regenerated. |
+| 48 | Planner input | The planner gets the arena's static text (the map) as well as the observation; the planner input budget rises from 1,500 to 2,000 tokens (ISSUES I-022). |
+| 49 | Keys and the gateway | `ASSUMED` External-provider calls go from the browser to Nami's AI Gateway with the player's provider key passed through in the `Authorization` header; the gateway stores no keys, keeps no request bodies, and is unauthenticated (a stranger using it spends their own key, not Nami's). Workers AI models go through the Worker binding with the gateway option, paid by Nami and guarded as before. The anti-goal "a key leaves the browser for anything but the provider" is restated: a key goes only to the gateway and the provider, and is never stored. If the gateway cannot be called from a browser (CORS), the Worker proxies the call with the key passed through, never logged. Decided by a 30-minute spike at the start of R2. |
 
 ## 4. Principles
 
@@ -146,13 +150,17 @@ interface Arena<Config, State, Obs, Answers, Ev> {
   modes: readonly string[];         // ["solo"]
   config: ZodType<Config>;          // mapId, seed, durationTicks, slots, mode, arena-specific fields
   maps: readonly string[];          // ids; getMap(id) returns the arena's map
+  tickMs?: number;                  // defaults to the platform's 50 ms
+  actorIntervalTicks?: number;      // defaults to the platform's 10
   questions(obs: Obs, memory: Memory): Questions;   // the actor's typed questions for this observation (§5.3)
   spawn(config: Config, rng: RngState): State;
   perceive(state: State, agent: AgentId): Obs;      // pure
   actionFrom(answers: Answers, obs: Obs, previous: Action): Action; // answers → the sim's action, thresholds inside
   step(state: State, actions: Record<AgentId, Action>): { state: State; events: Ev[] };
   tick(state: State): unknown;      // the Tick payload the renderer reads (positions, hp, …)
-  ended(state: State): { ranking: AgentId[] } | null;
+  active(state: State): AgentId[];  // agents still to be asked: alive and still in the world (extraction removes extracted agents)
+  ended(state: State): { ranking: AgentId[]; results?: Record<AgentId, unknown> } | null;  // results: per-agent outcome, arena-defined
+  staticText(config: Config): string;   // what every agent knows before the match: the map, the rules in a few lines
   events: ZodType<Ev>;              // discriminated union of the arena's event kinds
   bots: Record<string, (seed: number, slot: number) => Model>;   // dummies
   defaults: AgentDefaults;          // planner prompt, actor instructions per question, fixed plan for planner-less agents
@@ -172,7 +180,7 @@ collision code move to `kits/shooter` unchanged; `arenas/battle-royale`
 wraps them into the contract and keeps the ranking rule (survival, kills,
 HP) and the ending (last alive or duration).
 
-### 5.3 Model contract and catalog (`platform/core`, `platform/models`)
+### 5.3 Model contract, adapters and catalog (`platform/core`, `platform/models`)
 
 ```ts
 type Question =
@@ -194,26 +202,49 @@ type Reply = { ok: true; answers: Record<string, Answer>; usage: Usage; model: s
            | { ok: false; error: ModelError };   // kind: timeout | network | server | rate_limit | invalid_output | refusal | auth | billing | not_found; fatal: boolean
 ```
 
-- The **cloudflare** adapter sends `questions` as they are (the Clef wire
-  shape is this contract) through `POST /ask` on the Worker, which adds
-  the model name and the binding. It rejects `text` questions.
-- The **anthropic** adapter turns the question set into one JSON-schema
-  structured output (one property per question: an enum for `choice`, a
-  number 0–1 for `noul`, a string for `text`), fills `probabilities` with
-  1 for the chosen option, and maps faults as today.
-- The **dummy** adapter wraps a TypeScript function `(state, questions) =>
-  answers`; `dummy/random`, `dummy/first`, and every bot are dummies.
-  Usage is estimated at four characters per token so a dummy's calls
-  are logged like any other.
-- The **replaying** model answers from a recorded log (determinism).
-- Catalog: `platform/models/catalog.ts` lists ids, provider, which key
-  they need, supported types, and list prices for the cost report.
+Model ids are AI Gateway ids, `provider/model`, so the catalog is a list
+of what the gateway can reach. Four adapters:
+
+- **workers-ai** (`workers-ai/@cf/...`): decision models and other Workers
+  AI models, called through `POST /ask` on Nami's Worker, which runs
+  `env.AI.run(model, input, { gateway: { id } })`. For Clef-class models
+  the question set is sent as it is (the Clef wire shape is this
+  contract); `text` questions are rejected. Nami pays; the guard applies.
+- **gateway-chat** (`anthropic/...`, `openai/...`, `google-ai-studio/...`,
+  `groq/...`, `mistral/...` and any other chat provider the gateway
+  lists): one OpenAI-compatible chat completion through the gateway with
+  the player's provider key passed through, asking for structured output
+  with one JSON-schema property per question (an enum for `choice`, a
+  number 0–1 for `noul`, a string for `text`), `probabilities` filled
+  with 1 for the chosen option, faults mapped as today (timeout,
+  network, server, rate limit, invalid output, refusal, auth, billing,
+  not found). Providers whose structured output does not come through
+  the compat layer are marked `text-only` in the catalog and cannot be
+  actors. Replaces the Anthropic SDK adapter of v0.6/v3.2, whose fault
+  tests carry over.
+- **dummy** (`dummy/first`, `dummy/random`, `bot/<name>`): a TypeScript
+  function `(state, questions) => answers`; every bot is a dummy. Usage
+  is estimated at four characters per token so a dummy's calls are
+  logged like any other.
+- **replaying**: answers from a recorded log (determinism).
+
+Catalog (`platform/models/catalog.ts`): id, provider, adapter, key
+needed, supported question types, `timeoutMs`, typical latency, list
+prices. `ASSUMED` launch list: `workers-ai/@cf/cloudflare/clef-flash`
+(actor default), `workers-ai/@cf/cloudflare/clef`,
+`anthropic/claude-haiku-5-5` (planner default), `anthropic/claude-sonnet-5-5`,
+`dummy/first`, `dummy/random`, `bot/wanderer`, `bot/camper`. Other gateway
+providers are catalog data, added when a key and a structured-output
+check exist. Row 34's fallback (OpenAI Decisions) is one more adapter.
 
 `ASSUMED` The planner is asked one `text` question for the plan and one
-for the scratchpad, with the same `Plan` limits as today; the actor is
-asked the arena's questions plus the platform's fixed `escalate` noul.
-A model that does not support `text` cannot be a planner; the editor
-greys it out.
+for the scratchpad, with the same `Plan` limits as today; its input is
+the arena's `staticText` (the map), the observation text, the digest
+and memory, under 2,000 tokens. The actor is asked the arena's questions
+plus the platform's fixed `escalate` noul. A model that does not support
+`text` cannot be a planner; the editor greys it out. A sync call is
+raced against the model's `timeoutMs`; the planner's call has its own
+timeout and never holds a tick.
 
 ### 5.4 Agent spec
 
@@ -299,15 +330,16 @@ ids outside the catalog.
 | `core/src/sim/{match,log,providers,replay-provider}.ts` | `platform/core/match/*`, generalized over the Arena and Model contracts | rewrite of the glue, same behaviour and tests |
 | `core/src/bots/*`, `core/maps/*`, `core/src/maps.ts` | `kits/shooter/bots/*` as dummies; maps renamed `map-1`, `map-2` | move, rename |
 | `core/src/schemas.ts` | platform schemas (`Question`, `Answer`, `AgentSpec`, `MatchLog` v2, `Call`) in `platform/core`; shooter state, questions and events in `arenas/battle-royale` | split |
-| `brain/src/providers/anthropic.ts`, `thinker-client.ts`, `event-digest.ts`, `thinker-prompt.ts` | `platform/models/anthropic.ts`; the planner message builder and digest in `platform/core/planner/*`, taking `arena.observationText` | move, generalize |
+| `brain/src/providers/anthropic.ts`, `thinker-client.ts`, `event-digest.ts`, `thinker-prompt.ts` | `platform/models/gateway-chat.ts` (replaces the SDK adapter; fault tests carried); the planner message builder and digest in `platform/core/planner/*`, taking `arena.staticText` and `arena.observationText` | rewrite the adapter, move the rest |
 | `worker/*` | `platform/worker`, route `/ask` | rename |
 | `web/src/replay/*`, `web/src/ui/*` | `platform/web` shell + `kits/shooter/render/*` | split |
 | `core/fixtures/sample-log.json`, goldens | regenerated as version 2 logs; goldens unchanged in content | regenerate |
 | `DESIGN.md`, `plan/`, `ISSUES.md` | this file; `arenas/battle-royale/DESIGN.md` for the shooter specifics (sections 6 of v3.0); `plan/` re-planned; ISSUES carried | rewrite |
 
-Parity gate for the move: the 873 tests pass in their new homes, the
-16-bot log of `run-match` is byte-identical to today's apart from the
-envelope fields, and the replay smoke passes against it.
+Parity gate for the move, as a test: the 873 tests pass in their new
+homes, the 16-bot log of `run-match` equals today's apart from the
+envelope fields (a test compares the arena events and `Tick.data` of
+both), and the replay smoke passes against it.
 
 ## 7. Phases of the revamp
 
@@ -315,7 +347,7 @@ envelope fields, and the replay smoke passes against it.
 |-------|-------------|------|
 | R0 Contracts and moves | New workspace layout, contracts in `platform/core`, shooter code moved into the kit and the battle royale arena, registry | Everything builds; the parity gate holds with dummies and bots. |
 | R1 Shell and renderer split | Replay shell generic, shooter renderer behind `ArenaRenderer`, agent panel reads `Call` events | Smoke passes on a version-2 log; follow, overlay, panel as today. |
-| R2 Models | Model contract, catalog, cloudflare and anthropic adapters, planner glue, agent editor with role → model choice | A dummy planner and a dummy actor run a match from the page; the real adapters pass today's fault tests. |
+| R2 Models | Model contract, catalog with timeouts, the workers-ai and gateway-chat adapters (after the CORS spike, row 49), planner glue with the static text, agent editor with role → model choice and the wall-clock projection | A dummy planner and a dummy actor run a match from the page; the real adapters pass today's fault tests; a Haiku planner answers a structured call through the gateway from the browser. |
 | R3 PoC | The remaining P3/P4 goals of v3.0 (default agents, cost measurement, anti-goal check, guard, deploy) against the new structure | v3.0 §8 P3 and P4 exits. |
 
 The task-level plan is written after this document is approved.
@@ -353,15 +385,13 @@ list prices so the cost report is computed, not typed.
 
 ## 11. Open items
 
-- `[Q7]` Repo and directory rename: done by Nami, when?
-- `[Q8]` Model catalog at launch and whether `clef` (27B) is offered.
-- `[Q10]` Role names: actor and planner, or fast and slow?
-- `[Q11]` Confirm timing (now) and the first slice (battle royale through the contracts with dummies).
-- `[Q2]`–`[Q6]` from v3.0 stand where not superseded; v0.5 and v0.6 live spikes still need credentials.
+- Answered on 2026-10-22: timing (now), timeouts and planner frequency (row 40), role names (actor, planner), racing and extraction sketches (row 46), first slice (row 44), catalog limited to the gateway (row 38), rename by Nami (row 35), old logs dropped (row 47), plan rewritten, work on `main`, planner map text (row 48), turn quantization and the review minors carried into R3 (ISSUES I-017, I-023), parity gate as a test.
+- Still open: `[Q2]`–`[Q6]` from v3.0 where not superseded; the v0.5 and v0.6 live spikes still need credentials; browser-to-gateway CORS (row 49, spike in R2); which gateway providers pass structured output through the compat layer (checked per provider when added).
 
 ## 12. Deferred: cadence and budget
 
-Discussed on 2026-10-22 and deferred so the core loop lands first. The
+No budget mechanics for now (Nami, 2026-10-22). Discussed and deferred so
+the core loop lands first. The
 direction: replace interval, min gap and max gap with a token budget per
 role and a bucket that refills at `budget ÷ duration` per tick; a role is
 asked when it can afford roughly its last call, the planner also when
