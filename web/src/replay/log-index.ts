@@ -4,14 +4,12 @@
 
 import { AGENT_HP, lastTick as lastTickOf, type Event, type EventOf, type MatchLog, type Slot } from "@kbattle/core";
 
-/** A near miss on a Tick row, `[targetId, fromX, fromY]` (ISSUES I-016): `from` is where the shooter stood. */
-export type NearMissRow = readonly [target: string, fromX: number, fromY: number];
-
 /**
- * A Tick event as the viewer reads it. v1.5 adds the optional `near` field
- * (present only when non-empty); a log written before it has none.
+ * A Tick event. Its optional `near` lists the near misses of the step that
+ * produced it as `[targetId, fromX, fromY]`, `from` being where the shooter
+ * stood (v1.5, ISSUES I-016); it is absent when there were none.
  */
-export type TickEvent = EventOf<"Tick"> & { readonly near?: readonly NearMissRow[] };
+export type TickEvent = EventOf<"Tick">;
 export type SpawnEvent = EventOf<"Spawn">;
 export type ShotEvent = EventOf<"Shot">;
 export type DeathEvent = EventOf<"Death">;

@@ -1,9 +1,10 @@
-import { MatchLogSchema, VISION_CONE_DEG, VISION_RANGE_M, vec2, type Vec2 } from "@kbattle/core";
-import { describe, expect, it } from "vitest";
+import { MatchLogSchema, normalizeDeg, VISION_CONE_DEG, VISION_RANGE_M, vec2, type Vec2 } from "@kbattle/core";
+import { beforeAll, describe, expect, it } from "vitest";
 import sampleJson from "../../../core/fixtures/sample-log.json" with { type: "json" };
-import { indexLog } from "../../src/replay/log-index";
+import { indexLog, type LogIndex } from "../../src/replay/log-index";
 import { clipToRect, overlayModel, tickSegment, visionCone } from "../../src/replay/overlay";
 import { stateFromTick } from "../../src/replay/state-from-tick";
+import { realMatch, type RealMatch } from "./real-match";
 
 const sample = MatchLogSchema.parse(sampleJson);
 const index = indexLog(sample);
@@ -139,5 +140,40 @@ describe("overlayModel on the sample log", () => {
   it("a dead agent has no cone and sees nothing: a1 at tick 142", () => {
     const model = overlayModel(stateFromTick(index, sample, 142), "a1");
     expect(model).toMatchObject({ agent: "a1", alive: false, pos: { x: 60.76, y: 49.73 }, cone: [], seen: [], incoming: [] });
+  });
+});
+
+describe("overlayModel on a real 16-bot match", () => {
+  let real: RealMatch;
+  let realIndex: LogIndex;
+  beforeAll(async () => {
+    real = await realMatch();
+    realIndex = indexLog(real.log);
+  });
+
+  it("puts a red tick toward the source of every hit and near miss on the followed agent, as the sim placed it", () => {
+    // The live world's facts (unrounded) say where each shot came from: hits first, then near
+    // misses, as perceive lists them. Each tick points there to the degree: perceive's whole-degree
+    // bearing plus the rows' rounding.
+    const wrong: string[] = [];
+    let ticks = 0;
+    let nearMisses = 0;
+    for (const [tick, world] of real.live) {
+      const facts = [...world.lastTick.hits, ...world.lastTick.nearMisses];
+      if (facts.length === 0) continue;
+      const state = stateFromTick(realIndex, real.log, tick);
+      for (const agent of world.agents) {
+        if (!agent.alive) continue;
+        const sources = facts.filter((f) => f.target === agent.id).map((f) => vec2.angleOf(vec2.sub(f.from, agent.pos)));
+        const { incoming } = overlayModel(state, agent.id);
+        ticks += incoming.length;
+        nearMisses += world.lastTick.nearMisses.filter((m) => m.target === agent.id).length;
+        const ok = incoming.length === sources.length && incoming.every((angle, i) => Math.abs(normalizeDeg(angle - (sources[i] ?? Number.NaN))) <= 1);
+        if (!ok) wrong.push(`tick ${tick} ${agent.id}: ticks at ${JSON.stringify(incoming)}, fire from ${JSON.stringify(sources.map((a) => +a.toFixed(2)))}`);
+      }
+    }
+    expect(wrong.slice(0, 5)).toEqual([]);
+    expect(nearMisses).toBeGreaterThan(0);
+    expect(ticks).toBeGreaterThan(nearMisses); // and hits on agents that survived them
   });
 });

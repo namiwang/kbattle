@@ -12,7 +12,10 @@
 // Between playback and the UI shell, the v2.3 view row: bullet dots and trails
 // against the Tick rows (trails gone within N ticks), the follow camera, the
 // vision-cone overlay against core.perceive at every tick, and frame timing at
-// 1x with trails and overlay on; at the end the same on a busy 16-agent log.
+// 1x with trails and overlay on; at the end the same on a busy 16-agent log,
+// then on a real 16-bot match (the one core's scripts/run-match.ts writes):
+// incoming-fire ticks against the log's hits and near-miss rows, a death,
+// resizing while following, and re-mounting with everything on.
 // Screenshots and the downloaded file go to web/.smoke/. Exits 1 if any check
 // fails.
 
@@ -20,15 +23,30 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
-import { eventsOfKind, getMap, MatchLogSchema, normalizeDeg, vec2, type Event as LogEvent, type MatchLog, type Vec2 } from "@kbattle/core";
+import {
+  botProviders,
+  eventsOfKind,
+  getMap,
+  MATCH_DURATION_TICKS,
+  MatchConfigSchema,
+  MatchLogSchema,
+  normalizeDeg,
+  runMatch,
+  vec2,
+  type Event as LogEvent,
+  type MatchLog,
+  type Slot,
+  type Vec2,
+} from "@kbattle/core";
 import { chromium, type Locator, type Page } from "playwright";
 import { createServer, type ViteDevServer } from "vite";
 import { TRAIL_TICKS, type DrawnBullets } from "../src/replay/bullets";
+import { makeTransform } from "../src/replay/coords";
 import type { DrawnAgent, KbattleDebug } from "../src/replay/debug";
-import { indexLog } from "../src/replay/log-index";
+import { indexLog, type LogIndex } from "../src/replay/log-index";
 import { overlayModel, type DrawnOverlay } from "../src/replay/overlay";
 import { stateFromTick } from "../src/replay/state-from-tick";
-import { BULLET, COLORS, KIND_COLORS, MARKER, OVERLAY } from "../src/replay/theme";
+import { BULLET, COLORS, KIND_COLORS, MARKER, OVERLAY, STAGE_PAD_PX } from "../src/replay/theme";
 
 const webDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = join(webDir, ".smoke");
@@ -370,12 +388,14 @@ function blend(under: number, over: number, alpha: number): number {
 /** The point `meters` away from `from` at absolute angle `deg` (§6.1). */
 const along = (from: Vec2, deg: number, meters: number): Vec2 => vec2.add(from, vec2.scale(vec2.fromAngle(deg), meters));
 
-const sampleIndex = indexLog(log);
-/** What the overlay must show for `agent` at `tick`, computed here in Node with core.perceive. */
-function expectedOverlay(tick: number, agent: string): Pick<DrawnOverlay, "tick" | "agent" | "cone" | "visible" | "incoming"> {
-  const m = overlayModel(stateFromTick(sampleIndex, log, tick), agent);
+/** What the overlay must show for `agent` at `tick` of `matchLog`, computed here in Node with core.perceive. */
+function overlayOf(index: LogIndex, matchLog: MatchLog, tick: number, agent: string): DrawnOverlay {
+  const m = overlayModel(stateFromTick(index, matchLog, tick), agent);
   return { tick, agent, cone: m.cone.length >= 3, visible: m.seen.map((x) => x.id), incoming: [...m.incoming] };
 }
+
+const sampleIndex = indexLog(log);
+const expectedOverlay = (tick: number, agent: string) => overlayOf(sampleIndex, log, tick, agent);
 
 /** True when bullet `id` is in a Tick row within the trail window ending at `tick` (the last TRAIL_TICKS ticks). */
 function inTrailWindow(id: string, tick: number): boolean {
@@ -800,7 +820,8 @@ async function checkUiShell(page: Page): Promise<void> {
 // ---- files (v2.5) ----
 
 // Installed before the page's own scripts. Counts what a mounted viewer holds on to:
-// listeners on window and document, live ResizeObservers, live WebGL contexts. After a
+// listeners on window and document, live ResizeObservers, live WebGL contexts, its
+// elements (canvas, .replay root, the .replay-view row of v2.3). After a
 // re-mount the counts must be what they were after the first mount. A string, not a
 // callback, for the tsx/__name reason given in checkPlayback.
 const LEAK_PROBE = `(() => {
@@ -859,6 +880,7 @@ const LEAK_PROBE = `(() => {
       webglContexts: [...contexts].filter((c) => !c.isContextLost()).length,
       canvases: document.querySelectorAll("canvas").length,
       viewers: document.querySelectorAll(".replay").length,
+      viewRows: document.querySelectorAll(".replay-view").length,
     };
   };
 })()`;
@@ -869,6 +891,7 @@ interface Leaks {
   webglContexts: number;
   canvases: number;
   viewers: number;
+  viewRows: number;
 }
 
 async function leaks(page: Page): Promise<Leaks> {
@@ -946,13 +969,14 @@ function syntheticLog(bytes: number): MatchLog {
   return { version: 1, config: { mapId: "arena-1", seed: 7, durationTicks: tick, slots }, seed: 7, prompts: log.prompts, events };
 }
 
-async function checkFiles(page: Page): Promise<void> {
+/** Returns the leak counts of one mounted viewer, the baseline later re-mounts are held to. */
+async function checkFiles(page: Page): Promise<Leaks> {
   // Per mounted viewer Pixi adds a ResizeObserver of its own (accessibility CanvasObserver) and keeps
   // one global test WebGL context, so these counts are compared with the baseline, not with 1.
   const baseline = await leaks(page);
   check(
-    "one viewer mounted: one .replay, one canvas, one keydown listener on document",
-    baseline.viewers === 1 && baseline.canvases === 1 && baseline.listeners["document:keydown"] === 1,
+    "one viewer mounted: one .replay, one view row, one canvas, one keydown listener on document",
+    baseline.viewers === 1 && baseline.viewRows === 1 && baseline.canvases === 1 && baseline.listeners["document:keydown"] === 1,
     `${baseline.resizeObservers} ResizeObservers, ${baseline.webglContexts} live WebGL contexts`,
   );
 
@@ -1078,6 +1102,7 @@ async function checkFiles(page: Page): Promise<void> {
     `${(bigText.length / 1024 / 1024).toFixed(2)} MiB, ${bigLast} ticks: ${timing.open.toFixed(0)} ms to first frame, ${timing.parse.toFixed(0)} ms read+parse`,
   );
   check("after every upload, still nothing left behind", isDeepStrictEqual(await leaks(page), baseline), JSON.stringify(await leaks(page)));
+  return baseline;
 }
 
 // ---- a busy 16-agent log with trails and the cone on (v2.3) ----
@@ -1161,11 +1186,7 @@ async function checkBusyLog(page: Page): Promise<void> {
   await playButton(page).click();
   const played = await sampleFrames(page, 90);
   await playButton(page).click();
-  const want = (tick: number) => {
-    const m = overlayModel(stateFromTick(busyIndex, busy, tick), "a5");
-    return { tick, agent: "a5", cone: m.cone.length >= 3, visible: m.seen.map((x) => x.id), incoming: [...m.incoming] };
-  };
-  const wrong = played.filter((f) => !isDeepStrictEqual(f.overlay, want(f.tick)));
+  const wrong = played.filter((f) => !isDeepStrictEqual(f.overlay, overlayOf(busyIndex, busy, f.tick, "a5")));
   const worst = played.reduce((max, f) => {
     const a = f.agents.find((x) => x.id === "a5");
     const c = a ? markerCenter(a) : { x: Number.NaN, y: Number.NaN };
@@ -1186,6 +1207,257 @@ async function checkBusyLog(page: Page): Promise<void> {
   console.log(`  timing, 16 agents, ~${inFlight} bullets at 1x, follow a5 + trails + vision cone: ${showTiming(on)}`);
   console.log(`  timing, 16 agents, ~${inFlight} bullets at 1x, free camera, no trails, no cone:   ${showTiming(bare)}`);
   check("budget: 60 fps at 1x with trails and the cone on (16 agents)", smooth(on), showTiming(on));
+}
+
+// ---- a real 16-bot match: incoming fire, a death, re-mounting while following (v2.3) ----
+
+/**
+ * The match core's scripts/run-match.ts writes by default (16 bots on arena-1, seed 7, wanderers
+ * and campers alternating), run here in-process: same config, same log, byte for byte.
+ * KBATTLE_MATCH_LOG=<file> opens a log that script wrote instead (any map or seed).
+ */
+async function realMatchLog(): Promise<MatchLog> {
+  const file = process.env.KBATTLE_MATCH_LOG;
+  if (file) return MatchLogSchema.parse(JSON.parse(readFileSync(file, "utf8")));
+  const config = MatchConfigSchema.parse({
+    mapId: "arena-1",
+    seed: 7,
+    durationTicks: MATCH_DURATION_TICKS,
+    slots: Array.from({ length: 16 }, (_, i): Slot => ({ kind: "bot", bot: i % 2 === 0 ? "wanderer" : "camper" })),
+  });
+  const prompts = { thinkerSystem: "", doerInstructions: { move: "", turn: "", fire: "", target: "" } };
+  return runMatch(config, { providers: botProviders(config.seed), prompts });
+}
+
+/**
+ * Where the fire on `agent` came from at `tick`, read straight off the log, not through
+ * stateFromTick: the owner of each bullet that hit it where this tick's row puts the owner, then
+ * the row's `near` entries for it. Null when an owner is gone from the row (the log has no
+ * position for it then).
+ */
+function fireFrom(index: LogIndex, tick: number, agent: string): Vec2[] | null {
+  const row = index.byTick(tick);
+  const sources: Vec2[] = [];
+  for (const event of index.eventsAt(tick)) {
+    if (event.kind !== "Hit" || event.target !== agent) continue;
+    const owner = index.shots.get(event.bullet)?.agent;
+    const at = row.agents.find(([id]) => id === owner);
+    if (!at) return null;
+    sources.push({ x: at[1], y: at[2] });
+  }
+  for (const [target, x, y] of row.tick === tick ? (row.near ?? []) : []) if (target === agent) sources.push({ x, y });
+  return sources;
+}
+
+async function checkRealMatch(page: Page, baseline: Leaks): Promise<void> {
+  const real = await realMatchLog();
+  const realPath = join(outDir, "match16.json");
+  writeFileSync(realPath, JSON.stringify(real));
+  const index = indexLog(real);
+  const rowOf = (tick: number, id: string) => index.byTick(tick).agents.find(([a]) => a === id);
+  const posOf = (tick: number, id: string): Vec2 => {
+    const row = rowOf(tick, id);
+    return row ? { x: row[1], y: row[2] } : { x: Number.NaN, y: Number.NaN };
+  };
+  const ticks = eventsOfKind(real, "Tick");
+  const nearRows = ticks.reduce((n, t) => n + (t.near?.length ?? 0), 0);
+  console.log(
+    `  real match: ${real.config.mapId} seed ${real.seed}, ${index.agents.length} agents, ${index.lastTick} ticks, ` +
+      `${eventsOfKind(real, "Hit").length} hits, ${nearRows} near-miss rows, ${index.deaths.size} deaths`,
+  );
+  await upload(page, realPath);
+  check(
+    "real match: Follow lists free and every spawned agent",
+    isDeepStrictEqual(await followSelect(page).locator("option").allTextContents(), ["free", ...index.agents]) && index.agents.length === 16,
+    `${index.agents.length} agents`,
+  );
+
+  // Follow the agent under the most fire (near misses and hits) through its fights.
+  const fire = new Map<string, number>();
+  for (const t of ticks) for (const [target] of t.near ?? []) fire.set(target, (fire.get(target) ?? 0) + 1);
+  for (const hit of eventsOfKind(real, "Hit")) fire.set(hit.target, (fire.get(hit.target) ?? 0) + 1);
+  const agent = [...fire].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "a0";
+  const alive = (t: number) => rowOf(t, agent) !== undefined;
+  const lastAlive = (index.deaths.get(agent)?.tick ?? index.lastTick + 1) - 1;
+  const scale = (await state(page)).scale;
+  const midPx = (OVERLAY.incomingFromPx + OVERLAY.incomingToPx) / 2;
+  // A tick where a probe at the middle of the first red tick can only see the tick: no other
+  // agent's marker or label within 25 px of it, no bullet dot within 6 px (markers and dots are
+  // drawn over the overlay).
+  const clearProbe = (t: number, source: Vec2): boolean => {
+    const at = posOf(t, agent);
+    const probeAt = along(at, vec2.angleOf(vec2.sub(source, at)), midPx / scale);
+    const row = index.byTick(t);
+    const px = (x: number, y: number) => vec2.dist(probeAt, { x, y }) * scale;
+    return row.agents.every(([id, x, y]) => id === agent || px(x, y) >= 25) && row.bullets.every(([, x, y]) => px(x, y) >= 6);
+  };
+  const underFire = (t: number, kind: "near" | "hit"): boolean => {
+    if (!alive(t)) return false;
+    const sources = fireFrom(index, t, agent);
+    const near = (index.byTick(t).near ?? []).filter(([target]) => target === agent).length;
+    const hits = index.eventsAt(t).filter((e) => e.kind === "Hit" && e.target === agent).length;
+    return sources !== null && sources.length > 0 && (kind === "near" ? near > 0 : hits > 0) && clearProbe(t, sources[0] ?? { x: 0, y: 0 });
+  };
+  const tickWith = (kind: "near" | "hit") => {
+    for (let t = 1; t <= lastAlive; t++) if (underFire(t, kind)) return t;
+    return undefined;
+  };
+  const nearTick = tickWith("near");
+  const hitTick = tickWith("hit");
+
+  await followSelect(page).selectOption(agent);
+  await coneBox(page).check();
+  for (const [kind, t] of [
+    ["near-miss row", nearTick],
+    ["hit", hitTick],
+  ] as const) {
+    if (t === undefined) {
+      check(`real match: ${agent} takes a ${kind} somewhere the probe can see it`, false);
+      continue;
+    }
+    await scrubTo(page, t);
+    const drawn = await drawnOverlay(page);
+    const at = posOf(t, agent);
+    const want = (fireFrom(index, t, agent) ?? []).map((s) => vec2.angleOf(vec2.sub(s, at)));
+    check(
+      `real match, tick ${t} (${kind}): following ${agent}, the overlay has a red tick toward each source of fire the log names`,
+      drawn !== null && drawn.tick === t && drawn.incoming.length === want.length && drawn.incoming.every((a, i) => Math.abs(normalizeDeg(a - (want[i] ?? Number.NaN))) <= 1),
+      `ticks at ${JSON.stringify(drawn?.incoming)}, fire from ${JSON.stringify(want.map((a) => +a.toFixed(1)))}`,
+    );
+    const center = await canvasCenter(page);
+    const angle = drawn?.incoming[0] ?? 0;
+    const png = await page.locator("canvas").screenshot();
+    await probe(page, png, [
+      { name: `real match, tick ${t} (${kind}): the red tick is on the canvas`, at: vec2.add(center, vec2.scale(vec2.fromAngle(angle), midPx)), want: OVERLAY.incoming },
+    ]);
+    if (kind === "near-miss row") await page.locator(".replay").screenshot({ path: join(outDir, "overlay-16.png") });
+  }
+
+  // Playing at 1x through a fight: every frame's overlay is perceive's for its tick, the agent stays
+  // centered, the dots are the Tick's bullets and no trail outlives its window. 120 frames cover
+  // about 40 ticks: start at the first tick s with the agent alive through s + 45 and both fire
+  // coming in and someone in sight within s + 2 .. s + 30.
+  const model = new Map<number, DrawnOverlay>();
+  for (let t = 0; t <= lastAlive; t++) model.set(t, overlayOf(index, real, t, agent));
+  const busyFrom = (s: number) => {
+    const span = Array.from({ length: 46 }, (_, k) => model.get(s + k));
+    const middle = span.slice(2, 31);
+    return span.every((m) => m?.cone === true) && middle.some((m) => (m?.incoming.length ?? 0) > 0) && middle.some((m) => (m?.visible.length ?? 0) > 0);
+  };
+  let from = 0;
+  while (from + 45 <= lastAlive && !busyFrom(from)) from++;
+  await speedSelect(page).selectOption("1");
+  await scrubTo(page, from);
+  await playButton(page).click();
+  const played = await sampleFrames(page, 120);
+  await playButton(page).click();
+  const wrong = played.filter((f) => !isDeepStrictEqual(f.overlay, overlayOf(index, real, f.tick, agent)));
+  const worst = played.reduce((max, f) => {
+    const a = f.agents.find((x) => x.id === agent);
+    const c = a ? markerCenter(a) : { x: Number.NaN, y: Number.NaN };
+    return Math.max(max, Number.isNaN(c.x) ? Infinity : Math.hypot(c.x - f.center.x, c.y - f.center.y));
+  }, 0);
+  const inWindow = (id: string, t: number) => {
+    for (let k = Math.max(0, t - TRAIL_TICKS + 1); k <= t; k++) if (index.byTick(k).bullets.some(([b]) => b === id)) return true;
+    return false;
+  };
+  const bulletsOk = played.every(
+    (f) =>
+      f.bullets.trails.every(({ id }) => inWindow(id, f.tick)) &&
+      isDeepStrictEqual(
+        f.bullets.dots.map((d) => d.id),
+        index.byTick(f.tick).bullets.map(([id]) => id),
+      ),
+  );
+  const withFire = played.filter((f) => (f.overlay?.incoming.length ?? 0) > 0).length;
+  const withSight = played.filter((f) => (f.overlay?.visible.length ?? 0) > 0).length;
+  check(
+    `real match at 1x, following ${agent}: every frame shows perceive's overlay for the tick on screen, ${agent} centered`,
+    wrong.length === 0 && worst < 0.5 && withFire > 0 && withSight > 0 && new Set(played.map((f) => f.tick)).size > 20,
+    `${played.length} frames, ticks ${played[0]?.tick}..${played.at(-1)?.tick}, ${withFire} with incoming fire, ${withSight} with someone seen, worst centering ${worst.toFixed(3)} px${wrong.length ? `; wrong at ${JSON.stringify(wrong.slice(0, 2))}` : ""}`,
+  );
+  check("real match at 1x: every frame's dots are the bullets of its Tick and no trail outlives its window", bulletsOk);
+
+  // Resizing while following: still centered, at the new fitted zoom.
+  await scrubTo(page, from);
+  await page.setViewportSize({ width: 700, height: 900 });
+  await page.waitForFunction((before) => window.__kbattle?.scale !== before, scale);
+  await frames2(page);
+  const resized = await page.evaluate(() => {
+    const c = document.querySelector("canvas");
+    return { w: c?.clientWidth ?? 0, h: c?.clientHeight ?? 0 };
+  });
+  const followed = (await drawnAgents(page)).find((a) => a.id === agent);
+  const c700 = await canvasCenter(page);
+  const at700 = followed ? markerCenter(followed) : { x: Number.NaN, y: Number.NaN };
+  const realMap = getMap(real.config.mapId);
+  const fitted = makeTransform(realMap.width, realMap.height, resized.w, resized.h, STAGE_PAD_PX).scale;
+  check(
+    `real match: after a resize while following ${agent}, it is still at the canvas center, at the new fitted zoom`,
+    Math.hypot(at700.x - c700.x, at700.y - c700.y) < 0.5 && Math.abs((await state(page)).scale - fitted) < 1e-9,
+    `marker ${at700.x.toFixed(2)},${at700.y.toFixed(2)} vs center ${c700.x},${c700.y}; scale ${(await state(page)).scale} vs fit ${fitted}`,
+  );
+  await page.setViewportSize({ width: 1000, height: 700 });
+  await page.waitForFunction((before) => window.__kbattle?.scale === before, scale);
+  await frames2(page);
+
+  // A death: the followed agent's cone goes, the camera stays where its last row put it.
+  const death = index.deaths.get(agent) ?? eventsOfKind(real, "Death")[0];
+  if (death) {
+    await followSelect(page).selectOption(death.agent);
+    await scrubTo(page, death.tick - 1);
+    const before = await drawnOverlay(page);
+    await scrubTo(page, death.tick);
+    const after = await drawnOverlay(page);
+    const [lastPx] = await toPx(page, [posOf(death.tick - 1, death.agent)]);
+    const mid = await canvasCenter(page);
+    check(
+      `real match: following ${death.agent} through its death at tick ${death.tick}: cone up to tick ${death.tick - 1}, then none, centered on its last row`,
+      before?.cone === true &&
+        isDeepStrictEqual(after, { tick: death.tick, agent: death.agent, cone: false, visible: [], incoming: [] }) &&
+        Math.hypot((lastPx?.x ?? 0) - mid.x, (lastPx?.y ?? 0) - mid.y) < 0.5,
+      `${JSON.stringify(before)} -> ${JSON.stringify(after)}`,
+    );
+  } else check("real match: someone dies", false);
+
+  // Frame timing at 1x through the same fight, everything on, then everything off.
+  await followSelect(page).selectOption(agent);
+  const on = await timePlayback(page, from, 3000);
+  await followSelect(page).selectOption("free");
+  await coneBox(page).uncheck();
+  await trailsBox(page).uncheck();
+  const bare = await timePlayback(page, from, 3000);
+  console.log(`  timing, real match at 1x, follow ${agent} + trails + vision cone: ${showTiming(on)}`);
+  console.log(`  timing, real match at 1x, free camera, no trails, no cone:   ${showTiming(bare)}`);
+  check("budget: 60 fps at 1x with trails and the cone on (real 16-bot match)", smooth(on), showTiming(on));
+
+  // Re-open the log while playing with follow, trails and the cone on: the new viewer starts the
+  // view row over and the old one leaves nothing behind.
+  await trailsBox(page).check();
+  await followSelect(page).selectOption(agent);
+  await coneBox(page).check();
+  await scrubTo(page, from);
+  await playButton(page).click();
+  await page.waitForTimeout(300);
+  await upload(page, realPath);
+  const fresh = {
+    follow: await followSelect(page).inputValue(),
+    trails: await trailsBox(page).isChecked(),
+    cone: await coneBox(page).isChecked(),
+    overlay: await drawnOverlay(page),
+    tick: (await state(page)).tick,
+  };
+  check(
+    "re-opened while following with trails and the cone on: the new replay starts at tick 0 on free, trails on, cone off",
+    isDeepStrictEqual(fresh, { follow: "free", trails: true, cone: false, overlay: null, tick: 0 }),
+    JSON.stringify(fresh),
+  );
+  const left = await leaks(page);
+  check(
+    "re-mounting with follow, trails and the cone on leaves nothing behind (listeners, observers, WebGL contexts, canvases, view rows)",
+    isDeepStrictEqual(left, baseline),
+    JSON.stringify(left),
+  );
 }
 
 async function main(): Promise<void> {
@@ -1247,8 +1519,9 @@ async function main(): Promise<void> {
     // does not; the marker goes back after it.
     await checkUiShell(page);
     await page.evaluate("window.__smokeMarker = true");
-    await checkFiles(page);
+    const baseline = await checkFiles(page);
     await checkBusyLog(page);
+    await checkRealMatch(page, baseline);
 
     check("zero console errors", errors.length === 0, errors.join(" | "));
   } finally {

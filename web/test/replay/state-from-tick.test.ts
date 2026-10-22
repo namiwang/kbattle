@@ -1,8 +1,9 @@
-import { MatchLogSchema, perceive, type Event as LogEvent, type MatchLog } from "@kbattle/core";
-import { describe, expect, it } from "vitest";
+import { MatchLogSchema, normalizeDeg, perceive, type Event as LogEvent, type MatchLog, type Vec2 } from "@kbattle/core";
+import { beforeAll, describe, expect, it } from "vitest";
 import sampleJson from "../../../core/fixtures/sample-log.json" with { type: "json" };
-import { indexLog, type TickEvent } from "../../src/replay/log-index";
+import { indexLog, type LogIndex, type TickEvent } from "../../src/replay/log-index";
 import { createStateAt, stateFromTick } from "../../src/replay/state-from-tick";
+import { realMatch, type RealMatch } from "./real-match";
 
 const sample = MatchLogSchema.parse(sampleJson);
 const index = indexLog(sample);
@@ -193,5 +194,134 @@ describe("createStateAt", () => {
     expect(at101).not.toBe(at100);
     expect(at101).toEqual(stateFromTick(index, sample, 101));
     expect(stateAt(100)).toEqual(at100);
+  });
+});
+
+// A real match: the log the viewer opens, against the world the sim held at
+// every tick. Tick rows round positions to 2 decimals and facings to 1 (R10),
+// so the rebuilt world is the live one to that rounding. What the log cannot
+// give back is where an agent stood during the step it died in: it moved
+// before the bullet landed, and rows omit it from then on. The rebuilt agent
+// stays where its last row put it, and so do the shots it fired in that step
+// and the hits of its bullets from then on (one step of movement, ≤ 0.25 m).
+describe("stateFromTick on a real 16-bot match (core's runMatch, as scripts/run-match.ts runs it)", () => {
+  let real: RealMatch;
+  let realIndex: LogIndex;
+  beforeAll(async () => {
+    real = await realMatch();
+    realIndex = indexLog(real.log);
+  });
+
+  const ROW_M = 0.005 + 1e-9;
+  const ROW_DEG = 0.05 + 1e-9;
+  const rounded = (got: Vec2, want: Vec2) => Math.abs(got.x - want.x) <= ROW_M && Math.abs(got.y - want.y) <= ROW_M;
+  const show = (v: unknown) => JSON.stringify(v);
+
+  it("rebuilds every agent at every tick: the living to the rows' rounding, the dead with HP 0; kills and moved exactly", () => {
+    const wrong: string[] = [];
+    let alive = 0;
+    let dead = 0;
+    for (const [tick, world] of real.live) {
+      const state = stateFromTick(realIndex, real.log, tick);
+      if (show(state.agents.map((a) => a.id)) !== show(world.agents.map((a) => a.id))) wrong.push(`tick ${tick}: agents ${show(state.agents.map((a) => a.id))}`);
+      for (const want of world.agents) {
+        const got = state.agents.find((a) => a.id === want.id);
+        if (!got || got.alive !== want.alive || got.hp !== want.hp || got.kills !== want.kills) {
+          wrong.push(`tick ${tick} ${want.id}: ${show(got)} vs live ${show({ alive: want.alive, hp: want.hp, kills: want.kills })}`);
+          continue;
+        }
+        if (!want.alive) {
+          dead++;
+          continue;
+        }
+        alive++;
+        if (!rounded(got.pos, want.pos) || Math.abs(normalizeDeg(got.facing - want.facing)) > ROW_DEG || got.moved !== want.moved) {
+          wrong.push(`tick ${tick} ${want.id}: ${show(got)} vs live ${show({ pos: want.pos, facing: want.facing, moved: want.moved })}`);
+        }
+      }
+    }
+    expect(wrong.slice(0, 5)).toEqual([]);
+    expect(alive).toBeGreaterThan(0);
+    expect(dead).toBeGreaterThan(0);
+  });
+
+  it("rebuilds each step's facts: shots where the shooters stand, hits from where the owner stands, every near miss from the row's `near`", () => {
+    // Where the log puts an agent at a tick: its row at that tick, live to the rounding;
+    // without one (it died in this step or before) its last row, the one before its death.
+    const placed = (tick: number, id: string, live: Vec2): Vec2 => {
+      if (realIndex.byTick(tick).agents.some(([agent]) => agent === id)) return live;
+      const death = realIndex.deaths.get(id);
+      const row = death && realIndex.byTick(death.tick - 1).agents.find(([agent]) => agent === id);
+      return row ? { x: row[1], y: row[2] } : { x: Number.NaN, y: Number.NaN };
+    };
+    const wrong: string[] = [];
+    const seen = { shots: 0, hits: 0, nearMisses: 0, fromLastRow: 0 };
+    for (const [tick, world] of real.live) {
+      const got = stateFromTick(realIndex, real.log, tick).lastTick;
+      const want = world.lastTick;
+      seen.shots += want.shots.length;
+      seen.nearMisses += want.nearMisses.length;
+      const sameShots =
+        got.shots.length === want.shots.length &&
+        got.shots.every((s, i) => {
+          const live = want.shots[i];
+          if (live === undefined || s.agent !== live.agent) return false;
+          const pos = placed(tick, live.agent, live.pos);
+          if (pos !== live.pos) seen.fromLastRow++;
+          return rounded(s.pos, pos);
+        });
+      if (!sameShots) wrong.push(`tick ${tick} shots: ${show(got.shots)} vs live ${show(want.shots)}`);
+      const sameMisses =
+        got.nearMisses.length === want.nearMisses.length &&
+        got.nearMisses.every((m, i) => m.target === want.nearMisses[i]?.target && rounded(m.from, want.nearMisses[i].from));
+      if (!sameMisses) wrong.push(`tick ${tick} near misses: ${show(got.nearMisses)} vs live ${show(want.nearMisses)}`);
+      // Hits follow the tick's Hit events, in the order step() records them.
+      const hits = realIndex.eventsAt(tick).filter((e) => e.kind === "Hit");
+      if (got.hits.length !== want.hits.length || hits.length !== want.hits.length) {
+        wrong.push(`tick ${tick} hits: ${show(got.hits)} vs live ${show(want.hits)}`);
+        continue;
+      }
+      want.hits.forEach((hit, i) => {
+        seen.hits++;
+        const event = hits[i];
+        const owner = event?.kind === "Hit" ? realIndex.shots.get(event.bullet)?.agent : undefined;
+        if (owner === undefined) return void wrong.push(`tick ${tick} hit ${i}: no Shot event for its bullet`);
+        const from = placed(tick, owner, hit.from);
+        if (from !== hit.from) seen.fromLastRow++;
+        const rebuilt = got.hits[i];
+        if (rebuilt?.target !== hit.target || !rounded(rebuilt.from, from)) wrong.push(`tick ${tick} hit ${i}: ${show(rebuilt)} vs ${show({ target: hit.target, from })}`);
+      });
+    }
+    expect(wrong.slice(0, 5)).toEqual([]);
+    expect(seen.shots).toBeGreaterThan(0);
+    expect(seen.hits).toBeGreaterThan(0);
+    expect(seen.nearMisses).toBeGreaterThan(0);
+    expect(seen.fromLastRow).toBeGreaterThan(0); // this match has shots and hits by agents gone from the rows
+  });
+
+  it("so each living agent perceives itself and the fire coming at it as it did live (bearings to the degree)", () => {
+    // Bearings may differ by a degree where the rows' rounding crosses a whole degree. A hit
+    // whose owner is gone from the rows can be off by more at point-blank range (9° once, at
+    // 1.6 m, over five matches; none here). Who it sees is not compared: rounding moves enemies
+    // across the cone's edge (16 of 5,702 views on this match) or past a wall's corner.
+    const wrong: string[] = [];
+    let incoming = 0;
+    for (const [tick, world] of real.live) {
+      const state = stateFromTick(realIndex, real.log, tick);
+      for (const agent of world.agents) {
+        if (!agent.alive) continue;
+        const live = perceive(world, agent.id);
+        const replayed = perceive(state, agent.id);
+        incoming += live.incoming.length;
+        const sameIncoming =
+          replayed.incoming.length === live.incoming.length &&
+          replayed.incoming.every((x, i) => Math.abs(normalizeDeg(x.bearing - (live.incoming[i]?.bearing ?? Number.NaN))) <= 1);
+        if (show(replayed.self) !== show(live.self) || !sameIncoming) {
+          wrong.push(`tick ${tick} ${agent.id}: ${show([replayed.self, replayed.incoming])} vs live ${show([live.self, live.incoming])}`);
+        }
+      }
+    }
+    expect(wrong.slice(0, 5)).toEqual([]);
+    expect(incoming).toBeGreaterThan(0);
   });
 });
