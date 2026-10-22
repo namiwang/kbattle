@@ -1,7 +1,7 @@
 # ISSUES
 
 Running log of uncertainties, defects and decisions taken while executing
-`plan/`. Newest at the bottom. Status: `open`, `resolved`, or
+the plan (`plan/` under kbattle v3.0, `PLAN.md` since Decision Arena v4.0). Newest at the bottom. Status: `open`, `resolved`, or
 `blocked-on-nami`. Each entry says what was decided and what it costs if
 the decision is wrong.
 
@@ -156,7 +156,7 @@ no status; the status is only recorded on the binding as the undocumented
 it to answer 429 vs 502, which can misattribute under concurrency, and no
 `Retry-After` is available to forward. The browser client therefore backs
 off on its own schedule (§5.5). Also: `wrangler deploy --env live` names
-the Worker `kbattle-live`; v4.5 decides the production name. Cost if
+the Worker `decision-arena-live` (renamed in R0.1); R3.7 decides the production name. Cost if
 wrong: a rare 429 reported as 502 (client keeps the last answer either
 way).
 
