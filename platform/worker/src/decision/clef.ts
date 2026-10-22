@@ -1,4 +1,4 @@
-import { DOER_MODEL, DoerAnswerSchema, type DecideRequest, type DoerAnswer } from "@kbattle/core";
+import { DOER_MODEL, DoerAnswerSchema, type DecideRequest, type DoerAnswer } from "@decision-arena/core";
 
 /**
  * The slice of the Workers AI binding (env.AI) the Clef adapter calls. clef-flash is not in workers-types'

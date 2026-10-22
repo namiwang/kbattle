@@ -47,7 +47,7 @@ import {
   type MatchLog,
   type Slot,
   type Vec2,
-} from "@kbattle/core";
+} from "@decision-arena/core";
 import { chromium, type Locator, type Page } from "playwright";
 import { createServer, type ViteDevServer } from "vite";
 import { TRAIL_TICKS, type DrawnBullets } from "../src/replay/bullets";

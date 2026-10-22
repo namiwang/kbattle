@@ -24,7 +24,7 @@ import {
   type Observation,
   type PerceptionState,
   type QuestionId,
-} from "@kbattle/core";
+} from "@decision-arena/core";
 import type { DoerEvent, LogIndex, SlotKind, ThinkerEvent } from "./log-index";
 
 /** What core.perceive gives an agent in one world, whether it is alive there, and the lines that show it. */

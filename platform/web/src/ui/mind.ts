@@ -1,9 +1,9 @@
 // The Mind section (DESIGN.md §7 item 2, row 13): the thinker system prompt and
 // one instruction per doer question. Four of the five questions: escalate's
-// instruction is fixed by kbattle (§5.4), so Prompts has no field for it. A blank
+// instruction is fixed by Decision Arena (§5.4), so Prompts has no field for it. A blank
 // instruction uses the default (ISSUES I-005), which the field shows as its placeholder.
 
-import { DOER_INTERVAL_TICKS, MOVE_CHOICES, PromptsSchema, TICK_MS, TURN_CHOICES, type Prompts } from "@kbattle/core";
+import { DOER_INTERVAL_TICKS, MOVE_CHOICES, PromptsSchema, TICK_MS, TURN_CHOICES, type Prompts } from "@decision-arena/core";
 import { DEFAULT_PROMPTS } from "./defaults";
 import { el, showText } from "./dom";
 import type { Store } from "./state";

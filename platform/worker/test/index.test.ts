@@ -16,6 +16,6 @@ describe("worker fetch handler", () => {
 
     expect(assetsFetch).toHaveBeenCalledExactlyOnceWith(request);
     expect(response.status).toBe(200);
-    expect(await response.text()).toBe("<h1>hello kbattle</h1>");
+    expect(await response.text()).toBe("<h1>hello Decision Arena</h1>");
   });
 });

@@ -1,4 +1,4 @@
-import { MatchLogSchema, normalizeDeg, VISION_CONE_DEG, VISION_RANGE_M, vec2, type Vec2 } from "@kbattle/core";
+import { MatchLogSchema, normalizeDeg, VISION_CONE_DEG, VISION_RANGE_M, vec2, type Vec2 } from "@decision-arena/core";
 import { beforeAll, describe, expect, it } from "vitest";
 import sampleJson from "../../../core/fixtures/sample-log.json" with { type: "json" };
 import { indexLog, type LogIndex } from "../../src/replay/log-index";

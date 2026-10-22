@@ -6,7 +6,7 @@
 // tick (stateFromTick, then perceive: microseconds). Two layers: the cone goes
 // under bullet trails and agents, the rings and ticks over trails, under agents.
 
-import { normalizeDeg, perceive, VISION_CONE_DEG, VISION_RANGE_M, vec2, type PerceptionState, type Vec2 } from "@kbattle/core";
+import { normalizeDeg, perceive, VISION_CONE_DEG, VISION_RANGE_M, vec2, type PerceptionState, type Vec2 } from "@decision-arena/core";
 import { Graphics } from "pixi.js";
 import { OVERLAY } from "./theme";
 

@@ -1,7 +1,7 @@
 // "Since your last call" (DESIGN.md §5.4): a text digest of what the agent perceived
 // since the last thinker call, built only from its observations (principle 3).
 import { describe, expect, it } from "vitest";
-import type { Observation } from "@kbattle/core";
+import type { Observation } from "@decision-arena/core";
 import { createDigest, DIGEST_MAX_CHARS } from "../src/event-digest";
 
 type ObservationPatch = Partial<Omit<Observation, "self">> & { self?: Partial<Observation["self"]> };

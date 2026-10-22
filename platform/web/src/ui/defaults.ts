@@ -2,7 +2,7 @@
 // match form. Placeholder prompts until v3.4 writes the real ones in brain and
 // this module re-exports them (DESIGN.md §5.4: "the app ships default prompts").
 
-import { MATCH_DURATION_TICKS, type Prompts } from "@kbattle/core";
+import { MATCH_DURATION_TICKS, type Prompts } from "@decision-arena/core";
 import type { MatchForm } from "./state";
 
 // Frozen: the store hands these objects out as they are, so an edit in place would

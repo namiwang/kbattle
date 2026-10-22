@@ -4,7 +4,7 @@
 // at speed s a second of wall time is s × 20 ticks. Ticks stay in 0..lastTick;
 // playing stops on the last one.
 
-import { TICK_MS } from "@kbattle/core";
+import { TICK_MS } from "@decision-arena/core";
 
 export const SPEEDS = Object.freeze([0.25, 0.5, 1, 2, 4] as const);
 export type Speed = (typeof SPEEDS)[number];

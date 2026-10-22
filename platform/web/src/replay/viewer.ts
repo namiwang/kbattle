@@ -5,7 +5,7 @@
 // §5.3); nothing here runs the sim. The overlay's and the panel's perception
 // is recomputed from the log with core.perceive.
 
-import { getMap, type MatchLog } from "@kbattle/core";
+import { getMap, type MatchLog } from "@decision-arena/core";
 import { UPDATE_PRIORITY } from "pixi.js";
 import { createAgentLayer } from "./agents";
 import { createBulletLayer, createTrailBuffer, type DrawnBullets } from "./bullets";

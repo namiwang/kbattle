@@ -8,7 +8,7 @@ import {
   type Observation,
   type TickFacts,
   type Vec2,
-} from "@kbattle/core";
+} from "@decision-arena/core";
 import { beforeAll, describe, expect, it } from "vitest";
 import sampleJson from "../../../core/fixtures/sample-log.json" with { type: "json" };
 import { indexLog, type LogIndex, type TickEvent } from "../../src/replay/log-index";

@@ -1,4 +1,4 @@
-import { MatchLogSchema, type Event as LogEvent, type MatchLog } from "@kbattle/core";
+import { MatchLogSchema, type Event as LogEvent, type MatchLog } from "@decision-arena/core";
 import { describe, expect, it } from "vitest";
 import sampleJson from "../../../core/fixtures/sample-log.json" with { type: "json" };
 import { cameraTransform, centerOn, followChoices, FREE } from "../../src/replay/camera";

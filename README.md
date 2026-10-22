@@ -16,10 +16,10 @@ milestones R0.3 and R0.4 move it to `kits/shooter` and
 
 | Path | Package | Role |
 |------|---------|------|
-| `platform/core/` | `@kbattle/core` | Types, deterministic sim, bots, match loop. Pure TypeScript, no I/O. |
-| `platform/models/` | `@kbattle/brain` | Thinker and doer drivers, provider adapters. |
-| `platform/web/` | `@kbattle/web` | Vite app. |
-| `platform/worker/` | `@kbattle/worker` | Cloudflare Worker: serves `platform/web/dist`, `POST /decide`. |
+| `platform/core/` | `@decision-arena/core` | Types, deterministic sim, bots, match loop. Pure TypeScript, no I/O. |
+| `platform/models/` | `@decision-arena/models` | Thinker and doer drivers, provider adapters. |
+| `platform/web/` | `@decision-arena/web` | Vite app. |
+| `platform/worker/` | `@decision-arena/worker` | Cloudflare Worker: serves `platform/web/dist`, `POST /decide`. |
 
 The workspace also takes `kits/*` and `arenas/*`, empty until R0.3 and R0.4.
 `core` and `models` are consumed as TypeScript source; their `build` is a typecheck.
@@ -37,5 +37,11 @@ pnpm typecheck   # tsc --noEmit in every package
 pnpm dev         # builds web, then Vite on :5173 and wrangler dev on :8787
 ```
 
-One package: `pnpm --filter <core|brain|web|worker> <script>`.
+One package: `pnpm --filter <core|models|web|worker> <script>`.
 `pnpm --filter worker dev` serves `platform/web/dist`, so build web first.
+
+## History
+
+Decision Arena was called kbattle until DESIGN v4.0 (2026-10-22). The v3.0
+design is `git show bae7c0f:DESIGN.md`; the v3.0 plan lived in `plan/` until
+commit 8c831a9.

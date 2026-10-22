@@ -1,5 +1,5 @@
 {
-  "name": "@kbattle/worker",
+  "name": "@decision-arena/worker",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,12 +11,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@kbattle/brain": "workspace:*",
-    "@kbattle/core": "workspace:*"
+    "@decision-arena/core": "workspace:*",
+    "@decision-arena/models": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261019.1",
-    "@kbattle/web": "workspace:*",
+    "@decision-arena/web": "workspace:*",
     "wrangler": "4.151.2"
   }
 }

@@ -22,7 +22,7 @@ import Anthropic, {
   type ClientOptions,
 } from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { THINKER_MODEL } from "@kbattle/core";
+import { THINKER_MODEL } from "@decision-arena/core";
 import { PlanReplySchema, PlanSchema } from "../schemas";
 import {
   thinkerError,

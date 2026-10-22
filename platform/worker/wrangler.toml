@@ -1,4 +1,4 @@
-name = "kbattle"
+name = "decision-arena"
 main = "src/index.ts"
 compatibility_date = "2026-10-19"
 
@@ -19,7 +19,7 @@ binding = "ASSETS"
 # binding = "AI"
 
 # The live doer, Clef on Workers AI: `wrangler dev --env live` (needs CLOUDFLARE_API_TOKEN and
-# CLOUDFLARE_ACCOUNT_ID, or `wrangler login`), later `wrangler deploy --env live` (Worker name kbattle-live).
+# CLOUDFLARE_ACCOUNT_ID, or `wrangler login`), later `wrangler deploy --env live` (Worker name decision-arena-live).
 # Environments do not inherit vars or ai, so both are set here; main, compatibility_date and assets carry over.
 [env.live.vars]
 DOER_BACKEND = "clef"

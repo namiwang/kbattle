@@ -1,6 +1,6 @@
 # worker
 
-The kbattle Worker (DESIGN.md §5.2, §5.7): serves the web build (`../web/dist`) and answers
+The Decision Arena Worker (DESIGN.md §5.2, §5.7): serves the web build (`../web/dist`) and answers
 `POST /decide`, the doer call, with a `DoerAnswer` (§5.4).
 
 ## Doer backend
@@ -48,7 +48,7 @@ pnpm --filter worker exec tsx scripts/measure.ts --n 60
 `wrangler dev` calls Workers AI on the account and is billed. The token needs Workers AI access and
 enough Workers permissions for wrangler's remote-binding session; `wrangler login` grants both.
 Deploying later: `pnpm --filter worker exec wrangler deploy --env live`. The Worker name is then
-`kbattle-live`; v4.5 picks the public one.
+`decision-arena-live`; v4.5 picks the public one.
 
 ## Measure
 

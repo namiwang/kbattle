@@ -1,4 +1,4 @@
-import { MatchConfigSchema, type Prompts, type Slot } from "@kbattle/core";
+import { MatchConfigSchema, type Prompts, type Slot } from "@decision-arena/core";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG, DEFAULT_PROMPTS } from "../../src/ui/defaults";
 import {

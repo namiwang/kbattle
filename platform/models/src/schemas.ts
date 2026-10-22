@@ -1,8 +1,8 @@
 // The thinker's output schema lives in core with the other boundary schemas (DESIGN.md §5.3).
-import { PlanSchema } from "@kbattle/core";
+import { PlanSchema } from "@decision-arena/core";
 
 export { PlanSchema };
-export type { Plan } from "@kbattle/core";
+export type { Plan } from "@decision-arena/core";
 
 /**
  * The lengths the harness prompt asks the thinker for, in characters: well under

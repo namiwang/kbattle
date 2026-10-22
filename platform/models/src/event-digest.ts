@@ -19,7 +19,7 @@ import {
   type HearingBand,
   type Observation,
   type Vec2,
-} from "@kbattle/core";
+} from "@decision-arena/core";
 
 /**
  * The digest's default size in characters. With the other inputs at their caps,

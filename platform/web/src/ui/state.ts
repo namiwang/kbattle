@@ -2,7 +2,7 @@
 // the match form, in a tiny store saved to localStorage; and the pure rules that
 // turn the form into a MatchConfig. Run match (v4.2) calls validateForm.
 
-import { MAP_IDS, MatchConfigSchema, PromptsSchema, type MatchConfig, type Prompts, type Slot } from "@kbattle/core";
+import { MAP_IDS, MatchConfigSchema, PromptsSchema, type MatchConfig, type Prompts, type Slot } from "@decision-arena/core";
 import * as z from "zod";
 import { formatIssuePath } from "../replay/errors";
 import { DEFAULT_CONFIG, DEFAULT_PROMPTS } from "./defaults";

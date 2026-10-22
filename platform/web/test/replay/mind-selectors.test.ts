@@ -1,4 +1,4 @@
-import { ESCALATE_THRESHOLD, FIRE_THRESHOLD, MatchLogSchema, perceive, type DoerAnswers, type MatchLog } from "@kbattle/core";
+import { ESCALATE_THRESHOLD, FIRE_THRESHOLD, MatchLogSchema, perceive, type DoerAnswers, type MatchLog } from "@decision-arena/core";
 import { describe, expect, it } from "vitest";
 import sampleJson from "../../../core/fixtures/sample-log.json" with { type: "json" };
 import { indexLog } from "../../src/replay/log-index";

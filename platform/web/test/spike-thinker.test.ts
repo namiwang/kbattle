@@ -1,7 +1,7 @@
 // The v0.6 thinker spike page's state: how one ThinkerResult changes it
 // (DESIGN.md §5.5; row 29 for auth, row 16 for everything else).
 import { describe, expect, it } from "vitest";
-import type { ThinkerResult } from "@kbattle/brain";
+import type { ThinkerResult } from "@decision-arena/models";
 import { applyResult, costUsd, initialSpikeState } from "../src/spike-thinker-state";
 
 const PLAN_A = { text: "Hold the east wall.", scratchpad: "a3 likes the gap." };

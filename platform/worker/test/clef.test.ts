@@ -1,4 +1,4 @@
-import { DOER_MODEL, type DecideRequest } from "@kbattle/core";
+import { DOER_MODEL, type DecideRequest } from "@decision-arena/core";
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi, type MockInstance } from "vitest";
 import decideRequest from "../../core/fixtures/decide-request.json" with { type: "json" };
 import type { AiBinding } from "../src/decision/clef";

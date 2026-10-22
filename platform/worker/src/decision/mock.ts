@@ -1,4 +1,4 @@
-import { DoerAnswerSchema, type DecideRequest, type DoerAnswer } from "@kbattle/core";
+import { DoerAnswerSchema, type DecideRequest, type DoerAnswer } from "@decision-arena/core";
 
 /**
  * The doer's stand-in until Clef is wired in (v0.5): one answer per question

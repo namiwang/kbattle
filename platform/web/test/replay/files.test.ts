@@ -1,4 +1,4 @@
-import { MatchLogSchema } from "@kbattle/core";
+import { MatchLogSchema } from "@decision-arena/core";
 import { describe, expect, it } from "vitest";
 import unknownKindText from "../../../core/fixtures/bad/unknown-event-kind.json?raw";
 import sampleText from "../../../core/fixtures/sample-log.json?raw";

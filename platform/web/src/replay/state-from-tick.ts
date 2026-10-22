@@ -26,7 +26,7 @@ import {
   type PerceptionState,
   type TickFacts,
   type Vec2,
-} from "@kbattle/core";
+} from "@decision-arena/core";
 import { clampTick, type LogIndex, type TickEvent } from "./log-index";
 
 type AgentRow = TickEvent["agents"][number];

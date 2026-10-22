@@ -1,8 +1,8 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import * as core from "@kbattle/core";
+import * as core from "@decision-arena/core";
 import * as brain from "../src/index";
 
-describe("@kbattle/brain entry point", () => {
+describe("@decision-arena/models entry point", () => {
   it("exposes the Anthropic thinker and re-exports core's PlanSchema", () => {
     expect(typeof brain.makeAnthropicThinker).toBe("function");
     expect(typeof brain.thinkingParamFor).toBe("function");

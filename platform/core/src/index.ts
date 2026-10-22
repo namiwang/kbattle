@@ -1,4 +1,4 @@
-// @kbattle/core public surface.
+// @decision-arena/core public surface.
 // Vector helpers live under `vec2` (vec2.add, vec2.fromAngle, ...) to keep
 // generic names like `add` and `len` off the package root.
 export * as vec2 from "./vec2";

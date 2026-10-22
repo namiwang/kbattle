@@ -1,7 +1,7 @@
 // The thinker's prompt text (DESIGN.md §5.4): the observation as text lines, the
 // system prompt (harness, then the user's prompt) and the per-call user message.
 import { describe, expect, it } from "vitest";
-import type { Observation } from "@kbattle/core";
+import type { Observation } from "@decision-arena/core";
 import { DIGEST_MAX_CHARS } from "../src/event-digest";
 import { PLAN_REPLY_CHARS } from "../src/schemas";
 import { buildSystem, buildUserMessage, estimateTokens, formatObservation, HARNESS_PROMPT } from "../src/thinker-prompt";

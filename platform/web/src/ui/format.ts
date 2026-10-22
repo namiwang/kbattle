@@ -1,7 +1,7 @@
 // Read-outs next to the match form: the bots that fill the remaining slots, and
 // the duration in sim seconds. Plain functions of the form, so Node tests them.
 
-import { TICK_MS } from "@kbattle/core";
+import { TICK_MS } from "@decision-arena/core";
 import type { MatchForm } from "./state";
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;

@@ -19,7 +19,7 @@ import {
   VISION_RANGE_M,
   type Observation,
   type Prompts,
-} from "@kbattle/core";
+} from "@decision-arena/core";
 import { PLAN_REPLY_CHARS } from "./schemas";
 
 const seconds = (ticks: number) => (ticks * TICK_MS) / 1000;

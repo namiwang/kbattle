@@ -2,7 +2,7 @@
 // that parsed, whether a key fault stopped the spike, and a log of calls. One
 // ThinkerResult is applied per DESIGN.md §5.5: auth stops the spike (row 29);
 // every other fault keeps the last plan (row 16) and is logged.
-import type { Plan, ThinkerResult } from "@kbattle/brain";
+import type { Plan, ThinkerResult } from "@decision-arena/models";
 
 export interface SpikeState {
   /** The last plan that parsed; faults keep it. */

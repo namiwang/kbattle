@@ -3,7 +3,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import type * as z from "zod";
 import * as core from "../src/index";
 
-describe("@kbattle/core entry point", () => {
+describe("@decision-arena/core entry point", () => {
   it("exposes the vector helpers under the vec2 namespace", () => {
     expect(core.vec2.add({ x: 1, y: 2 }, { x: 3, y: 4 })).toEqual({ x: 4, y: 6 });
     expect(core.vec2.fromAngle(90).y).toBe(1);

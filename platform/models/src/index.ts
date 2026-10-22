@@ -1,4 +1,4 @@
-// @kbattle/brain public surface: the thinker contract (DESIGN.md §5.4, §5.6), its
+// @decision-arena/models public surface: the thinker contract (DESIGN.md §5.4, §5.6), its
 // Anthropic implementation, and the thinker client with its prompt text and
 // observation digest (v3.2). The doer side arrives in v3.1.
 export { FATAL_THINKER_ERRORS, thinkerError } from "./types";

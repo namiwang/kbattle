@@ -4,7 +4,7 @@
 // (destroy, then mount) without a page reload, back at tick 0; a file that
 // does not open leaves the replay on screen as it was.
 
-import type { MatchLog } from "@kbattle/core";
+import type { MatchLog } from "@decision-arena/core";
 import { createErrorBox, formatFileError } from "./errors";
 import { downloadMatchLog, parseMatchLogText, pickJsonFile } from "./files";
 import { mountReplay, type ReplayViewer } from "./viewer";

@@ -10,7 +10,7 @@
 // - Versioning is in the key names: a stored shape that changes incompatibly
 //   moves to `kbattle:v2:*` and v1 values are left behind.
 
-import { MAP_IDS, PromptsSchema } from "@kbattle/core";
+import { MAP_IDS, PromptsSchema } from "@decision-arena/core";
 import * as z from "zod";
 import { DEFAULT_CONFIG, DEFAULT_PROMPTS } from "./defaults";
 import type { UiState } from "./state";

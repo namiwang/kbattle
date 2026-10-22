@@ -42,18 +42,18 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.135.0
         version: 0.135.0(zod@4.6.7)
-      '@kbattle/core':
+      '@decision-arena/core':
         specifier: workspace:*
         version: link:../core
 
   platform/web:
     dependencies:
-      '@kbattle/brain':
-        specifier: workspace:*
-        version: link:../models
-      '@kbattle/core':
+      '@decision-arena/core':
         specifier: workspace:*
         version: link:../core
+      '@decision-arena/models':
+        specifier: workspace:*
+        version: link:../models
       pixi.js:
         specifier: 8.22.0
         version: 8.22.0
@@ -73,17 +73,17 @@ importers:
 
   platform/worker:
     dependencies:
-      '@kbattle/brain':
-        specifier: workspace:*
-        version: link:../models
-      '@kbattle/core':
+      '@decision-arena/core':
         specifier: workspace:*
         version: link:../core
+      '@decision-arena/models':
+        specifier: workspace:*
+        version: link:../models
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20261019.1
         version: 5.20261019.1
-      '@kbattle/web':
+      '@decision-arena/web':
         specifier: workspace:*
         version: link:../web
       wrangler:

@@ -1,5 +1,5 @@
 // Canned Anthropic Messages API traffic for tests: no network.
-import { THINKER_MODEL } from "@kbattle/core";
+import { THINKER_MODEL } from "@decision-arena/core";
 
 export interface SentRequest {
   url: string;

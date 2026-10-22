@@ -1,4 +1,4 @@
-import { MatchLogSchema } from "@kbattle/core";
+import { MatchLogSchema } from "@decision-arena/core";
 import { describe, expect, it } from "vitest";
 import sampleJson from "../../../core/fixtures/sample-log.json" with { type: "json" };
 import { createTrailBuffer, trailAlpha, TRAIL_TICKS, type BulletRow, type Trail } from "../../src/replay/bullets";
