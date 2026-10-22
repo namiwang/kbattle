@@ -1,8 +1,7 @@
 packages:
-  - core
-  - brain
-  - web
-  - worker
+  - platform/*
+  - kits/*
+  - arenas/*
 
 # pnpm 11 runs no dependency install scripts unless allowed here.
 # wrangler needs these two (esbuild bundler, workerd runtime).

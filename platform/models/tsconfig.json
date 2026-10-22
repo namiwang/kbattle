@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // DOM for fetch, Response and AbortSignal: the Anthropic adapter runs in the browser.
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": ["src", "test"]
+}

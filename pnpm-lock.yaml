@@ -27,16 +27,7 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@22.20.5)(vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15))
 
-  brain:
-    dependencies:
-      '@anthropic-ai/sdk':
-        specifier: ^0.135.0
-        version: 0.135.0(zod@4.6.7)
-      '@kbattle/core':
-        specifier: workspace:*
-        version: link:../core
-
-  core:
+  platform/core:
     dependencies:
       zod:
         specifier: ^4.6.7
@@ -46,11 +37,20 @@ importers:
         specifier: ^22.20.5
         version: 22.20.5
 
-  web:
+  platform/models:
+    dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.135.0
+        version: 0.135.0(zod@4.6.7)
+      '@kbattle/core':
+        specifier: workspace:*
+        version: link:../core
+
+  platform/web:
     dependencies:
       '@kbattle/brain':
         specifier: workspace:*
-        version: link:../brain
+        version: link:../models
       '@kbattle/core':
         specifier: workspace:*
         version: link:../core
@@ -71,11 +71,11 @@ importers:
         specifier: ^8.3.4
         version: 8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15)
 
-  worker:
+  platform/worker:
     dependencies:
       '@kbattle/brain':
         specifier: workspace:*
-        version: link:../brain
+        version: link:../models
       '@kbattle/core':
         specifier: workspace:*
         version: link:../core

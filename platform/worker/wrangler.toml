@@ -1,0 +1,28 @@
+name = "kbattle"
+main = "src/index.ts"
+compatibility_date = "2026-10-19"
+
+# Which doer answers POST /decide (platform/worker/README.md): "mock" needs no Cloudflare account; "clef" asks
+# Workers AI (DOER_MODEL) through the AI binding, which only the live environment below has.
+[vars]
+DOER_BACKEND = "mock"
+
+[assets]
+directory = "../web/dist"
+binding = "ASSETS"
+
+# No Workers AI at the top level: with an [ai] binding, `wrangler dev` needs a Cloudflare login (ISSUES I-001).
+# AI is always remote, so it opens a remote session and exits with "Failed to start the remote proxy
+# session. ... In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment
+# variable". `wrangler dev --local` starts, but env.AI is then defined and cannot run.
+# [ai]
+# binding = "AI"
+
+# The live doer, Clef on Workers AI: `wrangler dev --env live` (needs CLOUDFLARE_API_TOKEN and
+# CLOUDFLARE_ACCOUNT_ID, or `wrangler login`), later `wrangler deploy --env live` (Worker name kbattle-live).
+# Environments do not inherit vars or ai, so both are set here; main, compatibility_date and assets carry over.
+[env.live.vars]
+DOER_BACKEND = "clef"
+
+[env.live.ai]
+binding = "AI"
