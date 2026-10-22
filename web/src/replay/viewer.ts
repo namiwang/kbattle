@@ -1,17 +1,22 @@
 // The replay viewer: a MatchLog in, a Pixi scene of the clock's tick out, with
-// playback controls under it. It reads Tick events only (DESIGN.md §5.3);
-// nothing here runs the sim.
+// playback controls under it and a view row (follow camera, bullet trails,
+// vision cone). It reads Tick events only (DESIGN.md §5.3); nothing here runs
+// the sim. The overlay's perception is recomputed from the log with core.perceive.
 
 import { getMap, type MatchLog } from "@kbattle/core";
 import { UPDATE_PRIORITY } from "pixi.js";
 import { createAgentLayer } from "./agents";
+import { createBulletLayer, createTrailBuffer, type DrawnBullets } from "./bullets";
+import { createFollowSelect, followChoices, FREE } from "./camera";
 import { createClock, type Clock } from "./clock";
 import { createControls } from "./controls";
 import type { Transform } from "./coords";
 import type { DrawnAgent } from "./debug";
 import { indexLog, type LogIndex } from "./log-index";
 import { drawMap } from "./map";
+import { createOverlayLayer, overlayModel, type DrawnOverlay } from "./overlay";
 import { createStage, type Stage } from "./stage";
+import { createStateAt } from "./state-from-tick";
 import "./replay.css";
 
 export interface ReplayViewer {
@@ -20,9 +25,14 @@ export interface ReplayViewer {
   readonly clock: Clock;
   /** The tick on screen. */
   readonly tick: number;
-  /** The meters-to-pixels transform right now. */
+  /** The meters-to-pixels transform right now (the follow camera's while it follows). */
   readonly transform: Transform;
+  /** The agent the camera follows, or null when it is free. */
+  readonly follow: string | null;
   drawnAgents(): DrawnAgent[];
+  drawnBullets(): DrawnBullets;
+  /** What the perception overlay shows, or null while it is off or nobody is followed. */
+  drawnOverlay(): DrawnOverlay | null;
   /** Settles once the scene has been rendered for the first time (tick 0), or on destroy. */
   readonly firstFrame: Promise<void>;
   /**
@@ -34,6 +44,16 @@ export interface ReplayViewer {
   destroy(): void;
 }
 
+/** A checkbox with its label text after it. */
+function toggle(text: string, checked: boolean): { label: HTMLLabelElement; input: HTMLInputElement } {
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.checked = checked;
+  const label = document.createElement("label");
+  label.append(input, text);
+  return { label, input };
+}
+
 /** Builds the replay of `log` inside `host` (any sized element), paused at tick 0. */
 export async function mountReplay(host: HTMLElement, log: MatchLog): Promise<ReplayViewer> {
   const map = getMap(log.config.mapId);
@@ -41,11 +61,22 @@ export async function mountReplay(host: HTMLElement, log: MatchLog): Promise<Rep
   const clock = createClock(index.lastTick);
   const controls = createControls(clock);
 
+  // View row: follow camera, trails, vision cone. Element listeners only: nothing on document.
+  const follow = createFollowSelect(followChoices(index));
+  const followLabel = document.createElement("label");
+  followLabel.append("Follow", follow);
+  const trailsToggle = toggle("Trails", true);
+  const coneToggle = toggle("Vision cone", false);
+  coneToggle.label.title = "The followed agent's vision cone, the enemies it sees, and where incoming fire comes from";
+  const view = document.createElement("div");
+  view.className = "replay-view";
+  view.append(followLabel, trailsToggle.label, coneToggle.label);
+
   const root = document.createElement("div");
   root.className = "replay";
   const stageHost = document.createElement("div");
   stageHost.className = "replay-stage";
-  root.append(stageHost, controls.element);
+  root.append(stageHost, controls.element, view);
   host.append(root);
 
   let stage: Stage;
@@ -57,18 +88,46 @@ export async function mountReplay(host: HTMLElement, log: MatchLog): Promise<Rep
     throw error;
   }
   const agents = createAgentLayer((id) => index.kindOf(id));
-  stage.world.addChild(drawMap(map), agents.view);
-  agents.setPixelsPerMeter(stage.transform.scale);
-  stage.onResize((t) => agents.setPixelsPerMeter(t.scale));
+  const bullets = createBulletLayer();
+  const overlay = createOverlayLayer();
+  // Bottom to top: arena, cone, trails, rings and incoming ticks, agents, bullets.
+  stage.world.addChild(drawMap(map), overlay.under, bullets.trails, overlay.over, agents.view, bullets.dots);
+  const setScale = (scale: number) => {
+    agents.setPixelsPerMeter(scale);
+    bullets.setPixelsPerMeter(scale);
+    overlay.setPixelsPerMeter(scale);
+  };
+  setScale(stage.transform.scale);
+  stage.onResize((t) => setScale(t.scale));
+
+  const trails = createTrailBuffer();
+  const bulletsAt = (t: number) => index.byTick(t).bullets;
+  const stateAt = createStateAt(index, log); // one rebuilt world per tick, shared by camera and overlay
+  const followed = () => (follow.value === FREE ? null : follow.value);
 
   let tick = clock.tick;
-  agents.render(index.byTick(tick));
+  const draw = () => {
+    agents.render(index.byTick(tick)); // O(1): scrubbing never replays from zero
+    trails.seek(tick, bulletsAt);
+    bullets.render(trails.trails(), trailsToggle.input.checked);
+    const id = followed();
+    const state = id === null ? undefined : stateAt(tick);
+    const agent = state?.agents.find((a) => a.id === id);
+    stage.setCenter(agent ? agent.pos : null); // a dead agent stays centered where it was last seen
+    overlay.render(state && agent && coneToggle.input.checked ? overlayModel(state, agent.id) : null);
+  };
+  draw();
+
+  let dirty = false;
+  const redraw = () => (dirty = true);
+  for (const widget of [follow, trailsToggle.input, coneToggle.input]) widget.addEventListener("change", redraw);
   // Runs before Pixi draws the frame (the render callback has a lower priority).
   stage.app.ticker.add((ticker) => {
     clock.advance(ticker.deltaMS);
-    if (clock.tick !== tick) {
+    if (clock.tick !== tick || dirty) {
       tick = clock.tick;
-      agents.render(index.byTick(tick)); // O(1): scrubbing never replays from zero
+      dirty = false;
+      draw();
     }
     controls.sync();
   });
@@ -87,7 +146,12 @@ export async function mountReplay(host: HTMLElement, log: MatchLog): Promise<Rep
     get transform() {
       return stage.transform;
     },
+    get follow() {
+      return followed();
+    },
     drawnAgents: () => agents.drawn(),
+    drawnBullets: () => bullets.drawn(),
+    drawnOverlay: () => overlay.drawn(),
     firstFrame,
     destroy() {
       if (destroyed) return;

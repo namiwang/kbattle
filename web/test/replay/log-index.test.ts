@@ -67,6 +67,28 @@ describe("indexLog on the sample log", () => {
     expect(index.byTick(Number.NaN).tick).toBe(0);
   });
 
+  it("lists every agent of the match, in spawn order", () => {
+    expect(index.agents).toEqual(["a0", "a1"]);
+  });
+
+  it("lists the events of exactly one tick, in log order", () => {
+    const kinds = (t: number) => index.eventsAt(t).map((e) => e.kind);
+    expect(kinds(0)).toEqual(["Spawn", "Spawn", "Tick"]);
+    expect(kinds(101)).toEqual(["Doer", "Shot", "Shot", "Tick"]);
+    expect(kinds(142)).toEqual(["Hit", "Death", "Tick", "MatchEnd"]);
+    expect(index.eventsAt(102)).toEqual([index.byTick(102)]);
+    expect(index.eventsAt(-1)).toEqual([]);
+    expect(index.eventsAt(143)).toEqual([]);
+    expect(index.eventsAt(3.5)).toEqual([]);
+  });
+
+  it("indexes shots by bullet id, so a hit names its shooter", () => {
+    expect(index.shots.size).toBe(15);
+    expect(index.shots.get("b0")).toMatchObject({ tick: 71, agent: "a1" });
+    expect(index.shots.get("b11")).toMatchObject({ tick: 131, agent: "a0" });
+    expect(index.shots.get("b99")).toBeUndefined();
+  });
+
   it("gives each agent its slot kind (agent aN sits in slot N)", () => {
     expect(index.kindOf("a0")).toBe("prompted");
     expect(index.kindOf("a1")).toBe("bot");
@@ -105,9 +127,20 @@ describe("indexLog on logs with missing Tick events", () => {
     expect(index.kindOf("a0")).toBe("doer");
   });
 
+  it("lists agents named by the first Tick event without a Spawn event after the spawned ones", () => {
+    const index = indexLog(
+      craftedLog([
+        { kind: "Spawn", tick: 0, agent: "a1", pos: { x: 96, y: 50 }, facing: 180 },
+        { kind: "Tick", tick: 0, agents: [["a0", 4, 50, 0, 100], ["a1", 96, 50, 180, 100]], bullets: [] },
+      ]),
+    );
+    expect(index.agents).toEqual(["a1", "a0"]);
+  });
+
   it("resolves tick 0 of a log with no events", () => {
     const index = indexLog(craftedLog([]));
     expect(index.lastTick).toBe(0);
     expect(index.byTick(0).agents).toEqual([]);
+    expect(index.agents).toEqual([]);
   });
 });

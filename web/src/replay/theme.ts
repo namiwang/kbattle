@@ -30,3 +30,24 @@ export const MARKER = Object.freeze({ bodyRadiusPx: 6, facingLengthPx: 15, facin
 
 /** Free space around the arena inside the canvas, in CSS pixels. */
 export const STAGE_PAD_PX = 16;
+
+/** Bullets (v2.3): a dot per bullet in flight and a fading trail behind it, sized in CSS pixels. */
+export const BULLET = Object.freeze({ color: 0xffe08a, dotRadiusPx: 2.25, trailWidthPx: 1.5, trailAlpha: 0.8 });
+
+/**
+ * The followed agent's perception (v2.3): its vision cone, a ring around each
+ * enemy it sees, a red tick toward each source of incoming fire. Sizes in CSS pixels.
+ */
+export const OVERLAY = Object.freeze({
+  cone: 0xf4f6fa,
+  coneFillAlpha: 0.12,
+  coneEdgeAlpha: 0.45,
+  coneEdgePx: 1,
+  seen: 0x5ee08a,
+  seenRingPx: 11,
+  seenWidthPx: 2,
+  incoming: 0xff3b3b,
+  incomingFromPx: 18,
+  incomingToPx: 30,
+  incomingWidthPx: 2.5,
+});

@@ -59,6 +59,38 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- view row: follow camera, trails, vision cone (v2.3) ---- */
+
+.replay-view {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  padding: 6px 12px;
+  border-top: 1px solid #262c37;
+  background: #13161c;
+}
+
+.replay-view label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.replay-view select {
+  font: inherit;
+  color: inherit;
+  background: #1f2530;
+  border: 1px solid #343c4a;
+  border-radius: 4px;
+  padding: 3px 10px;
+}
+
+.replay-view input[type="checkbox"] {
+  margin: 0;
+  accent-color: #f2b134;
+}
+
 /* ---- the page around the viewer: file bar, error box, drop zone (v2.5) ---- */
 
 .replay-page {
