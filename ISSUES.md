@@ -166,8 +166,9 @@ way).
 no log event records them, so the mind panel could only rebuild hits.
 Decision: v1.5 adds an optional `near` field to `Tick` events,
 `[targetId, fromX, fromY][]`, present only when non-empty, so the viewer
-rebuilds `lastTick.nearMisses`. DESIGN.md §5.3's event list is unchanged;
-`Tick` gains a field. Cost if wrong: a few bytes per contested tick.
+rebuilds the near misses of the perception window (`WorldState.recent`
+since the final fix pass, see I-021). DESIGN.md §5.3's event list is
+unchanged; `Tick` gains a field. Cost if wrong: a few bytes per contested tick.
 
 ## I-017 Turn choices quantize to 90° per decision — open (tune at v3.4)
 
@@ -186,7 +187,10 @@ for 6,000 ticks, Clef-shaped answers with full probability maps) reaches
 review): core's match loop rounds probabilities and confidence to 4
 decimals before validating, logging and acting on an answer, so the live
 run and the replay derive actions from the same numbers and
-byte-identical replay holds for every provider. Cost if wrong: a probability within 0.00005
+byte-identical replay holds for every provider. `noul` values are
+validated and logged as given (they are single numbers; the maps were the
+size problem); the browser doer client should round them too before
+returning. Cost if wrong: a probability within 0.00005
 of a threshold is rounded onto it (irrelevant in practice).
 
 ## I-019 Death-step position is not logged — open (post-PoC)
@@ -194,7 +198,8 @@ of a threshold is rounded onto it (irrelevant in practice).
 An agent that dies mid-step keeps its last Tick row in the replay, up to
 0.25 m from where it actually stood, so shots it fired in that step and
 hits by its bullets afterwards are rebuilt slightly off (worst observed:
-an incoming bearing 9° off at 1.64 m). Fix would be a position on the
+an incoming bearing 9° off at 1.64 m; with the perception window of
+I-021, heard-shot bearings can shift up to 7° in the same cases). Fix would be a position on the
 Death event, rounded like Tick rows. Accepted for the PoC. Cost if wrong:
 cosmetic in the mind panel.
 
@@ -218,7 +223,13 @@ decision. Decision: transient facts accumulate over the last
 `DOER_INTERVAL_TICKS` steps (`WorldState.recent`), `perceive` merges the
 window, each fact reaches exactly one decision, and the viewer rebuilds
 the same window. DESIGN.md §6.2's "this tick" wording is superseded.
-Cost if wrong: perception reports a shot up to 0.5 s late.
+Cost if wrong: perception reports a shot up to 0.5 s late. Accepted side
+effect: one bullet can appear twice in `incoming` within a window (a near
+miss on one step, then a hit or a second near miss); removing the repeat
+would need bullet ids in `near` rows. The vision-cone overlay draws the
+window's incoming bearings too. After the fix, 97% of heard-shot facts and
+97% of incoming facts over 20 seeds reach a decision; `perceive` for 16
+agents costs 48–110 µs per tick (budget 1 ms).
 
 ## I-022 The thinker receives no static map — open (P3 design decision)
 

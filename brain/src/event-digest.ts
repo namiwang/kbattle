@@ -7,8 +7,9 @@
 // drops whole lines from the end, so the oldest sightings go first.
 //
 // Note an observation once, in tick order. A note sees what perception reports at
-// that tick: shots and near misses are facts of a single tick (TickFacts), so a
-// caller that notes only doer ticks counts only the ones that fell on those ticks.
+// that tick: shots and near misses are facts of the perception window, the last
+// DOER_INTERVAL_TICKS steps (sim ruling R15), so a caller that notes every doer
+// tick sees each fact exactly once.
 import {
   bearingTo,
   HEARING_BANDS,
