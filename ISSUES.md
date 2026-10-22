@@ -139,7 +139,7 @@ the fault tests and size `max_tokens` for the chosen model. The 600-token `max_t
 what `Plan` allows, so the harness prompt must ask for short output.
 Spike bundle is 419 KB (102 KB gzipped), mostly the SDK.
 
-## I-014 Event ticks are unbounded in the log schema — open (v1.5)
+## I-014 Event ticks are unbounded in the log schema — resolved (v1.5)
 
 `MatchLogSchema` caps `config.durationTicks` at 60,000 but not event
 ticks, so a crafted file with a tick of 1e8 makes the viewer's per-tick
@@ -178,14 +178,15 @@ lower `TURN_RATE_DPS` (120 → 60° per decision; 180° about-face in 1.5 s)
 or keep it and rely on `face_target`. Decide while tuning the default
 prompts in v3.4 by watching replays. Cost if wrong: coarse scanning.
 
-## I-018 Log size with full probability maps — resolved (v3.1)
+## I-018 Log size with full probability maps — resolved (core, final fix pass)
 
 Bot matches stay under 1.8 MB, but a synthetic worst case (16 agents alive
 for 6,000 ticks, Clef-shaped answers with full probability maps) reaches
-6.65 MB, above the 5 MB budget. Decision: the browser doer client rounds
-probabilities and confidence to 4 decimals before returning answers, so
-the live run and the replay derive actions from the same numbers and
-byte-identical replay holds. Cost if wrong: a probability within 0.00005
+6.65 MB, above the 5 MB budget. Decision (revised after the final
+review): core's match loop rounds probabilities and confidence to 4
+decimals before validating, logging and acting on an answer, so the live
+run and the replay derive actions from the same numbers and
+byte-identical replay holds for every provider. Cost if wrong: a probability within 0.00005
 of a threshold is rounded onto it (irrelevant in practice).
 
 ## I-019 Death-step position is not logged — open (post-PoC)
@@ -206,3 +207,43 @@ not recorded in the log, so the panel shows "(doer-only slot: fixed plan,
 no thinker)" instead of the text; when v3.3 lands it should put that text
 into `MatchLog.prompts` or emit one Thinker event at tick 0. Cost if
 wrong: cosmetic.
+
+## I-021 Perception window — resolved (final fix pass, ruling R15)
+
+The final review found that with `FIRE_INTERVAL_TICKS = DOER_INTERVAL_TICKS
+= 10` every shot lands on a tick ≡ 1 (mod 10) while a doer perceives the
+state after the previous tick, whose facts cover one step: in 20 bot
+matches 0 of 6,979 heard shots and 7% of incoming facts reached any
+decision. Decision: transient facts accumulate over the last
+`DOER_INTERVAL_TICKS` steps (`WorldState.recent`), `perceive` merges the
+window, each fact reaches exactly one decision, and the viewer rebuilds
+the same window. DESIGN.md §6.2's "this tick" wording is superseded.
+Cost if wrong: perception reports a shot up to 0.5 s late.
+
+## I-022 The thinker receives no static map — open (P3 design decision)
+
+DESIGN.md row 9 and principle 3 give every agent the full static map; the
+v3.2 harness prompt carries none and the 1,500-token input budget is
+spent (1,486). Before v3.4: either put a compact obstacle list (about 60
+tokens) into the cacheable system prompt and lower the digest or reply
+caps, or rule that the thinker plays without a map. Cost if wrong: default
+prompts that mention cover the thinker cannot see.
+
+## I-023 Deferred minors from the final review — open
+
+Recorded, not fixed, for P3/P4: incoming bearing uses the shooter's
+current position, not the muzzle (p90 3.8° off); `face_target` tracks
+targets outside the cone (0.3% of tracking ticks); no final `pollEvents`
+after a cancel, so a fatal thinker result that arrives after the abort is
+unlogged; `usage` and `model` are not logged, so v3.5 cannot read cost
+from the log; ranking ties go to the lowest slot, and prompted slots are
+seated first (biases v3.6); `/decide` accepts any option ids and texts and
+reads the whole body before measuring it (v4.4); the spike page ships in
+`web/dist`; no Content-Security-Policy enforcing the key's destination;
+replays depend on the viewer's bundled maps by id; point-blank shots never
+appear in a Tick row so the viewer draws nothing for them; replay file
+size is uncapped; a 400 from the thinker is not fatal; the 8,000-character
+prompt cap exceeds the token budget; Thinker log input repeats plan and
+scratchpad; no-key mode zeroes prompted slots instead of converting them
+to doer-only; background tabs throttle the wall-floor timer to 1 s per
+tick; the unsquashed WIP commit `2e39312` on `p2`.
