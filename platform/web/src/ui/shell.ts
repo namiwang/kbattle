@@ -27,7 +27,7 @@ export function createShell(host: HTMLElement, store: Store): UiShell {
     el(
       "header",
       { className: "ui-header" },
-      el("h1", { textContent: "kbattle" }),
+      el("h1", { textContent: "Decision Arena" }),
       el("p", {
         textContent: "LLM agents play a top-down battle royale. Write a mind for yours, run a match, watch the replay.",
       }),

@@ -29,7 +29,7 @@ const seconds = (ticks: number) => (ticks * TICK_MS) / 1000;
  * agent can do, how to read the user message, and the JSON to answer with. Users
  * never see or edit it. Numbers come from core's constants, so it follows a retune.
  */
-export const HARNESS_PROMPT = `You are the thinker of one agent in kbattle, a top-down battle royale on a ${ARENA_WIDTH_M} x ${ARENA_HEIGHT_M} m arena with walls. The last one alive wins; ranking is survival, then kills, then hp. Hp starts at ${AGENT_HP}; a hit costs ${BULLET_DAMAGE}. Walls block bullets and sight.
+export const HARNESS_PROMPT = `You are the thinker of one agent in a top-down battle royale on a ${ARENA_WIDTH_M} x ${ARENA_HEIGHT_M} m arena with walls. The last one alive wins; ranking is survival, then kills, then hp. Hp starts at ${AGENT_HP}; a hit costs ${BULLET_DAMAGE}. Walls block bullets and sight.
 
 A doer model steers your agent every ${seconds(DOER_INTERVAL_TICKS)} s: move (forward, back, left, right, stop; relative to facing), turn (left, right, none, face_target), fire, target (a visible enemy). You are called when it finds your plan no longer fits (at most every ${seconds(THINKER_MIN_GAP_TICKS)} s), and at least every ${seconds(THINKER_MAX_GAP_TICKS)} s.
 

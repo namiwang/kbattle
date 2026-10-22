@@ -3,7 +3,7 @@
 // (platform/core/fixtures/sample-log.json); Upload, a drop or Download replace or save it.
 
 import sampleLogUrl from "../../core/fixtures/sample-log.json?url";
-import type { KbattleDebug } from "./replay/debug";
+import type { DecisionArenaDebug } from "./replay/debug";
 import { createReplayPage } from "./replay/page";
 import { createShell } from "./ui/shell";
 import { createStore } from "./ui/state";
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   const page = createReplayPage(shell.replayHost);
 
   // Reads whichever viewer is on screen, so it follows uploads.
-  const debug: KbattleDebug = {
+  const debug: DecisionArenaDebug = {
     get ready() {
       return page.ready;
     },
@@ -41,7 +41,7 @@ async function main(): Promise<void> {
     drawnMind: () => page.viewer?.drawnMind() ?? null,
     validateForm: () => shell.validateForm(),
   };
-  window.__kbattle = debug;
+  window.__decisionArena = debug;
 
   const response = await fetch(sampleLogUrl);
   if (!response.ok) throw new Error(`sample log: HTTP ${response.status}`);

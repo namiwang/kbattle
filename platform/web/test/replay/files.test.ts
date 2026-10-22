@@ -80,9 +80,9 @@ describe("openMatchLogFile", () => {
 });
 
 describe("matchLogFileName", () => {
-  it("is kbattle-<mapId>-<seed>.json", () => {
-    expect(matchLogFileName(sample)).toBe("kbattle-arena-1-1.json");
-    expect(matchLogFileName({ ...sample, seed: 42, config: { ...sample.config, seed: 42 } })).toBe("kbattle-arena-1-42.json");
+  it("is decision-arena-<mapId>-<seed>.json", () => {
+    expect(matchLogFileName(sample)).toBe("decision-arena-arena-1-1.json");
+    expect(matchLogFileName({ ...sample, seed: 42, config: { ...sample.config, seed: 42 } })).toBe("decision-arena-arena-1-42.json");
   });
 });
 

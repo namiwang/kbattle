@@ -5,10 +5,10 @@ import { makeAnthropicThinker } from "@decision-arena/models";
 import { THINKER_MODEL } from "@decision-arena/core";
 import { applyResult, initialSpikeState, type SpikeState } from "./spike-thinker-state";
 
-const KEY_STORAGE = "kbattle:v1:anthropic-key";
+const KEY_STORAGE = "decision-arena:v1:anthropic-key";
 
 // A stand-in for the harness prompt v3.4 writes.
-const SAMPLE_SYSTEM = `You are the thinker for agent a0 in kbattle, a top-down 2D battle royale: the last agent alive wins.
+const SAMPLE_SYSTEM = `You are the thinker for agent a0 in a top-down 2D battle royale: the last agent alive wins.
 Units: meters, y down; angles in degrees clockwise from +x; a bearing is relative to your facing, positive to the right.
 A fast doer model controls your agent every 0.5 s (move, turn, fire, target) and reads only your plan text.
 Each call gives you your perception, the events since your last call, your current plan and your scratchpad.

@@ -71,7 +71,7 @@ export function createMindSection(store: Store): HTMLElement {
       el("p", {
         id: "ui-thinker-hint",
         className: "ui-hint",
-        textContent: "kbattle puts its own harness first (the rules, what the agent perceives, the reply format); you write the strategy.",
+        textContent: "Decision Arena puts its own harness first (the rules, what the agent perceives, the reply format); you write the strategy.",
       }),
     ),
     el(
@@ -83,7 +83,7 @@ export function createMindSection(store: Store): HTMLElement {
         className: "ui-hint",
         textContent:
           "A blank field uses the default. A fifth question, escalate (“the plan no longer fits the situation”), " +
-          "is fixed by kbattle: a yes calls the thinker for a new plan.",
+          "is fixed by Decision Arena: a yes calls the thinker for a new plan.",
       }),
     ),
   );

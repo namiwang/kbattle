@@ -5,9 +5,9 @@ import type { UiState } from "../../src/ui/state";
 import { loadState, saveState } from "../../src/ui/storage";
 import { fakeStorage } from "./fake-storage";
 
-const KEY = "kbattle:v1:anthropic-key";
-const PROMPTS = "kbattle:v1:prompts";
-const CONFIG = "kbattle:v1:config";
+const KEY = "decision-arena:v1:anthropic-key";
+const PROMPTS = "decision-arena:v1:prompts";
+const CONFIG = "decision-arena:v1:config";
 
 const DEFAULTS: UiState = { key: "", prompts: DEFAULT_PROMPTS, config: DEFAULT_CONFIG };
 

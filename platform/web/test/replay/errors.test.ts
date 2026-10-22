@@ -36,7 +36,7 @@ describe("formatFileError", () => {
       ],
     };
     expect(formatFileError(error).split("\n")).toEqual([
-      "The file is JSON but not a kbattle replay (2 problems):",
+      "The file is JSON but not a Decision Arena replay (2 problems):",
       "events[12].kind: Invalid discriminator value",
       "seed: seed must equal config.seed",
     ]);
@@ -48,7 +48,7 @@ describe("formatFileError", () => {
       issues: [{ path: "", message: "Invalid input: expected object, received array" }],
     });
     expect(text.split("\n")).toEqual([
-      "The file is JSON but not a kbattle replay (1 problem):",
+      "The file is JSON but not a Decision Arena replay (1 problem):",
       "(root): Invalid input: expected object, received array",
     ]);
   });
@@ -59,7 +59,7 @@ describe("formatFileError", () => {
       message: "Invalid input: expected number, received string",
     }));
     const lines = formatFileError({ kind: "schema", issues }).split("\n");
-    expect(lines[0]).toBe(`The file is JSON but not a kbattle replay (${MAX_ISSUES_SHOWN + 7} problems):`);
+    expect(lines[0]).toBe(`The file is JSON but not a Decision Arena replay (${MAX_ISSUES_SHOWN + 7} problems):`);
     expect(lines).toHaveLength(1 + MAX_ISSUES_SHOWN + 1);
     expect(lines[MAX_ISSUES_SHOWN]).toBe(`events[${MAX_ISSUES_SHOWN - 1}].tick: Invalid input: expected number, received string`);
     expect(lines.at(-1)).toBe("…and 7 more.");

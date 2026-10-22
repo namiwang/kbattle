@@ -1,11 +1,11 @@
 // Headless browser smoke for the page. Not part of `pnpm test`; run
-// `pnpm --filter web smoke`. Starts Vite on port 5174 (or opens KBATTLE_URL),
-// loads the page in Playwright's chromium, waits for window.__kbattle.ready,
+// `pnpm --filter web smoke`. Starts Vite on port 5174 (or opens DECISION_ARENA_URL),
+// loads the page in Playwright's chromium, waits for window.__decisionArena.ready,
 // checks canvas pixels against the sample log and the map, resizes the window,
 // then drives the playback controls (keyboard, buttons, timeline drag, every
 // speed) and checks the scene against the log at each stop. Then the UI shell
 // (v4.1): key, prompts and match form survive a reload, Clear key and no-key
-// mode, the form check through window.__kbattle.validateForm(). Then the files
+// mode, the form check through window.__decisionArena.validateForm(). Then the files
 // (v2.5): uploads through the file input (good, schema-bad, not JSON), checks
 // that each re-mount leaves no listener, observer or WebGL context behind,
 // downloads and re-opens the log, drops a file, and times a 5 MB upload.
@@ -52,7 +52,7 @@ import { chromium, type Locator, type Page } from "playwright";
 import { createServer, type ViteDevServer } from "vite";
 import { TRAIL_TICKS, type DrawnBullets } from "../src/replay/bullets";
 import { makeTransform } from "../src/replay/coords";
-import type { DrawnAgent, KbattleDebug } from "../src/replay/debug";
+import type { DecisionArenaDebug, DrawnAgent } from "../src/replay/debug";
 import { indexLog, type LogIndex } from "../src/replay/log-index";
 import {
   answerSummary,
@@ -90,20 +90,20 @@ const rgb = (c: number): Rgb => [(c >> 16) & 255, (c >> 8) & 255, c & 255];
 const hex = (c: Rgb | undefined) => (c ? `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}` : "none");
 
 /** Reads the hook's plain values; functions on it are called through page.evaluate. */
-async function state(page: Page): Promise<Pick<KbattleDebug, "ready" | "tick" | "lastTick" | "scale">> {
+async function state(page: Page): Promise<Pick<DecisionArenaDebug, "ready" | "tick" | "lastTick" | "scale">> {
   return page.evaluate(() => {
-    const k = window.__kbattle;
-    if (!k) throw new Error("window.__kbattle missing");
+    const k = window.__decisionArena;
+    if (!k) throw new Error("window.__decisionArena missing");
     return { ready: k.ready, tick: k.tick, lastTick: k.lastTick, scale: k.scale };
   });
 }
 
 async function toPx(page: Page, points: Vec2[]): Promise<Vec2[]> {
-  return page.evaluate((pts) => pts.map((p) => window.__kbattle?.toPx(p) ?? { x: Number.NaN, y: Number.NaN }), points);
+  return page.evaluate((pts) => pts.map((p) => window.__decisionArena?.toPx(p) ?? { x: Number.NaN, y: Number.NaN }), points);
 }
 
 async function drawnAgents(page: Page): Promise<DrawnAgent[]> {
-  return page.evaluate(() => window.__kbattle?.drawnAgents() ?? []);
+  return page.evaluate(() => window.__decisionArena?.drawnAgents() ?? []);
 }
 
 async function frames2(page: Page): Promise<void> {
@@ -346,7 +346,7 @@ async function checkPlayback(page: Page): Promise<void> {
   await page.evaluate(`(() => {
     const seen = (window.__seen = []);
     const sample = () => {
-      seen.push(window.__kbattle ? window.__kbattle.tick : -1);
+      seen.push(window.__decisionArena ? window.__decisionArena.tick : -1);
       if (seen.length < 600) requestAnimationFrame(sample);
     };
     requestAnimationFrame(sample);
@@ -378,11 +378,11 @@ const trailsBox = (page: Page) => page.getByRole("checkbox", { name: "Trails" })
 const coneBox = (page: Page) => page.getByRole("checkbox", { name: "Vision cone" });
 
 async function drawnBullets(page: Page): Promise<DrawnBullets> {
-  return page.evaluate(() => window.__kbattle?.drawnBullets() ?? { dots: [], trails: [] });
+  return page.evaluate(() => window.__decisionArena?.drawnBullets() ?? { dots: [], trails: [] });
 }
 
 async function drawnOverlay(page: Page): Promise<DrawnOverlay | null> {
-  return page.evaluate(() => window.__kbattle?.drawnOverlay() ?? null);
+  return page.evaluate(() => window.__decisionArena?.drawnOverlay() ?? null);
 }
 
 async function canvasCenter(page: Page): Promise<Vec2> {
@@ -437,7 +437,7 @@ interface FrameSample {
 /** Records the debug hook's view in `count` consecutive animation frames (a string script: tsx/__name, see checkPlayback). */
 async function sampleFrames(page: Page, count: number): Promise<FrameSample[]> {
   await page.evaluate(`(() => {
-    const k = window.__kbattle;
+    const k = window.__decisionArena;
     const canvas = document.querySelector("canvas");
     const samples = (window.__samples = []);
     const sample = () => {
@@ -529,7 +529,7 @@ async function checkOverlays(page: Page): Promise<void> {
   check("Follow lists free and every spawned agent", isDeepStrictEqual(choices, ["free", ...spawned]), JSON.stringify(choices));
   const defaults = {
     follow: await followSelect(page).inputValue(),
-    hook: (await page.evaluate(() => window.__kbattle?.follow)) ?? null,
+    hook: (await page.evaluate(() => window.__decisionArena?.follow)) ?? null,
     trails: await trailsBox(page).isChecked(),
     cone: await coneBox(page).isChecked(),
     overlay: await drawnOverlay(page),
@@ -611,7 +611,7 @@ async function checkOverlays(page: Page): Promise<void> {
   const s = await state(page);
   check(
     "following a0 puts its marker at the middle of the canvas (Pixi's own transforms) and keeps the zoom",
-    (await page.evaluate(() => window.__kbattle?.follow)) === "a0" && Math.hypot(at.x - center.x, at.y - center.y) < 0.5 && s.scale === freeScale,
+    (await page.evaluate(() => window.__decisionArena?.follow)) === "a0" && Math.hypot(at.x - center.x, at.y - center.y) < 0.5 && s.scale === freeScale,
     `marker ${at.x.toFixed(2)},${at.y.toFixed(2)} vs center ${center.x},${center.y}; scale ${s.scale} vs ${freeScale}`,
   );
   const a0Row = frames.get(104)?.agents.find(([id]) => id === "a0");
@@ -721,7 +721,7 @@ async function checkOverlays(page: Page): Promise<void> {
 
 // ---- UI shell (v4.1): key, mind, match form, localStorage ----
 
-const STORED = Object.freeze({ key: "kbattle:v1:anthropic-key", prompts: "kbattle:v1:prompts", config: "kbattle:v1:config" });
+const STORED = Object.freeze({ key: "decision-arena:v1:anthropic-key", prompts: "decision-arena:v1:prompts", config: "decision-arena:v1:config" });
 const SMOKE_KEY = "sk-ant-smoke-not-a-real-key";
 
 async function stored(page: Page): Promise<Record<string, string | null>> {
@@ -730,7 +730,7 @@ async function stored(page: Page): Promise<Record<string, string | null>> {
 
 /** Runs the check behind Run match through the debug hook; returns the text it shows. */
 async function validateForm(page: Page): Promise<string> {
-  return page.evaluate(() => window.__kbattle?.validateForm() ?? "window.__kbattle missing");
+  return page.evaluate(() => window.__decisionArena?.validateForm() ?? "window.__decisionArena missing");
 }
 
 const parsed = (text: string | null | undefined): Record<string, unknown> => (text ? (JSON.parse(text) as Record<string, unknown>) : {});
@@ -789,14 +789,14 @@ async function checkUiShell(page: Page): Promise<void> {
   check("8 slots with 1 prompted leaves 7 bots", (await text(bots)) === "4 wanderers, 3 campers", await text(bots));
   const saved = await stored(page);
   check(
-    "localStorage holds the key as text, the prompts and the form as JSON, under kbattle:v1:*",
+    "localStorage holds the key as text, the prompts and the form as JSON, under decision-arena:v1:*",
     saved[STORED.key] === SMOKE_KEY && parsed(saved[STORED.prompts]).thinkerSystem === prompt && parsed(saved[STORED.config]).seed === 4242,
     JSON.stringify(saved),
   );
 
   // Reload: everything comes back.
   await page.reload();
-  await page.waitForFunction(() => window.__kbattle?.ready === true, undefined, { timeout: 20_000 });
+  await page.waitForFunction(() => window.__decisionArena?.ready === true, undefined, { timeout: 20_000 });
   check("reload keeps the key", (await key.inputValue()) === SMOKE_KEY);
   check("reload keeps the prompts", (await thinker.inputValue()) === prompt && (await move.inputValue()) === "Smoke: strafe left and right.");
   const after = { seed: await seed.inputValue(), slots: await slots.inputValue(), prompted: await prompted.inputValue(), enabled: await prompted.isEnabled() };
@@ -850,7 +850,7 @@ const THUMB_HALF_PX = 8;
 const firstPlan = eventsOfKind(log, "Thinker").find((e) => e.ok)?.plan?.text ?? "";
 
 async function drawnMind(page: Page): Promise<DrawnMind | null> {
-  return page.evaluate(() => window.__kbattle?.drawnMind?.() ?? null);
+  return page.evaluate(() => window.__decisionArena?.drawnMind?.() ?? null);
 }
 
 /** What the panel must show for `agent` at `tick` of the sample log, computed here in Node. */
@@ -1263,7 +1263,7 @@ async function checkMindPanel(page: Page): Promise<void> {
   // Narrow window: the panel goes below the canvas; markers follow the narrower timeline.
   const wideScale = (await state(page)).scale;
   await page.setViewportSize({ width: 600, height: 900 });
-  await page.waitForFunction((before) => window.__kbattle?.scale !== before, wideScale);
+  await page.waitForFunction((before) => window.__decisionArena?.scale !== before, wideScale);
   await frames2(page);
   const narrowCanvas = await rectOf(page, ".replay-stage canvas");
   const narrowPanel = await rectOf(page, ".replay-mind");
@@ -1283,7 +1283,7 @@ async function checkMindPanel(page: Page): Promise<void> {
   check("600x900: the fault marker at 78 sits under the thumb scrubbed to 78 (pixels)", fault78 !== undefined && Math.abs(fault78.center - thumb78) <= 1.5, `marker ${fault78?.center.toFixed(2)} px, thumb ${thumb78.toFixed(2)} px`);
   await page.locator(".replay").screenshot({ path: join(outDir, "mind-panel-narrow.png") });
   await page.setViewportSize({ width: 1000, height: 700 });
-  await page.waitForFunction((before) => window.__kbattle?.scale === before, wideScale);
+  await page.waitForFunction((before) => window.__decisionArena?.scale === before, wideScale);
   await frames2(page);
 
   // Re-mount while the panel shows a0 at the refusal: nothing left behind, the new panel starts empty.
@@ -1394,7 +1394,7 @@ async function openCount(page: Page): Promise<number> {
 
 async function waitOpened(page: Page, before: number): Promise<void> {
   await page.waitForFunction(
-    (n) => performance.getEntriesByName("replay-open", "measure").length > n && window.__kbattle?.ready === true,
+    (n) => performance.getEntriesByName("replay-open", "measure").length > n && window.__decisionArena?.ready === true,
     before,
   );
 }
@@ -1526,7 +1526,7 @@ async function checkFiles(page: Page): Promise<Leaks> {
   const savedPath = join(outDir, download.suggestedFilename());
   await download.saveAs(savedPath);
   const savedText = readFileSync(savedPath, "utf8");
-  check("download is named kbattle-<mapId>-<seed>.json", download.suggestedFilename() === `kbattle-${log.config.mapId}-${log.seed}.json`, download.suggestedFilename());
+  check("download is named decision-arena-<mapId>-<seed>.json", download.suggestedFilename() === `decision-arena-${log.config.mapId}-${log.seed}.json`, download.suggestedFilename());
   check(
     "the downloaded file is compact JSON of the same MatchLog",
     !savedText.includes("\n") && isDeepStrictEqual(MatchLogSchema.parse(JSON.parse(savedText)), log),
@@ -1699,10 +1699,10 @@ async function checkBusyLog(page: Page): Promise<void> {
 /**
  * The match core's scripts/run-match.ts writes by default (16 bots on arena-1, seed 7, wanderers
  * and campers alternating), run here in-process: same config, same log, byte for byte.
- * KBATTLE_MATCH_LOG=<file> opens a log that script wrote instead (any map or seed).
+ * DECISION_ARENA_MATCH_LOG=<file> opens a log that script wrote instead (any map or seed).
  */
 async function realMatchLog(): Promise<MatchLog> {
-  const file = process.env.KBATTLE_MATCH_LOG;
+  const file = process.env.DECISION_ARENA_MATCH_LOG;
   if (file) return MatchLogSchema.parse(JSON.parse(readFileSync(file, "utf8")));
   const config = MatchConfigSchema.parse({
     mapId: "arena-1",
@@ -1870,7 +1870,7 @@ async function checkRealMatch(page: Page, baseline: Leaks): Promise<void> {
   // Resizing while following: still centered, at the new fitted zoom.
   await scrubTo(page, from);
   await page.setViewportSize({ width: 700, height: 900 });
-  await page.waitForFunction((before) => window.__kbattle?.scale !== before, scale);
+  await page.waitForFunction((before) => window.__decisionArena?.scale !== before, scale);
   await frames2(page);
   const resized = await page.evaluate(() => {
     const c = document.querySelector("canvas");
@@ -1887,7 +1887,7 @@ async function checkRealMatch(page: Page, baseline: Leaks): Promise<void> {
     `marker ${at700.x.toFixed(2)},${at700.y.toFixed(2)} vs center ${c700.x},${c700.y}; scale ${(await state(page)).scale} vs fit ${fitted}`,
   );
   await page.setViewportSize({ width: 1000, height: 700 });
-  await page.waitForFunction((before) => window.__kbattle?.scale === before, scale);
+  await page.waitForFunction((before) => window.__decisionArena?.scale === before, scale);
   await frames2(page);
 
   // A death: the followed agent's cone goes, the camera stays where its last row put it.
@@ -1952,7 +1952,7 @@ async function checkRealMatch(page: Page, baseline: Leaks): Promise<void> {
 async function main(): Promise<void> {
   mkdirSync(outDir, { recursive: true });
   let server: ViteDevServer | undefined;
-  let url = process.env.KBATTLE_URL;
+  let url = process.env.DECISION_ARENA_URL;
   if (!url) {
     server = await createServer({ root: webDir, logLevel: "warn", server: { port: 5174 } });
     await server.listen();
@@ -1974,7 +1974,7 @@ async function main(): Promise<void> {
 
     await page.addInitScript(LEAK_PROBE);
     await page.goto(url);
-    await page.waitForFunction(() => window.__kbattle?.ready === true, undefined, { timeout: 20_000 });
+    await page.waitForFunction(() => window.__decisionArena?.ready === true, undefined, { timeout: 20_000 });
     // Timings below depend on it: headless Chromium usually renders WebGL in software (SwiftShader).
     const renderer = await page.evaluate(() => {
       const gl = document.createElement("canvas").getContext("webgl2");
@@ -1994,7 +1994,7 @@ async function main(): Promise<void> {
     await checkFrame(page, "1000x700", 0, "tick0.png");
 
     await page.setViewportSize({ width: 600, height: 900 });
-    await page.waitForFunction((before) => window.__kbattle?.scale !== before, s.scale);
+    await page.waitForFunction((before) => window.__decisionArena?.scale !== before, s.scale);
     await frames2(page);
     await checkAspect(page, "600x900");
     await checkFrame(page, "600x900", 0, "tick0-600x900.png");

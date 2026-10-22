@@ -1,4 +1,4 @@
-// The `window.__kbattle` hook: read-only state for the headless smoke
+// The `window.__decisionArena` hook: read-only state for the headless smoke
 // (scripts/smoke.ts) and for poking at the viewer from devtools, plus the form
 // check behind Run match (v4.1), which the smoke calls while the button is disabled.
 
@@ -17,7 +17,7 @@ export interface DrawnAgent {
   tip: { x: number; y: number };
 }
 
-export interface KbattleDebug {
+export interface DecisionArenaDebug {
   /** True once a log is open and its first frame drawn; false while a file loads. */
   readonly ready: boolean;
   /** The tick on screen. */
@@ -42,6 +42,6 @@ export interface KbattleDebug {
 
 declare global {
   interface Window {
-    __kbattle?: KbattleDebug;
+    __decisionArena?: DecisionArenaDebug;
   }
 }

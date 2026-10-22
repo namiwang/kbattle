@@ -258,3 +258,13 @@ prompt cap exceeds the token budget; Thinker log input repeats plan and
 scratchpad; no-key mode zeroes prompted slots instead of converting them
 to doer-only; background tabs throttle the wall-floor timer to 1 s per
 tick; the unsquashed WIP commit `2e39312` on `p2`.
+
+## I-024 Old `kbattle:v1:*` browser storage is left behind — resolved (R0.1)
+
+R0.1 renamed the page's localStorage keys to `decision-arena:v1:*`
+(DESIGN.md §5.7) and does not read the old `kbattle:v1:*` ones, the rule
+`platform/web/src/ui/storage.ts` already states for a format change. A
+browser that saved a key, prompts or a match form before R0.1 opens with
+the defaults once; the old values stay until its site data is cleared.
+Cost if wrong: re-typing a key and prompts once; nobody outside
+development has stored any.

@@ -31,7 +31,7 @@ export function formatFileError(error: FileError): string {
   const lines = issues.slice(0, MAX_ISSUES_SHOWN).map((issue) => `${issue.path || "(root)"}: ${issue.message}`);
   if (issues.length > MAX_ISSUES_SHOWN) lines.push(`…and ${issues.length - MAX_ISSUES_SHOWN} more.`);
   const count = issues.length === 1 ? "1 problem" : `${issues.length} problems`;
-  return [`The file is JSON but not a kbattle replay (${count}):`, ...lines].join("\n");
+  return [`The file is JSON but not a Decision Arena replay (${count}):`, ...lines].join("\n");
 }
 
 export interface ErrorBox {
