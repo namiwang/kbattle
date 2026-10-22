@@ -82,6 +82,13 @@
   display: block;
 }
 
+/* The perception the doer answers in force were decided on (R18), set off under its caption. */
+.replay-mind-saw-facts {
+  margin-top: 1px;
+  padding-left: 6px;
+  border-left: 2px solid #262c37;
+}
+
 .replay-mind-none {
   color: #5f6a7a;
 }

@@ -1,11 +1,13 @@
 // The mind panel of the replay (DESIGN.md row 27, §7 item 5): for the followed
 // agent at the tick on screen, what it perceives, the plan it follows, the doer
-// answers it acts on, and markers under the timeline for its thinker calls and
-// its failed calls. The content is mindView (mind-selectors.ts), rebuilt only
-// when the tick or the agent changes, and only the sections that changed are
-// rewritten. Markers are rebuilt when the agent changes. CSS places them along
-// the timeline's thumb track, so a resize moves them without any script.
-// Element listeners only: nothing on document or window.
+// answers it acts on with the perception they were decided on ("saw at tick
+// T − 1, answered at tick T", R18), and markers under the timeline for its
+// thinker calls and its failed calls. The content is mindView
+// (mind-selectors.ts), rebuilt only when the tick or the agent changes, and
+// only the sections that changed are rewritten. Markers are rebuilt when the
+// agent changes. CSS places them along the timeline's thumb track, so a resize
+// moves them without any script. Element listeners only: nothing on document
+// or window.
 
 import type { PerceptionState } from "@kbattle/core";
 import type { LogIndex } from "./log-index";
@@ -19,6 +21,7 @@ import {
   type DrawnMind,
   type MarkerShape,
   type MindView,
+  type PerceptionLines,
 } from "./mind-selectors";
 import { kindColor } from "./theme";
 import "./mind-panel.css";
@@ -39,7 +42,7 @@ export interface MindPanel {
 
 export interface MindPanelDeps {
   readonly index: LogIndex;
-  /** The world at a tick: the viewer's per-tick memo, shared with the camera and the overlay. */
+  /** The world at a tick: the viewer's memo, shared with the camera and the overlay (the panel also asks for the tick before a doer call). */
   readonly stateAt: (tick: number) => PerceptionState;
   /** Moves the clock to a tick: a marker was clicked. */
   readonly seek: (tick: number) => void;
@@ -57,12 +60,7 @@ export function createMindPanel({ index, stateAt, seek }: MindPanelDeps): MindPa
   const head = h("header", "replay-mind-head");
   head.append(swatch, title, meta);
 
-  const self = h("dd", "replay-mind-self");
-  const visible = h("dd", "replay-mind-visible");
-  const heard = h("dd", "replay-mind-heard");
-  const incoming = h("dd", "replay-mind-incoming");
-  const facts = h("dl", "replay-mind-facts");
-  facts.append(h("dt", "", "self"), self, h("dt", "", "visible"), visible, h("dt", "", "heard"), heard, h("dt", "", "incoming"), incoming);
+  const facts = factsList("replay-mind", "replay-mind-facts");
 
   const planText = h("p", "replay-mind-plan-text");
   const planCaption = h("p", "replay-mind-caption replay-mind-plan-caption");
@@ -70,13 +68,16 @@ export function createMindPanel({ index, stateAt, seek }: MindPanelDeps): MindPa
 
   const doerCaption = h("p", "replay-mind-caption replay-mind-doer-caption");
   const doerFault = h("p", "replay-mind-fault replay-mind-doer-fault");
+  // What the answers in force were decided on: its own class names, so selectors for the Perception block above never reach it.
+  const sawCaption = h("p", "replay-mind-caption replay-mind-saw-caption");
+  const saw = factsList("replay-mind-saw", "replay-mind-facts replay-mind-saw-facts");
   const answers = h("div", "replay-mind-answers");
 
   body.append(
     head,
-    section("Perception", facts),
+    section("Perception", facts.element),
     section("Plan", planText, planCaption, planFault),
-    section("Doer", doerCaption, doerFault, answers),
+    section("Doer", doerCaption, doerFault, sawCaption, saw.element, answers),
   );
   element.append(empty, body);
 
@@ -105,10 +106,7 @@ export function createMindPanel({ index, stateAt, seek }: MindPanelDeps): MindPa
     const perceptionKey = JSON.stringify(lines);
     if (perceptionKey !== shown.perception) {
       shown.perception = perceptionKey;
-      self.textContent = lines.self;
-      entries(visible, lines.visible);
-      entries(heard, lines.heard);
-      entries(incoming, lines.incoming);
+      facts.show(lines);
     }
 
     const planKey = JSON.stringify(v.plan);
@@ -121,13 +119,18 @@ export function createMindPanel({ index, stateAt, seek }: MindPanelDeps): MindPa
       planFault.hidden = v.plan.fault === null;
     }
 
-    // The caption names the call the answers come from, so it and the fault decide the rows.
-    const doerKey = `${v.doer.caption}\n${v.doer.fault ?? ""}`;
+    // The captions name the call the answers come from, so they and the fault decide the perception and the rows.
+    const decided = v.doer.perception;
+    const doerKey = `${v.doer.caption}\n${v.doer.fault ?? ""}\n${decided?.caption ?? ""}`;
     if (doerKey !== shown.doer) {
       shown.doer = doerKey;
       doerCaption.textContent = v.doer.caption;
       doerFault.textContent = v.doer.fault ?? "";
       doerFault.hidden = v.doer.fault === null;
+      sawCaption.textContent = decided?.caption ?? "";
+      sawCaption.hidden = decided === null;
+      saw.element.hidden = decided === null;
+      if (decided) saw.show(decided.lines);
       answers.replaceChildren(...v.doer.rows.map(answerElement));
     }
   };
@@ -153,7 +156,7 @@ export function createMindPanel({ index, stateAt, seek }: MindPanelDeps): MindPa
         view = null;
       } else {
         element.dataset.agent = agent;
-        view = mindView(index, stateAt(tick), agent);
+        view = mindView(index, stateAt, tick, agent);
         fill(view);
       }
       empty.hidden = view !== null;
@@ -175,6 +178,25 @@ function h<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, tex
 /** Writes `text` only when the element shows something else: no DOM mutation for an unchanged line. */
 function setText(element: HTMLElement, text: string): void {
   if (element.textContent !== text) element.textContent = text;
+}
+
+/** A perception as a list: self, visible, heard, incoming, each a <dd> classed `${prefix}-self` and so on. */
+function factsList(prefix: string, className: string): { element: HTMLElement; show(lines: PerceptionLines): void } {
+  const self = h("dd", `${prefix}-self`);
+  const visible = h("dd", `${prefix}-visible`);
+  const heard = h("dd", `${prefix}-heard`);
+  const incoming = h("dd", `${prefix}-incoming`);
+  const element = h("dl", className);
+  element.append(h("dt", "", "self"), self, h("dt", "", "visible"), visible, h("dt", "", "heard"), heard, h("dt", "", "incoming"), incoming);
+  return {
+    element,
+    show(lines) {
+      self.textContent = lines.self;
+      entries(visible, lines.visible);
+      entries(heard, lines.heard);
+      entries(incoming, lines.incoming);
+    },
+  };
 }
 
 function section(heading: string, ...children: HTMLElement[]): HTMLElement {

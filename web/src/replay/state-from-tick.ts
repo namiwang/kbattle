@@ -87,16 +87,19 @@ function stepFacts(index: LogIndex, s: number): TickFacts {
 }
 
 /**
- * stateFromTick for one log, remembering the last tick it built: everything
- * drawn for the tick on screen (camera, overlay) shares one state, rebuilt
- * only when the tick changes.
+ * stateFromTick for one log, remembering the last two ticks it built:
+ * everything drawn for the tick on screen (camera, overlay, the mind panel's
+ * Perception block) shares one state, and the mind panel's Doer section
+ * another, the tick before the doer call in force (R18); each is rebuilt only
+ * when its tick changes. A third tick forgets the one asked for least recently.
  */
 export function createStateAt(index: LogIndex, log: MatchLog): (tick: number) => PerceptionState {
-  let last: { tick: number; state: PerceptionState } | undefined;
+  let kept: { tick: number; state: PerceptionState }[] = []; // most recently asked for last
   return (tick) => {
     const t = clampTick(tick, index.lastTick);
-    if (last?.tick !== t) last = { tick: t, state: stateFromTick(index, log, t) };
-    return last.state;
+    const hit = kept.find((k) => k.tick === t) ?? { tick: t, state: stateFromTick(index, log, t) };
+    kept = [...kept.filter((k) => k !== hit), hit].slice(-2);
+    return hit.state;
   };
 }
 

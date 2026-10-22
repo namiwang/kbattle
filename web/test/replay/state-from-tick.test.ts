@@ -212,6 +212,20 @@ describe("createStateAt", () => {
     expect(at101).toEqual(stateFromTick(index, sample, 101));
     expect(stateAt(100)).toEqual(at100);
   });
+
+  it("keeps the last two ticks it built: the tick on screen and the tick a doer call saw (R18) are each built once", () => {
+    const stateAt = createStateAt(index, sample);
+    const at115 = stateAt(115);
+    const at110 = stateAt(110);
+    expect([stateAt(115), stateAt(110), stateAt(115)]).toEqual([at115, at110, at115]);
+    expect(stateAt(115)).toBe(at115);
+    expect(stateAt(110)).toBe(at110);
+    const at116 = stateAt(116); // a third tick forgets the one asked for least recently (115)
+    expect(stateAt(110)).toBe(at110);
+    expect(stateAt(116)).toBe(at116);
+    expect(stateAt(115)).not.toBe(at115);
+    expect(stateAt(115)).toEqual(at115);
+  });
 });
 
 // A real match: the log the viewer opens, against the world the sim held at
