@@ -268,3 +268,15 @@ browser that saved a key, prompts or a match form before R0.1 opens with
 the defaults once; the old values stay until its site data is cleared.
 Cost if wrong: re-typing a key and prompts once; nobody outside
 development has stored any.
+
+## I-025 The smoke's 60 fps budget check can fail under machine load — open
+
+`budget: 60 fps at 1x with trails and the cone on (16 agents)` allows at
+most 3% of frames over 20 ms (`smooth` in `platform/web/scripts/smoke.ts`)
+while headless Chromium's software WebGL spends about 15.5 ms of main
+thread on each 16.7 ms frame. During R0.1 it failed once (8 of 173 frames
+over 20 ms, 6 allowed; p50 16.7 ms and p95 16.8 ms, as in passing runs)
+and passed on two reruns of the same tree. A failure with an unchanged
+p95 is load on the machine: rerun before debugging. Cost if wrong: a real
+slowdown taken for noise, which a second failure or a higher p95 would
+show.

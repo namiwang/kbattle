@@ -21,9 +21,9 @@ the suite (`pnpm -r test`, `typecheck`, `lint`, `build`) and the web smoke
 ### R0.1 Relayout and rename
 Goal: the workspace is `platform/{core,models,web,worker}` under the `@decision-arena` scope, with the shooter still inside `platform/core` so nothing changes behaviour yet.
 Depends on: nothing.
-- [ ] `git mv core platform/core`, `brain platform/models`, `web platform/web`, `worker platform/worker`; workspace globs `platform/*`, `kits/*`, `arenas/*`; package names, imports, scripts, wrangler name, page title, README, storage prefix `decision-arena:v1:*` renamed.
-- [ ] `grep -ri kbattle` finds nothing outside ISSUES.md, PLAN.md and git history.
-- [ ] Suite and smoke green with the same counts as before the move (core 548, models 70, web 212, worker 43; smoke 245).
+- [x] `git mv core platform/core`, `brain platform/models`, `web platform/web`, `worker platform/worker`; workspace globs `platform/*`, `kits/*`, `arenas/*`; package names, imports, scripts, wrangler name, page title, README, storage prefix `decision-arena:v1:*` renamed.
+- [x] `grep -ri kbattle` finds nothing outside ISSUES.md, PLAN.md and git history.
+- [x] Suite and smoke green with the same counts as before the move (core 548, models 70, web 212, worker 43; smoke 245).
 
 ### R0.2 Platform contracts
 Goal: `platform/core` defines `Arena`, `Model`, `Question`/`Answer`, `AgentSpec`, `MatchLog` v2 (`Call`, `Tick { data }`, `MatchEnd`) and the registry (DESIGN §5.2–§5.5).
@@ -158,3 +158,4 @@ commit c509a40.
 
 - 2026-10-21 — v0.1–v0.4, v1.1–v1.4, v2.1–v2.2, v2.5, v4.1, v0.6 and v0.5 (offline) shipped by opus subagents on `poc`; notable deviations: libraries consumed as TypeScript source, DoerAnswer and Plan strip unknown keys, MapSpec pulled forward, `Tick.near` added, four doer fields (escalate fixed).
 - 2026-10-22 — v1.5, v1.6, v3.2, v2.3, v2.4 shipped; final review found the perception-window aliasing (ISSUES I-021), fixed with rulings R15–R18; `poc` fast-forwarded into `main`; DESIGN v4.0 written; this plan replaces `plan/`.
+- 2026-10-22 — R0.1 shipped on `main` (cd01f54 move, a8462fa scope and names, 17f9486 strings); counts unchanged (core 548, models 70, web 212, worker 43; smoke 245); deviations: DESIGN.md and README's history note keep the old name on purpose (controller ruling); comments naming old repo-root paths now say `platform/…`; the thinker harness and the spike prompt drop the product name rather than swap it (budget 1,484 of 1,500 tokens); old `kbattle:v1:*` storage is left behind (ISSUES I-024); the smoke's 16-agent fps check failed once under load and passed on rerun (ISSUES I-025).
