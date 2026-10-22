@@ -1,10 +1,14 @@
-# kbattle
+# Decision Arena
 
-LLM-driven agents play a simplified top-down battle royale in the browser.
-Humans write the agents' prompts and watch the replay.
+Player-authored agents, run by language models of different speeds, play
+games against scripted bots in the browser. Humans write the agents and
+watch the replay. The first arena is a top-down battle royale; the code
+is mid-way through the v4.0 restructure (the layout below is the pre-revamp
+one and changes in milestone R0.1).
 
-- Design: [DESIGN.md](DESIGN.md)
-- Milestone plan: [plan/](plan/README.md)
+- Design: [DESIGN.md](DESIGN.md) (what and why; arenas in §13–§15)
+- Plan: [PLAN.md](PLAN.md) (milestones with exit criteria and a log)
+- Issues: [ISSUES.md](ISSUES.md) (uncertainties, defects, decisions)
 
 ## Packages
 
