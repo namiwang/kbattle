@@ -280,3 +280,23 @@ and passed on two reruns of the same tree. A failure with an unchanged
 p95 is load on the machine: rerun before debugging. Cost if wrong: a real
 slowdown taken for noise, which a second failure or a higher p95 would
 show.
+
+## I-026 UX findings from the served-app test (2026-10-22) — open (R1.3, R3.5)
+
+Tested against `wrangler dev` with the mock backend: every HTTP and
+browser check passed (smoke 245/245 against port 8787, a 34-check served
+script, a 16-bot log uploaded and played to the end). What a user would
+stumble on, for the page milestones: Run match is disabled with a
+roadmap-style hint (R3.5); nothing marks the end of a match or shows the
+ranking, dead agents just vanish (R1.2/R3.5); the replay sits about
+1,500 px below the fold and its section runs edge to edge while the
+forms are centred (R1.3); the Follow control is far from the panel that
+tells you to use it (R1.2); the agent panel needs an inner scroll on
+laptop screens with no visible scrollbar (R1.2); Move and Turn
+instructions are single-line fields that clip the defaults (R1.3);
+upload errors show raw validator output below a clear headline (R3.5);
+uploading resets the speed; no legend for agent colours or markers; the
+page copy still says mind, thinker and doer (renamed in R1.3/R2.5); bot
+decisions read like model answers with 100% bars. Also: the spike page
+ships in the build with stale copy (I-023), `GET /decide` answers 404
+rather than 405, and comments cite v3.0 section numbers (§7, §5.7).
