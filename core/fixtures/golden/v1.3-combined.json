@@ -1,5 +1,5 @@
 {
-  "scene": "All combined, on arena-1 with 4 agents, tick 600 of 6000. a0 at the center (50, 50) faces 0 deg and fires this tick at a1, which walks toward it 30 m east (seen) and was hit this tick by a0's previous bullet. a2 at (50, 10), north of the north block, fires this tick (heard mid at -90, not seen). a3 at (40, 58) walks behind a0's right shoulder (steps near) and its older bullet passed near a0 this tick (incoming).",
+  "scene": "All combined, on arena-1 with 4 agents, tick 600 of 6000; the perception window holds steps 591..600. a0 at the center (50, 50) faces 0 deg and fires this tick at a1, which walks toward it 30 m east (seen) and was hit this tick by a0's previous bullet. a2 at (50, 10), north of the north block, fires this tick (heard mid at -90, not seen). a3 at (40, 58) walks behind a0's right shoulder (steps near); it fired b27 at tick 594, 1.5 m back along its path (heard near), and b27 passed near a0 this tick (incoming).",
   "observations": {
     "a0": {
       "self": {
@@ -21,6 +21,11 @@
         }
       ],
       "heard": [
+        {
+          "kind": "shot",
+          "bearing": 142,
+          "dist": "near"
+        },
         {
           "kind": "shot",
           "bearing": -90,
@@ -71,6 +76,11 @@
         },
         {
           "kind": "shot",
+          "bearing": -8,
+          "dist": "mid"
+        },
+        {
+          "kind": "shot",
           "bearing": 59,
           "dist": "far"
         }
@@ -98,6 +108,11 @@
           "kind": "shot",
           "bearing": 0,
           "dist": "mid"
+        },
+        {
+          "kind": "shot",
+          "bearing": 13,
+          "dist": "far"
         }
       ],
       "incoming": []

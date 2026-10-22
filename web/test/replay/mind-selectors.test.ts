@@ -388,11 +388,11 @@ describe("perceptionLines", () => {
     return perceptionLines(perceive(state, agent), state.agents.find((a) => a.id === agent)?.alive ?? false);
   };
 
-  it("tick 115: self, a1 straight ahead, the hit's source as a bearing", () => {
+  it("tick 115: self, a1 straight ahead, its shot of tick 111 heard (the window, R15), the hit's source as a bearing", () => {
     expect(at(115)).toEqual({
       self: "26.50, 50.00 · facing 0.0° · HP 80 · kills 0 · 4.3 s left",
       visible: ["a1 · 0° · 41 m · moving"],
-      heard: [],
+      heard: ["shot · 0° · mid"],
       incoming: ["0°"],
     });
   });
@@ -430,37 +430,68 @@ describe("perceptionLines", () => {
 });
 
 describe("mindView", () => {
-  const view = (tick: number, agent = "a0", at = index, log = sample) => mindView(at, stateFromTick(at, log, tick), agent);
+  const view = (tick: number, agent = "a0", at = index, log = sample) => mindView(at, (t) => stateFromTick(at, log, t), tick, agent);
   const rowsAt = (tick: number) => {
     const answers = latestDoerAt(index, "a0", tick).answered?.answers;
     if (!answers) throw new Error(`sample: no answers at tick ${tick}`);
     return answerRows(answers);
   };
   const firstPlan = latestPlanAt(index, "a0", 7).applied?.plan?.text;
+  /** The Doer section's perception for a0's call answered at `answered`: core.perceive on the world of tick answered − 1. */
+  const decided = (answered: number) => {
+    const observation = perceive(stateFromTick(index, sample, answered - 1), "a0");
+    return { tick: answered - 1, caption: `saw at tick ${answered - 1}, answered at tick ${answered}`, observation, alive: true, lines: perceptionLines(observation, true) };
+  };
 
   it("tick 0: perception from core.perceive, no plan yet, no answers yet", () => {
     const state = stateFromTick(index, sample, 0);
-    expect(mindView(index, state, "a0")).toEqual({
+    expect(view(0)).toEqual({
       tick: 0,
       agent: "a0",
       perception: { observation: perceive(state, "a0"), alive: true, lines: perceptionLines(perceive(state, "a0"), true) },
       plan: { text: null, caption: "(no plan yet)", fault: null },
-      doer: { caption: "(no answers yet)", fault: null, rows: [] },
+      doer: { caption: "(no answers yet)", fault: null, perception: null, rows: [] },
     });
+  });
+
+  it("the Doer section shows the perception its answers came from: perceive on the world of tick T − 1 for the call answered at T (R18)", () => {
+    // The scrub tick, and the call whose answers are in force then: tick 1 saw the spawn (tick 0);
+    // 41 keeps the answers of 31 after a timeout; 115 and 142 are between and on doer ticks.
+    for (const [tick, answered] of [[1, 1], [10, 1], [41, 31], [77, 71], [115, 111], [141, 141], [142, 141]] as const) {
+      expect(view(tick).doer.perception, `tick ${tick}`).toEqual(decided(answered));
+    }
+    expect(decided(1).observation).toEqual(perceive(stateFromTick(index, sample, 0), "a0")); // answered at 1: the spawn
+  });
+
+  it("tick 115: the top block is the world on screen, the Doer block the world the answers of 111 were decided on (tick 110)", () => {
+    const at115 = view(115);
+    expect(at115.perception.lines).toMatchObject({ self: "26.50, 50.00 · facing 0.0° · HP 80 · kills 0 · 4.3 s left", incoming: ["0°"] });
+    expect(at115.doer.perception?.lines).toEqual({
+      self: "26.50, 50.00 · facing 0.0° · HP 100 · kills 0 · 4.5 s left",
+      visible: ["a1 · 0° · 42 m · moving"],
+      heard: ["shot · 0° · mid"], // a1's shot of tick 101, in the window of tick 110 (R15)
+      incoming: [],
+    });
+    expect(at115.doer.caption).toBe("answered at tick 111");
   });
 
   it("tick 7: the plan applied this tick, the answers of tick 1", () => {
     expect(view(7).plan).toEqual({ text: firstPlan, caption: "applied at tick 7 (requested at 1)", fault: null });
-    expect(view(7).doer).toEqual({ caption: "answered at tick 1", fault: null, rows: rowsAt(1) });
+    expect(view(7).doer).toEqual({ caption: "answered at tick 1", fault: null, perception: decided(1), rows: rowsAt(1) });
   });
 
   it("tick 41: the doer timed out, the answers of tick 31 are kept", () => {
-    expect(view(41).doer).toEqual({ caption: "kept from tick 31", fault: "Doer fault at tick 41: timeout: no answer within 2000 ms", rows: rowsAt(31) });
+    expect(view(41).doer).toEqual({
+      caption: "kept from tick 31",
+      fault: "Doer fault at tick 41: timeout: no answer within 2000 ms",
+      perception: decided(31), // the kept answers' own input, not the failed call's
+      rows: rowsAt(31),
+    });
   });
 
   it("tick 77: the plan of tick 7, no fault line, the answers of tick 71", () => {
     expect(view(77).plan).toEqual({ text: firstPlan, caption: "applied at tick 7 (requested at 1)", fault: null });
-    expect(view(77).doer).toEqual({ caption: "answered at tick 71", fault: null, rows: rowsAt(71) });
+    expect(view(77).doer).toEqual({ caption: "answered at tick 71", fault: null, perception: decided(71), rows: rowsAt(71) });
   });
 
   it("tick 78 and the end: the refusal on the fault line, the plan of tick 7 still in view", () => {

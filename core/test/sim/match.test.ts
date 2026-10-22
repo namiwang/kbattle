@@ -15,6 +15,7 @@ import {
   type Slot,
 } from "../../src/schemas";
 import { rankAgents, runMatch } from "../../src/sim/match";
+import { replayMatch } from "../../src/sim/replay-provider";
 import type { DecisionContext, DecisionProvider } from "../../src/sim/providers";
 import { roundTo } from "../../src/sim/round";
 import type { MoveChoice, TurnChoice, WorldState } from "../../src/types";
@@ -243,11 +244,83 @@ describe("runMatch: faults (R12, principle 5)", () => {
     expect(path[25]).not.toEqual(path[11]);
   });
 
+  it("gives each doer call its own signal and aborts it when the loop stops waiting for it, at the timeout (R17)", async () => {
+    const calls: { tick: number; signal: AbortSignal; told: boolean }[] = [];
+    const hangs: DecisionProvider = {
+      decide({ tick, signal }) {
+        const call = { tick, signal, told: false };
+        calls.push(call);
+        signal.addEventListener("abort", () => (call.told = true), { once: true });
+        return tick === 1 ? Promise.resolve(answer("forward")) : new Promise<DoerAnswer>(() => {});
+      },
+    };
+    const log = await runMatch(openConfig(12), { map: OPEN, prompts: PROMPTS, doerTimeoutMs: 5, providers: firstIs(hangs) });
+    expect(doerOf(log, "a0").map((e) => e.error)).toEqual([undefined, "timeout: no answer within 5 ms"]);
+    expect(calls.map((c) => [c.tick, c.signal.aborted, c.told])).toEqual([
+      [1, false, false], // answered in time: never aborted
+      [11, true, true],
+    ]);
+    expect(calls[0]?.signal).not.toBe(calls[1]?.signal);
+    expect(calls[1]?.signal.reason).toMatchObject({ name: "TimeoutError" });
+  });
+
   it("logs an answer without an answers object as ok:false instead of applying it", async () => {
     const broken: DecisionProvider = { decide: () => Promise.resolve({ model: "x" } as unknown as DoerAnswer) };
     const log = await runMatch(openConfig(5), { map: OPEN, prompts: PROMPTS, providers: firstIs(broken) });
     expect(doerOf(log, "a0")).toEqual([{ kind: "Doer", tick: 1, agent: "a0", ok: false, error: "invalid answer: no answers object" }]);
     expect(MatchLogSchema.safeParse(log).success).toBe(true);
+  });
+
+  it("logs answers the schema rejects as ok:false, 'invalid answer: <path>: <message>'; the agent keeps its action and the log parses (R16)", async () => {
+    const provider: DecisionProvider = {
+      decide({ tick }) {
+        if (tick === 1) return Promise.resolve(answer("forward"));
+        if (tick === 11) return Promise.resolve({ model: "test", answers: { ...answer("stop").answers, fire: { type: "noul", noul: 1.0000001 } } });
+        // A choice without its `type`.
+        return Promise.resolve({ model: "test", answers: { ...answer("stop").answers, move: { choice: "stop", probabilities: { stop: 1 }, confidence: 1 } } } as unknown as DoerAnswer);
+      },
+    };
+    const log = await runMatch(openConfig(25), { map: OPEN, prompts: PROMPTS, providers: firstIs(provider) });
+    expect(MatchLogSchema.parse(log)).toEqual(log);
+    expect(doerOf(log, "a0").map((e) => [e.tick, e.ok, e.error])).toEqual([
+      [1, true, undefined],
+      [11, false, "invalid answer: fire.noul: Too big: expected number to be <=1"],
+      [21, false, 'invalid answer: move.type: Invalid input: expected "choice"'],
+    ]);
+    const path = pathOf(log, "a0");
+    for (let t = 12; t <= 25; t++) expect(path[t], `tick ${t}`).not.toEqual(path[t - 1]); // the answers of tick 1 stand: still walking
+  });
+
+  it("rounds probabilities and confidence to 4 decimals and keeps only the schema's keys before logging and acting (R16, ISSUES I-018)", async () => {
+    const precise: DecisionProvider = {
+      decide: () =>
+        Promise.resolve({
+          model: "test",
+          answers: {
+            escalate: { type: "noul", noul: 0.1234567891 },
+            move: {
+              type: "choice",
+              choice: "forward",
+              probabilities: { forward: 0.6123456789, back: 0.0969135803, left: 0.0969135803, right: 0.0969135803, stop: 0.0969135802 },
+              confidence: 0.6123456789,
+              reasoning: "not part of an answer",
+            },
+            fire: { type: "noul", noul: 0.4999999999 },
+            mood: { type: "noul", noul: 1 },
+          },
+        } as unknown as DoerAnswer),
+    };
+    const log = await runMatch(openConfig(12), { map: OPEN, prompts: PROMPTS, providers: firstIs(precise) });
+    expect(doerOf(log, "a0")[0]?.answers).toEqual({
+      move: { type: "choice", choice: "forward", probabilities: { forward: 0.6123, back: 0.0969, left: 0.0969, right: 0.0969, stop: 0.0969 }, confidence: 0.6123 },
+      fire: { type: "noul", noul: 0.4999999999 }, // a noul is checked as given: below FIRE_THRESHOLD, so no shot
+      escalate: { type: "noul", noul: 0.1234567891 },
+    });
+    expect(Object.keys(doerOf(log, "a0")[0]?.answers ?? {})).toEqual(["move", "fire", "escalate"]); // the schema's order
+    expect(MatchLogSchema.parse(log)).toEqual(log);
+    expect(eventsOfKind(log, "Shot")).toEqual([]);
+    const replayed = await replayMatch(log, { map: OPEN });
+    expect(JSON.stringify(replayed)).toBe(JSON.stringify(log));
   });
 });
 
@@ -301,6 +374,49 @@ describe("runMatch: cancel (signal)", () => {
       expect.objectContaining({ kind: "Tick", tick: 11 }),
       { kind: "MatchEnd", tick: 11, ranking: [] },
     ]);
+  });
+
+  it("aborts the signals of the match's doer calls when it is cancelled: the call in flight and those already answered (R17)", async () => {
+    const controller = new AbortController();
+    const signals = new Map<string, AbortSignal>();
+    const provider = (hangsAt11: boolean): DecisionProvider => ({
+      decide({ tick, agent, signal }) {
+        signals.set(`${agent}@${tick}`, signal);
+        if (!hangsAt11 || tick !== 11) return Promise.resolve(answer("stop"));
+        setTimeout(() => controller.abort(), 5);
+        return new Promise<DoerAnswer>(() => {});
+      },
+    });
+    let before: boolean[] = [];
+    const log = await runMatch(openConfig(100), {
+      map: OPEN,
+      prompts: PROMPTS,
+      doerTimeoutMs: 60_000,
+      signal: controller.signal,
+      providers: (_slot, i) => provider(i === 0),
+      onTick: (tick) => tick === 10 && (before = [...signals.values()].map((s) => s.aborted)),
+    });
+    expect(log.events.at(-1)).toEqual({ kind: "MatchEnd", tick: 11, ranking: [] });
+    expect(before).toEqual([false, false]); // tick 1's calls, answered, while the match ran on
+    expect([...signals].map(([call, signal]) => [call, signal.aborted])).toEqual([
+      ["a0@1", true],
+      ["a1@1", true],
+      ["a0@11", true],
+      ["a1@11", true],
+    ]);
+  });
+
+  it("a cancel between doer ticks reaches the providers too, through their latest calls' signals (R17)", async () => {
+    const controller = new AbortController();
+    const signals: AbortSignal[] = [];
+    const spy: DecisionProvider = {
+      decide({ signal }) {
+        signals.push(signal);
+        return Promise.resolve(answer("stop"));
+      },
+    };
+    await runMatch(openConfig(100), { map: OPEN, prompts: PROMPTS, providers: () => spy, signal: controller.signal, onTick: (tick) => tick === 15 && controller.abort() });
+    expect(signals.map((s) => s.aborted)).toEqual([true, true, true, true]); // ticks 1 and 11, two agents each
   });
 
   it("does not wait out the wall floor once cancelled", async () => {
@@ -390,6 +506,29 @@ describe("runMatch: thinker events (pollEvents, row 31)", () => {
     await expect(runMatch(openConfig(10), { map: OPEN, prompts: PROMPTS, providers: firstIs(wrong) })).rejects.toThrow(
       /pollEvents\(3\)/,
     );
+  });
+
+  it("refuses a polled event that fails EventSchema, so a provider bug never reaches the log (R16)", async () => {
+    const invalid = [
+      { kind: "Thinker", tick: 3, requestedTick: 1, agent: "a0", input: {}, ok: true }, // ok without a plan
+      { kind: "Thinker", tick: 3, requestedTick: 4, agent: "a0", input: {}, ok: true, plan }, // asked for after it landed
+      { kind: "Thinker", tick: 3, requestedTick: 1, agent: "a0", input: undefined, ok: true, plan }, // no input to log (principle 4)
+      { kind: "Shot", tick: 3, agent: "a0", bullet: "" },
+    ];
+    for (const event of invalid) {
+      const wrong: DecisionProvider = { decide: still.decide, pollEvents: (tick) => (tick === 3 ? [event as Event] : []) };
+      await expect(runMatch(openConfig(10), { map: OPEN, prompts: PROMPTS, providers: firstIs(wrong) }), JSON.stringify(event)).rejects.toThrow(
+        new RegExp(`^pollEvents\\(3\\) returned an invalid ${event.kind} event: `),
+      );
+    }
+  });
+
+  it("logs a polled event as the schema reads it: unknown keys dropped", async () => {
+    const extra = { ...thinker("a0", 3, 1), debug: { raw: "provider internals" } } as unknown as Event;
+    const a0: DecisionProvider = { decide: still.decide, pollEvents: (tick) => (tick === 3 ? [extra] : []) };
+    const log = await runMatch(openConfig(5), { map: OPEN, prompts: PROMPTS, providers: firstIs(a0) });
+    expect(eventsOfKind(log, "Thinker")).toEqual([thinker("a0", 3, 1)]);
+    expect(MatchLogSchema.parse(log)).toEqual(log);
   });
 });
 

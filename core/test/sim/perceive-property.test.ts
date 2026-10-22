@@ -1,17 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { AGENT_RADIUS_M, VISION_CONE_DEG, VISION_RANGE_M } from "../../src/constants";
+import { AGENT_RADIUS_M, DOER_INTERVAL_TICKS, HEAR_SHOT_RANGE_M, MOVE_SPEED_MPS, VISION_CONE_DEG, VISION_RANGE_M } from "../../src/constants";
 import { circleInsideArena, circleOverlapsPolygon } from "../../src/sim/collision";
 import { perceive } from "../../src/sim/perceive";
 import { createRng, nextFloat, type RngState } from "../../src/sim/rng";
 import { HEARING_BANDS, type Agent, type Observation, type TickFacts, type WorldState } from "../../src/types";
+import { mpsToMetersPerTick } from "../../src/units";
+import { dist, fromAngle, scale, add } from "../../src/vec2";
 import { arena1, deepFreeze, makeAgent, makeBullet, makeWorld } from "./helpers";
 
 // Property (v1.3 exit criterion): perceive has no non-determinism. 100 seeded
-// random states (random positions, facings, HP, deaths, movement, bullets and
-// this tick's shots, hits and near misses), every agent's view computed twice:
-// deep-equal, never NaN, bearings in (−180, 180], ordering per R7.
+// random states (random positions, facings, HP, deaths, movement, bullets and a
+// perception window of shots, hits and near misses over the last
+// DOER_INTERVAL_TICKS steps, R15), every agent's view computed twice:
+// deep-equal, never NaN, bearings in (−180, 180], ordering per R7, and exactly
+// the window's shots in range and the window's fire on the agent.
 
 const STATES = 100;
+const MOVE_STEP_M = mpsToMetersPerTick(MOVE_SPEED_MPS);
 
 /** A tiny cursor over the sim's RNG for drawing test inputs. */
 function drawer(seed: number) {
@@ -45,15 +50,24 @@ function randomState(seed: number): WorldState {
     });
   });
   const anyone = () => draw.pick(agents);
-  const facts: TickFacts = {
-    shots: agents.filter((a) => a.alive && draw.float() < 0.3).map((a) => ({ agent: a.id, pos: { ...a.pos } })),
-    hits: Array.from({ length: draw.int(4) }, () => ({ target: anyone().id, from: { ...anyone().pos } })),
-    nearMisses: Array.from({ length: draw.int(4) }, () => ({ target: anyone().id, from: { ...anyone().pos } })),
-  };
+  // The window: one entry per step, oldest first, min(tick, DOER_INTERVAL_TICKS) of them. About
+  // a third of the agents fired once in it, standing within walking reach of where they are now;
+  // hits and near misses come from anywhere.
+  const recent: TickFacts[] = Array.from({ length: Math.min(tick, DOER_INTERVAL_TICKS) }, () => ({ shots: [], hits: [], nearMisses: [] }));
+  if (recent.length > 0) {
+    for (const a of agents) {
+      if (draw.float() >= 0.3) continue;
+      const i = draw.int(recent.length);
+      const back = scale(fromAngle(draw.float() * 360), draw.float() * (recent.length - 1 - i) * MOVE_STEP_M);
+      recent[i]!.shots.push({ agent: a.id, pos: add(a.pos, back) });
+    }
+    for (let n = draw.int(6); n > 0; n--) draw.pick(recent).hits.push({ target: anyone().id, from: { ...anyone().pos } });
+    for (let n = draw.int(6); n > 0; n--) draw.pick(recent).nearMisses.push({ target: anyone().id, from: { ...anyone().pos } });
+  }
   const bullets = Array.from({ length: draw.int(6) }, (_, n) =>
     makeBullet(n, anyone().id, { x: draw.float() * 100, y: draw.float() * 100 }, { x: draw.float() * 6 - 3, y: 1 }),
   );
-  return { ...makeWorld({ agents, bullets, tick, seed }), lastTick: facts };
+  return { ...makeWorld({ agents, bullets, tick, seed }), recent };
 }
 
 /** Every number in the observation, with its path, for the finiteness check. */
@@ -92,10 +106,12 @@ function checkInvariants(state: WorldState, id: string, obs: Observation): void 
   }
   const steps = obs.heard.filter((h) => h.kind === "steps");
   for (const h of steps) expect(h.dist).toBe("near"); // footsteps carry HEAR_STEPS_RANGE_M, inside the near band
-  expect(obs.heard.length - steps.length).toBeLessThanOrEqual(state.lastTick.shots.filter((s) => s.agent !== id).length);
   expect(steps.length).toBeLessThanOrEqual(state.agents.filter((a) => a.id !== id && a.alive && a.moved).length);
-  // Incoming: exactly my hits and near misses while alive.
-  const mine = [...state.lastTick.hits, ...state.lastTick.nearMisses].filter((f) => f.target === id).length;
+  // Window (R15): every other agent's shot of the last steps within range, from where it was fired;
+  // every hit and near miss on me in them; nothing while dead.
+  const shots = state.recent.flatMap((f) => f.shots).filter((s) => s.agent !== id && dist(s.pos, me.pos) <= HEAR_SHOT_RANGE_M);
+  expect(obs.heard.length - steps.length).toBe(me.alive ? shots.length : 0);
+  const mine = state.recent.flatMap((f) => [...f.hits, ...f.nearMisses]).filter((f) => f.target === id).length;
   expect(obs.incoming).toHaveLength(me.alive ? mine : 0);
   // Self, rounded as the log rounds Tick rows.
   expect(obs.self.hp).toBe(me.hp);

@@ -59,7 +59,7 @@ export function makeWorld(parts: {
     bullets,
     nextBulletId: Math.max(-1, ...bullets.map((b) => Number(b.id.slice(1)))) + 1,
     rng: createRng(parts.seed ?? 1),
-    lastTick: { shots: [], hits: [], nearMisses: [] },
+    recent: [],
   };
 }
 
@@ -68,7 +68,7 @@ export const SCENE_DIR = new URL("../../fixtures/scenes/", import.meta.url);
 /**
  * A hand-written world snapshot from core/fixtures/scenes/<name>.json: a
  * description of what it shows, and the WorldState itself (map inline, explicit
- * lastTick). Deeply frozen, so a perception that writes to it throws.
+ * perception window). Deeply frozen, so a perception that writes to it throws.
  */
 export function loadScene(name: string): { description: string; state: WorldState } {
   const json = JSON.parse(readFileSync(new URL(`${name}.json`, SCENE_DIR), "utf8")) as {

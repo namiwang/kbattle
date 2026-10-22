@@ -123,10 +123,11 @@ describe("overlayModel on the sample log", () => {
   });
 
   it("incoming angles are absolute: the facing plus the bearing perceive reports", () => {
-    // Tick 132: a0's b9 hits a1, which faces −176.3° with a0 dead ahead (bearing 0 after rounding).
+    // Tick 132: a0's b9 hits a1, which faces −176.3° with a0 dead ahead (bearing 0 after rounding);
+    // the window (ticks 123..132, R15) also holds b7, which hit a1 at 123 from a0's spot then (−3°).
     const hit = overlayModel(stateFromTick(index, sample, 132), "a1");
     expect(hit.facing).toBe(-176.3);
-    expect(hit.incoming).toEqual([-176.3]);
+    expect(hit.incoming).toEqual([-179.3, -176.3]);
     expect(overlayModel(stateFromTick(index, sample, 105), "a1").incoming).toEqual([180]); // b3, a1 facing 180°
     expect(overlayModel(stateFromTick(index, sample, 141), "a0")).toMatchObject({ facing: 3.7, incoming: [] });
   });
@@ -152,14 +153,14 @@ describe("overlayModel on a real 16-bot match", () => {
   });
 
   it("puts a red tick toward the source of every hit and near miss on the followed agent, as the sim placed it", () => {
-    // The live world's facts (unrounded) say where each shot came from: hits first, then near
-    // misses, as perceive lists them. Each tick points there to the degree: perceive's whole-degree
-    // bearing plus the rows' rounding.
+    // The live world's facts (unrounded) say where each shot came from: the window's hits first,
+    // then its near misses, each oldest first, as perceive lists them (R15). Each tick points there
+    // to the degree: perceive's whole-degree bearing plus the rows' rounding.
     const wrong: string[] = [];
     let ticks = 0;
     let nearMisses = 0;
     for (const [tick, world] of real.live) {
-      const facts = [...world.lastTick.hits, ...world.lastTick.nearMisses];
+      const facts = [...world.recent.flatMap((f) => f.hits), ...world.recent.flatMap((f) => f.nearMisses)];
       if (facts.length === 0) continue;
       const state = stateFromTick(realIndex, real.log, tick);
       for (const agent of world.agents) {
@@ -167,7 +168,7 @@ describe("overlayModel on a real 16-bot match", () => {
         const sources = facts.filter((f) => f.target === agent.id).map((f) => vec2.angleOf(vec2.sub(f.from, agent.pos)));
         const { incoming } = overlayModel(state, agent.id);
         ticks += incoming.length;
-        nearMisses += world.lastTick.nearMisses.filter((m) => m.target === agent.id).length;
+        nearMisses += world.recent.flatMap((f) => f.nearMisses).filter((m) => m.target === agent.id).length;
         const ok = incoming.length === sources.length && incoming.every((angle, i) => Math.abs(normalizeDeg(angle - (sources[i] ?? Number.NaN))) <= 1);
         if (!ok) wrong.push(`tick ${tick} ${agent.id}: ticks at ${JSON.stringify(incoming)}, fire from ${JSON.stringify(sources.map((a) => +a.toFixed(2)))}`);
       }

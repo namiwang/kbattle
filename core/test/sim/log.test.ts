@@ -58,7 +58,7 @@ describe("tickEvent: the Tick row of a world (R10)", () => {
   });
 
   it("writes this tick's near misses as [target, fromX, fromY], from rounded to 2 decimals (ISSUES I-016)", () => {
-    const lastTick = {
+    const thisTick = {
       shots: [],
       hits: [{ target: "a2", from: { x: 1, y: 1 } }],
       nearMisses: [
@@ -67,11 +67,14 @@ describe("tickEvent: the Tick row of a world (R10)", () => {
         { target: "a2", from: { x: 10.123, y: 50.456 } },
       ],
     };
-    expect(tickEvent({ ...world, lastTick }).near).toEqual([
+    // An older step of the perception window (R15) was written by its own Tick event.
+    const before = { shots: [], hits: [], nearMisses: [{ target: "a2", from: { x: 7, y: 7 } }] };
+    expect(tickEvent({ ...world, recent: [before, thisTick] }).near).toEqual([
       ["a0", 30.01, 29.99],
       ["a0", 30.5, 29.5],
       ["a2", 10.12, 50.46],
     ]);
+    expect(tickEvent({ ...world, recent: [before, { ...thisTick, nearMisses: [] }] })).not.toHaveProperty("near");
   });
 });
 

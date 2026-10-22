@@ -1,5 +1,5 @@
 {
-  "scene": "Incoming fire. Open 60 x 60 m arena, tick 3000 of 6000, nobody fired this tick. a0 at (20, 20) faces 0 deg. This tick a bullet from a2 (20, 50), behind a0's right shoulder, hit it (HP 80), and a bullet from a1 (5, 36), behind its left, passed 1.1 m from it. a0's own older bullet passed near a3 (45, 40), which a0 can see. a0's incoming lists the hit, then the near miss, as the shooters' bearings; a3's lists a0.",
+  "scene": "Incoming fire. Open 60 x 60 m arena, tick 3000 of 6000, nobody fired this tick; the perception window holds steps 2991..3000. a0 at (20, 20) faces 0 deg. a1 (5, 36), behind its left, fired b12 at tick 2992 (heard mid); b12 passed within 2 m of a0 on ticks 2999 (1.4 m) and 3000 (1.1 m), two near misses. This tick a bullet from a2 (20, 50), behind a0's right shoulder, hit it (HP 80). a0's own older bullet passed near a3 (45, 40), which a0 can see, on ticks 2999 and 3000. a0's incoming lists the hit, then the near misses oldest first, as the shooters' bearings; a3's lists a0 twice.",
   "observations": {
     "a0": {
       "self": {
@@ -20,10 +20,19 @@
           "moving": false
         }
       ],
-      "heard": [],
+      "heard": [
+        {
+          "kind": "shot",
+          "bearing": 133,
+          "dist": "mid"
+        }
+      ],
       "incoming": [
         {
           "bearing": 90
+        },
+        {
+          "bearing": 133
         },
         {
           "bearing": 133
@@ -71,7 +80,13 @@
           "moving": false
         }
       ],
-      "heard": [],
+      "heard": [
+        {
+          "kind": "shot",
+          "bearing": -47,
+          "dist": "mid"
+        }
+      ],
       "incoming": []
     },
     "a3": {
@@ -105,8 +120,17 @@
           "moving": false
         }
       ],
-      "heard": [],
+      "heard": [
+        {
+          "kind": "shot",
+          "bearing": 6,
+          "dist": "mid"
+        }
+      ],
       "incoming": [
+        {
+          "bearing": 39
+        },
         {
           "bearing": 39
         }

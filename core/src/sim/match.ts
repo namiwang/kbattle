@@ -9,21 +9,26 @@
 //   2. on doer-due ticks, (t − 1) % DOER_INTERVAL_TICKS === 0 (1, 11, 21, …),
 //      every living agent's decide, all at once, each with its view of the world
 //      before step t and raced against the doer timeout; a Doer event per call in
-//      slot order; answers become actions (actionFromAnswers), and a call that
-//      fails, times out or is cut short leaves the agent's action as it was
-//      (R12, principle 5);
+//      slot order; answers, their probabilities and confidence rounded to 4
+//      decimals and checked against DoerAnswersSchema (R16, ISSUES I-018), are
+//      logged as the schema reads them and become actions (actionFromAnswers),
+//      and a call that fails, times out, is cut short or answers something the
+//      schema rejects leaves the agent's action as it was (R12, principle 5);
 //   3. with minWallMsPerTick > 0, wait until that much wall time has passed
 //      since the previous step (§5.2: a tick advances when its doer answers are
 //      in and the wall floor has passed);
 //   4. step: its Shot, Hit and Death events, then Tick(t);
 //   5. MatchEnd with the R11 ranking when at most one agent is alive or t is
 //      config.durationTicks.
-// Cancelling (deps.signal) ends the match after the tick in progress: its calls
-// in flight are logged as aborted, the floor is not waited out, and
-// MatchEnd { ranking: [] } follows that tick's Tick. A failed doer call never
+// Each doer call gets its own AbortSignal (DecisionContext.signal, R17), aborted
+// at its timeout and when the match is cancelled. Cancelling (deps.signal) ends
+// the match after the tick in progress: its calls in flight are logged as
+// aborted, the floor is not waited out, and MatchEnd { ranking: [] } follows
+// that tick's Tick. A failed doer call never
 // stops the loop. These are bugs, and runMatch rejects: a config or prompts that
 // do not validate, a provider factory that throws, and a pollEvents that throws
-// or returns an event stamped with another tick.
+// or returns an event stamped with another tick or failing EventSchema (R16).
+// Polled events are logged as EventSchema reads them, so every log parses.
 //
 // Determinism contract (DESIGN.md §6.1; plan v1.6). runMatch writes the same
 // MatchLog, byte for byte under JSON.stringify, for the same config, map and
@@ -42,9 +47,12 @@
 // A cancelled match replays by cancelling after the same tick. Cross-engine
 // determinism is not required (§6.1): the renderer reads Tick rows.
 
+import type * as z from "zod";
 import { DOER_INTERVAL_TICKS, DOER_TIMEOUT_MS } from "../constants";
 import { getMap } from "../maps";
 import {
+  DoerAnswersSchema,
+  EventSchema,
   MatchConfigSchema,
   PromptsSchema,
   type DoerAnswers,
@@ -59,6 +67,7 @@ import { actionFromAnswers } from "./actions";
 import { createLogWriter } from "./log";
 import { perceive } from "./perceive";
 import type { DecisionContext, DecisionProvider, ProviderFactory } from "./providers";
+import { roundTo } from "./round";
 import { step } from "./step";
 import { spawn } from "./world";
 
@@ -113,7 +122,7 @@ export async function runMatch(config: MatchConfig, deps: RunMatchDeps): Promise
         .filter((agent) => agent.alive)
         .map((agent) => {
           const observation = perceive(world, agent.id);
-          const ctx: DecisionContext = { tick: t, agent: agent.id, observation, plan: plans.get(agent.id) ?? "" };
+          const ctx = { tick: t, agent: agent.id, observation, plan: plans.get(agent.id) ?? "" };
           return { agent, observation, outcome: ask(providers[agent.slot]!, ctx, timeoutMs, signal) };
         });
       const outcomes = await Promise.all(asked.map((call) => call.outcome));
@@ -162,12 +171,21 @@ export function rankAgents(agents: readonly Pick<Agent, "id" | "slot" | "alive" 
   return [...alive, ...dead].map((a) => a.id);
 }
 
-/** Every slot's events for tick t, in slot order; a Thinker plan that worked becomes its agent's plan text. */
+/**
+ * Every slot's events for tick t, in slot order, as the log file will hold them: their JSON form
+ * as EventSchema reads it (unknown keys dropped); a Thinker plan that worked becomes its agent's
+ * plan text. Throws on an event stamped with another tick or failing the schema (R16): a provider
+ * bug, which must not reach the log. Checking the JSON form also catches what only the file loses,
+ * such as a Thinker `input` that is undefined (zod passes a present key holding undefined).
+ */
 function poll(providers: readonly DecisionProvider[], t: number, plans: Map<AgentId, string>): Event[] {
   const events: Event[] = [];
   for (const provider of providers) {
-    for (const event of provider.pollEvents?.(t) ?? []) {
-      if (event.tick !== t) throw new Error(`pollEvents(${t}) returned a ${event.kind} event stamped tick ${event.tick}`);
+    for (const polled of provider.pollEvents?.(t) ?? []) {
+      if (polled.tick !== t) throw new Error(`pollEvents(${t}) returned a ${polled.kind} event stamped tick ${polled.tick}`);
+      const parsed = EventSchema.safeParse(asJson(polled));
+      if (!parsed.success) throw new Error(`pollEvents(${t}) returned an invalid ${String(polled.kind)} event: ${issueText(parsed.error, "event")}`);
+      const event = parsed.data;
       if (event.kind === "Thinker" && event.ok && event.plan) plans.set(event.agent, event.plan.text);
       events.push(event);
     }
@@ -175,26 +193,44 @@ function poll(providers: readonly DecisionProvider[], t: number, plans: Map<Agen
   return events;
 }
 
+/** `value` as JSON reads it back, what a log file holds; undefined when it has no JSON form. */
+function asJson(value: unknown): unknown {
+  try {
+    const text = JSON.stringify(value);
+    return text === undefined ? undefined : (JSON.parse(text) as unknown);
+  } catch {
+    return undefined;
+  }
+}
+
 type Outcome = { ok: true; answers: DoerAnswers } | { ok: false; error: string };
 
 /**
  * One doer call raced against the timeout and the cancel signal. Never rejects:
  * a rejection, a throw, a timeout, a cancel or an answer without answers is an
- * outcome with the error text to log.
+ * outcome with the error text to log. The provider gets the call's own signal
+ * (R17): aborted at the timeout, or by the match's signal whenever that fires
+ * (AbortSignal.any holds its sources weakly, so answered calls cost nothing).
  */
-function ask(provider: DecisionProvider, ctx: DecisionContext, timeoutMs: number, signal?: AbortSignal): Promise<Outcome> {
+function ask(provider: DecisionProvider, ctx: Omit<DecisionContext, "signal">, timeoutMs: number, signal?: AbortSignal): Promise<Outcome> {
   return new Promise((resolve) => {
     if (signal?.aborted) return resolve({ ok: false, error: ABORTED });
+    const call = new AbortController();
     const settle = (outcome: Outcome) => {
       clearTimeout(timer);
       signal?.removeEventListener("abort", onAbort);
       resolve(outcome); // the first settle wins; later ones change nothing
     };
     const onAbort = () => settle({ ok: false, error: ABORTED });
-    const timer = setTimeout(() => settle({ ok: false, error: `timeout: no answer within ${timeoutMs} ms` }), timeoutMs);
+    const timer = setTimeout(() => {
+      const error = `timeout: no answer within ${timeoutMs} ms`;
+      settle({ ok: false, error });
+      call.abort(new DOMException(error, "TimeoutError"));
+    }, timeoutMs);
     signal?.addEventListener("abort", onAbort, { once: true });
     try {
-      Promise.resolve(provider.decide(ctx)).then(
+      const callSignal = signal ? AbortSignal.any([call.signal, signal]) : call.signal;
+      Promise.resolve(provider.decide({ ...ctx, signal: callSignal })).then(
         (answer: unknown) => settle(answered(answer)),
         (error: unknown) => settle({ ok: false, error: errorText(error) }),
       );
@@ -204,11 +240,41 @@ function ask(provider: DecisionProvider, ctx: DecisionContext, timeoutMs: number
   });
 }
 
-/** An answer's answers object, or a failure when there is none (the type is not checked at runtime). */
+/**
+ * An answer's answers object, its choices' probabilities and confidence rounded to 4 decimals
+ * (ISSUES I-018), as DoerAnswersSchema reads it (unknown keys dropped, keys in the schema's order),
+ * so the logged answers, the action and a replay all come from the same numbers (R16). A failure
+ * when there is no answers object or the schema rejects it: its first issue's path and message.
+ */
 function answered(answer: unknown): Outcome {
   const answers = typeof answer === "object" && answer !== null ? (answer as { answers?: unknown }).answers : undefined;
   if (typeof answers !== "object" || answers === null) return { ok: false, error: "invalid answer: no answers object" };
-  return { ok: true, answers: answers as DoerAnswers };
+  const parsed = DoerAnswersSchema.safeParse(rounded(answers));
+  return parsed.success ? { ok: true, answers: parsed.data } : { ok: false, error: `invalid answer: ${issueText(parsed.error, "answers")}` };
+}
+
+/** A copy of `answers` with every number in an answer's `probabilities` and its `confidence` rounded to 4 decimals; anything else as it was, for the schema to judge. */
+function rounded(answers: object): Record<string, unknown> {
+  const round = (value: unknown) => (typeof value === "number" ? roundTo(value, 4) : value);
+  return Object.fromEntries(
+    Object.entries(answers).map(([question, answer]: [string, unknown]) => {
+      if (typeof answer !== "object" || answer === null) return [question, answer];
+      const { probabilities, confidence } = answer as { probabilities?: unknown; confidence?: unknown };
+      const copy: Record<string, unknown> = { ...answer };
+      if ("confidence" in copy) copy.confidence = round(confidence);
+      if (typeof probabilities === "object" && probabilities !== null) {
+        copy.probabilities = Object.fromEntries(Object.entries(probabilities).map(([option, p]: [string, unknown]) => [option, round(p)]));
+      }
+      return [question, copy];
+    }),
+  );
+}
+
+/** A zod error's first issue as "path: message", the path dotted, or `whole` when the issue is with the whole value. */
+function issueText(error: z.ZodError, whole: string): string {
+  const issue = error.issues[0];
+  if (!issue) return "rejected";
+  return `${issue.path.length > 0 ? issue.path.join(".") : whole}: ${issue.message}`;
 }
 
 /** What a Doer event says about a failed call: the Error's message (its name when empty), else String(error). */

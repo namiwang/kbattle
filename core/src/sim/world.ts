@@ -46,7 +46,7 @@ export function spawn(config: MatchConfig, map: MapSpec): WorldState {
     bullets: [],
     nextBulletId: 0,
     rng,
-    lastTick: { shots: [], hits: [], nearMisses: [] },
+    recent: [], // no step yet (R15)
   };
 }
 

@@ -18,7 +18,9 @@
 // resizing while following, and re-mounting with everything on.
 // Before the files, the v2.4 mind panel: following a0 it shows the log's plan,
 // doer answers and perception for the tick on screen (against mindView computed
-// here), within one frame of every scrub and under 8 ms per update; the fault
+// here), and beside the answers the perception they were decided on ("saw at
+// tick T − 1, answered at tick T", R18), within one frame of every scrub and
+// under 8 ms per update; the fault
 // line at the thinker refusal and "kept from tick" at the doer timeout; markers
 // under the timeline on the right ticks, linked requested/applied pairs, clicks
 // that seek; beside the canvas on wide windows, below it on narrow ones.
@@ -31,12 +33,14 @@ import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import {
   botProviders,
+  DOER_INTERVAL_TICKS,
   eventsOfKind,
   getMap,
   MATCH_DURATION_TICKS,
   MatchConfigSchema,
   MatchLogSchema,
   normalizeDeg,
+  perceive,
   runMatch,
   vec2,
   type Event as LogEvent,
@@ -50,7 +54,16 @@ import { TRAIL_TICKS, type DrawnBullets } from "../src/replay/bullets";
 import { makeTransform } from "../src/replay/coords";
 import type { DrawnAgent, KbattleDebug } from "../src/replay/debug";
 import { indexLog, type LogIndex } from "../src/replay/log-index";
-import { answerSummary, formatProbability, markerShapes, markersFor, mindView, type DrawnMind, type MarkerShape } from "../src/replay/mind-selectors";
+import {
+  answerSummary,
+  formatProbability,
+  markerShapes,
+  markersFor,
+  mindView,
+  perceptionLines,
+  type DrawnMind,
+  type MarkerShape,
+} from "../src/replay/mind-selectors";
 import { overlayModel, type DrawnOverlay } from "../src/replay/overlay";
 import { stateFromTick } from "../src/replay/state-from-tick";
 import { BULLET, COLORS, KIND_COLORS, MARKER, OVERLAY, STAGE_PAD_PX } from "../src/replay/theme";
@@ -842,7 +855,7 @@ async function drawnMind(page: Page): Promise<DrawnMind | null> {
 
 /** What the panel must show for `agent` at `tick` of the sample log, computed here in Node. */
 function expectedMind(tick: number, agent: string): DrawnMind {
-  return { ...mindView(sampleIndex, stateFromTick(sampleIndex, log, tick), agent), markers: markerShapes(markersFor(sampleIndex, agent)) };
+  return { ...mindView(sampleIndex, (t) => stateFromTick(sampleIndex, log, t), tick, agent), markers: markerShapes(markersFor(sampleIndex, agent)) };
 }
 
 /** The text of the first element matching `selector`, trimmed; null when there is none. Does not wait. */
@@ -1002,6 +1015,18 @@ async function drawnPerception(page: Page): Promise<{ self: string | null; visib
   }));
 }
 
+/** The Doer section's perception block as drawn (R18): its caption, whether it shows, and its lines. */
+async function drawnSaw(page: Page): Promise<{ caption: string | null; shown: boolean; self: string | null; visible: string[]; heard: string[]; incoming: string[] }> {
+  return page.evaluate(() => ({
+    caption: document.querySelector(".replay-mind-saw-caption")?.textContent ?? null,
+    shown: document.querySelector<HTMLElement>(".replay-mind-saw-facts")?.hidden === false,
+    self: document.querySelector(".replay-mind-saw-self")?.textContent ?? null,
+    visible: Array.from(document.querySelectorAll(".replay-mind-saw-visible .replay-mind-entry"), (e) => e.textContent ?? ""),
+    heard: Array.from(document.querySelectorAll(".replay-mind-saw-heard .replay-mind-entry"), (e) => e.textContent ?? ""),
+    incoming: Array.from(document.querySelectorAll(".replay-mind-saw-incoming .replay-mind-entry"), (e) => e.textContent ?? ""),
+  }));
+}
+
 /** Pauses the replay if it plays. */
 async function pause(page: Page): Promise<void> {
   if ((await playButton(page).textContent()) === "Pause") await playButton(page).click();
@@ -1041,7 +1066,12 @@ async function checkMindPanel(page: Page): Promise<void> {
   const followSize = await canvasSize(page);
   check("following a0 shows its mind without resizing the canvas or changing the zoom", isDeepStrictEqual(followSize, freeSize), `${JSON.stringify(freeSize)} -> ${JSON.stringify(followSize)}`);
   const at0 = await drawnMind(page);
-  check("following a0 at tick 0: the panel is mindView's for a0 at tick 0 (no plan yet, no answers yet)", isDeepStrictEqual(at0, expectedMind(0, "a0")), JSON.stringify(at0)?.slice(0, 300));
+  const saw0 = await drawnSaw(page);
+  check(
+    "following a0 at tick 0: the panel is mindView's for a0 at tick 0 (no plan yet, no answers yet, so no 'saw at' block)",
+    isDeepStrictEqual(at0, expectedMind(0, "a0")) && at0?.doer.perception === null && !saw0.shown,
+    `${JSON.stringify(at0)?.slice(0, 300)}; saw ${JSON.stringify(saw0)}`,
+  );
 
   // Markers: markerShapes for a0, positioned where the timeline puts their ticks.
   const marks = await markEls(page);
@@ -1134,6 +1164,29 @@ async function checkMindPanel(page: Page): Promise<void> {
     const want = expectedMind(tick, "a0").perception.lines;
     check(`tick ${tick}: the perception section shows core.perceive's view of a0, line by line`, isDeepStrictEqual(lines, { ...want }), JSON.stringify(lines));
   }
+
+  // R18: the Doer section shows what the answers in force were decided on, the world before the
+  // call's tick: at the doer tick 111 the world of tick 110, and still at 115, while the Perception
+  // block above follows the tick on screen (at 115 a0 has been hit since: HP 80, incoming fire).
+  // At 41 (timeout) the kept answers of 31 saw tick 30.
+  const decided110 = perceptionLines(perceive(stateFromTick(sampleIndex, log, 110), "a0"), true);
+  for (const tick of [111, 115]) {
+    await scrubTo(page, tick);
+    const sawDom = await drawnSaw(page);
+    const top = await drawnPerception(page);
+    const topWant = expectedMind(tick, "a0").perception.lines;
+    check(
+      `tick ${tick}: the Doer section says "saw at tick 110, answered at tick 111" over core.perceive's view of a0 at tick 110, line by line; the Perception block shows tick ${tick}`,
+      isDeepStrictEqual(sawDom, { caption: "saw at tick 110, answered at tick 111", shown: true, ...decided110 }) &&
+        isDeepStrictEqual(top, { ...topWant }) &&
+        (tick !== 115 || (top.self?.includes("HP 80") === true && top.incoming.length === 1 && sawDom.incoming.length === 0)),
+      `${JSON.stringify(sawDom)} | top ${JSON.stringify(top)}`,
+    );
+  }
+  await scrubTo(page, 41);
+  const saw41 = await drawnSaw(page);
+  const decided30 = perceptionLines(perceive(stateFromTick(sampleIndex, log, 30), "a0"), true);
+  check("tick 41 (doer timeout): the Doer section shows the kept answers' input, 'saw at tick 30, answered at tick 31'", isDeepStrictEqual(saw41, { caption: "saw at tick 30, answered at tick 31", shown: true, ...decided30 }), JSON.stringify(saw41));
 
   // Re-rendered only when the tick or the agent changes: toggling the cone or trails redraws the scene, not the panel.
   const lastRender = () => page.evaluate(() => performance.getEntriesByName("mind-render", "measure").at(-1)?.startTime ?? -1);
@@ -1662,23 +1715,27 @@ async function realMatchLog(): Promise<MatchLog> {
 }
 
 /**
- * Where the fire on `agent` came from at `tick`, read straight off the log, not through
- * stateFromTick: the owner of each bullet that hit it where this tick's row puts the owner, then
- * the row's `near` entries for it. Null when an owner is gone from the row (the log has no
- * position for it then).
+ * Where the fire on `agent` that perceive reports at `tick` came from, read straight off the log,
+ * not through stateFromTick. Perception holds the last DOER_INTERVAL_TICKS steps (R15), so: for
+ * each tick of that window, oldest first, the owner of each bullet that hit it where that tick's
+ * row puts the owner; then, again oldest first, the rows' `near` entries for it. Null when an
+ * owner is gone from its row (the log has no position for it then).
  */
 function fireFrom(index: LogIndex, tick: number, agent: string): Vec2[] | null {
-  const row = index.byTick(tick);
-  const sources: Vec2[] = [];
-  for (const event of index.eventsAt(tick)) {
-    if (event.kind !== "Hit" || event.target !== agent) continue;
-    const owner = index.shots.get(event.bullet)?.agent;
-    const at = row.agents.find(([id]) => id === owner);
-    if (!at) return null;
-    sources.push({ x: at[1], y: at[2] });
+  const hits: Vec2[] = [];
+  const near: Vec2[] = [];
+  for (let s = Math.max(1, tick - DOER_INTERVAL_TICKS + 1); s <= tick; s++) {
+    const row = index.byTick(s);
+    for (const event of index.eventsAt(s)) {
+      if (event.kind !== "Hit" || event.target !== agent) continue;
+      const owner = index.shots.get(event.bullet)?.agent;
+      const at = row.agents.find(([id]) => id === owner);
+      if (!at) return null;
+      hits.push({ x: at[1], y: at[2] });
+    }
+    for (const [target, x, y] of row.tick === s ? (row.near ?? []) : []) if (target === agent) near.push({ x, y });
   }
-  for (const [target, x, y] of row.tick === tick ? (row.near ?? []) : []) if (target === agent) sources.push({ x, y });
-  return sources;
+  return [...hits, ...near];
 }
 
 async function checkRealMatch(page: Page, baseline: Leaks): Promise<void> {

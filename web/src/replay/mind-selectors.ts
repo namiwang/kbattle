@@ -1,8 +1,13 @@
 // What the mind panel (DESIGN.md row 27, §7 item 5) shows for one agent at one
 // tick: its perception (core.perceive on the world rebuilt from the log, §5.3),
 // the plan and the doer answers in force (the log's Thinker and Doer events),
-// and the timeline markers. Pure and DOM-free: mindView is the whole panel as
-// data, mind-panel.ts only draws it.
+// the perception those answers were decided on, and the timeline markers. Pure
+// and DOM-free: mindView is the whole panel as data, mind-panel.ts only draws it.
+//
+// A doer call at tick T is asked about the world before T's step, the world of
+// tick T − 1 (sim ruling R1), so the Doer section shows perceive on that world,
+// "saw at tick T − 1, answered at tick T" (R18), while the Perception block at
+// the top shows the tick on screen.
 //
 // "In force" follows the fault model (§5.5): a failed call keeps the last plan
 // (thinker) or the last answers (doer), so what shows is the latest ok: true
@@ -22,12 +27,19 @@ import {
 } from "@kbattle/core";
 import type { DoerEvent, LogIndex, SlotKind, ThinkerEvent } from "./log-index";
 
+/** What core.perceive gives an agent in one world, whether it is alive there, and the lines that show it. */
+export interface PerceptionView {
+  readonly observation: Observation;
+  readonly alive: boolean;
+  readonly lines: PerceptionLines;
+}
+
 /** The mind panel's content for one agent at one tick. */
 export interface MindView {
   readonly tick: number;
   readonly agent: string;
-  /** What core.perceive gives the agent at the tick, whether it is alive, and the lines that show it. */
-  readonly perception: { readonly observation: Observation; readonly alive: boolean; readonly lines: PerceptionLines };
+  /** What the agent perceives at the tick on screen. */
+  readonly perception: PerceptionView;
   readonly plan: {
     /** The plan text in force; null before the first plan. */
     readonly text: string | null;
@@ -41,6 +53,12 @@ export interface MindView {
     readonly caption: string;
     /** The latest doer call when it failed, with its error. */
     readonly fault: string | null;
+    /**
+     * What the agent perceived when it gave the answers in force (R18): the world of
+     * tick T − 1 for the call answered at T, captioned "saw at tick T − 1, answered at
+     * tick T"; null before the first answer.
+     */
+    readonly perception: (PerceptionView & { readonly tick: number; readonly caption: string }) | null;
     /** The answers in force as rows; empty before the first answer. */
     readonly rows: readonly AnswerRow[];
   };
@@ -53,19 +71,23 @@ const NO_PLAN: Readonly<Record<SlotKind, string>> = Object.freeze({
   bot: "(scripted bot: no plan)",
 });
 
-/** The mind panel for `agent` in `state` (the world at the tick on screen, stateFromTick). Throws if no agent has that id. */
-export function mindView(index: LogIndex, state: PerceptionState, agent: string): MindView {
-  const { tick } = state;
-  const observation = perceive(state, agent);
-  const alive = state.agents.find((a) => a.id === agent)?.alive ?? false;
-  const { applied, last } = latestPlanAt(index, agent, tick);
+/**
+ * The mind panel for `agent` at `tick`. `stateAt` gives the world at a tick (stateFromTick, or the
+ * viewer's memo of it): the tick on screen, and the tick before the doer call in force. Throws if
+ * no agent has that id.
+ */
+export function mindView(index: LogIndex, stateAt: (tick: number) => PerceptionState, tick: number, agent: string): MindView {
+  const state = stateAt(tick);
+  const { applied, last } = latestPlanAt(index, agent, state.tick);
   const thinkerFault = last && !last.ok ? last : undefined;
-  const doer = latestDoerAt(index, agent, tick);
+  const doer = latestDoerAt(index, agent, state.tick);
   const doerFault = doer.kept ? doer.last : undefined;
+  const answeredAt = doer.answered?.tick;
+  const saw = answeredAt === undefined ? null : Math.max(0, answeredAt - 1);
   return {
-    tick,
+    tick: state.tick,
     agent,
-    perception: { observation, alive, lines: perceptionLines(observation, alive) },
+    perception: perceptionView(state, agent),
     plan: {
       text: applied?.plan?.text ?? null,
       caption: applied ? `applied at tick ${applied.tick} (requested at ${applied.requestedTick})` : NO_PLAN[index.kindOf(agent) ?? "prompted"],
@@ -76,9 +98,20 @@ export function mindView(index: LogIndex, state: PerceptionState, agent: string)
     doer: {
       caption: doer.answered ? `${doer.kept ? "kept from" : "answered at"} tick ${doer.answered.tick}` : "(no answers yet)",
       fault: doerFault ? `Doer fault at tick ${doerFault.tick}: ${doerFault.error ?? ""}` : null,
+      perception:
+        saw === null
+          ? null
+          : { tick: saw, caption: `saw at tick ${saw}, answered at tick ${answeredAt}`, ...perceptionView(stateAt(saw), agent) },
       rows: doer.answered?.answers ? answerRows(doer.answered.answers) : [],
     },
   };
+}
+
+/** What `agent` perceives in `state`, as data and as lines. */
+function perceptionView(state: PerceptionState, agent: string): PerceptionView {
+  const observation = perceive(state, agent);
+  const alive = state.agents.find((a) => a.id === agent)?.alive ?? false;
+  return { observation, alive, lines: perceptionLines(observation, alive) };
 }
 
 /** An Observation as text: one line for self, one per entry of each list. */

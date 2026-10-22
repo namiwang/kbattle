@@ -7,12 +7,15 @@
 //
 // Order inside step(t), each phase for every agent before the next (R4):
 // (1) cooldowns, (2) turn, (3) move, (4) fire, (5) bullets fly and hit,
-// (6) tick = t. Agents never collide with each other (PoC).
+// (6) tick = t, and step t's shots, hits and near misses join the perception
+// window, which keeps the newest DOER_INTERVAL_TICKS steps (R6, R15). Agents
+// never collide with each other (PoC).
 
 import { headingTo, normalizeDeg, turnToward } from "../angles";
 import {
   AGENT_RADIUS_M,
   BULLET_DAMAGE,
+  DOER_INTERVAL_TICKS,
   FIRE_INTERVAL_TICKS,
   INCOMING_RADIUS_M,
   MOVE_SPEED_MPS,
@@ -127,9 +130,10 @@ export function step(state: WorldState, actions: StepActions = {}): StepResult {
     }
   }
 
-  // (6) The new state is tick t.
+  // (6) The new state is tick t; its window drops the step that is now DOER_INTERVAL_TICKS old.
+  const recent = [...state.recent, facts].slice(-DOER_INTERVAL_TICKS);
   return {
-    state: { ...state, tick, agents, bullets, nextBulletId, rng, lastTick: facts },
+    state: { ...state, tick, agents, bullets, nextBulletId, rng, recent },
     events,
   };
 }

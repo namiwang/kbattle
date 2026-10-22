@@ -79,8 +79,9 @@ export function spawnEvents(state: WorldState): EventOf<"Spawn">[] {
 /**
  * The Tick event of a world: [id, x, y, facing, hp] for each living agent,
  * [id, x, y] for each bullet in flight, and, when a bullet passed close to
- * someone this tick without hitting, near: [target, fromX, fromY] from
- * state.lastTick.nearMisses (ISSUES I-016).
+ * someone this tick without hitting, near: [target, fromX, fromY] from the near
+ * misses of the step that produced the tick, the newest entry of state.recent
+ * (ISSUES I-016; the older entries were written by their own Tick events).
  */
 export function tickEvent(state: WorldState): EventOf<"Tick"> {
   const event: EventOf<"Tick"> = {
@@ -91,7 +92,7 @@ export function tickEvent(state: WorldState): EventOf<"Tick"> {
       .map((agent) => [agent.id, roundTo(agent.pos.x, 2), roundTo(agent.pos.y, 2), facingOf(agent.facing), Math.round(agent.hp)]),
     bullets: state.bullets.map((bullet) => [bullet.id, roundTo(bullet.pos.x, 2), roundTo(bullet.pos.y, 2)]),
   };
-  const { nearMisses } = state.lastTick;
+  const nearMisses = state.recent.at(-1)?.nearMisses ?? [];
   if (nearMisses.length > 0) {
     event.near = nearMisses.map((miss) => [miss.target, roundTo(miss.from.x, 2), roundTo(miss.from.y, 2)]);
   }
