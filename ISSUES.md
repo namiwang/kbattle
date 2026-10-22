@@ -196,3 +196,13 @@ hits by its bullets afterwards are rebuilt slightly off (worst observed:
 an incoming bearing 9° off at 1.64 m). Fix would be a position on the
 Death event, rounded like Tick rows. Accepted for the PoC. Cost if wrong:
 cosmetic in the mind panel.
+
+## I-020 Mind panel follow-ups — open (post-P2)
+
+Timeline markers assume Chromium's 16 px range thumb (8 px inset); in
+Firefox or Safari a marker may sit a few px off the thumb, a click still
+seeks to the exact tick. The fixed plan of a doer-only slot (row 32) is
+not recorded in the log, so the panel shows "(doer-only slot: fixed plan,
+no thinker)" instead of the text; when v3.3 lands it should put that text
+into `MatchLog.prompts` or emit one Thinker event at tick 0. Cost if
+wrong: cosmetic.
