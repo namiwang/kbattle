@@ -15,6 +15,7 @@ import {
   type Slot,
 } from "../../src/schemas";
 import { rankAgents, runMatch } from "../../src/sim/match";
+import { replayMatch } from "../../src/sim/replay-provider";
 import type { DecisionContext, DecisionProvider } from "../../src/sim/providers";
 import { roundTo } from "../../src/sim/round";
 import type { MoveChoice, TurnChoice, WorldState } from "../../src/types";
@@ -249,6 +250,58 @@ describe("runMatch: faults (R12, principle 5)", () => {
     expect(doerOf(log, "a0")).toEqual([{ kind: "Doer", tick: 1, agent: "a0", ok: false, error: "invalid answer: no answers object" }]);
     expect(MatchLogSchema.safeParse(log).success).toBe(true);
   });
+
+  it("logs answers the schema rejects as ok:false, 'invalid answer: <path>: <message>'; the agent keeps its action and the log parses (R16)", async () => {
+    const provider: DecisionProvider = {
+      decide({ tick }) {
+        if (tick === 1) return Promise.resolve(answer("forward"));
+        if (tick === 11) return Promise.resolve({ model: "test", answers: { ...answer("stop").answers, fire: { type: "noul", noul: 1.0000001 } } });
+        // A choice without its `type`.
+        return Promise.resolve({ model: "test", answers: { ...answer("stop").answers, move: { choice: "stop", probabilities: { stop: 1 }, confidence: 1 } } } as unknown as DoerAnswer);
+      },
+    };
+    const log = await runMatch(openConfig(25), { map: OPEN, prompts: PROMPTS, providers: firstIs(provider) });
+    expect(MatchLogSchema.parse(log)).toEqual(log);
+    expect(doerOf(log, "a0").map((e) => [e.tick, e.ok, e.error])).toEqual([
+      [1, true, undefined],
+      [11, false, "invalid answer: fire.noul: Too big: expected number to be <=1"],
+      [21, false, 'invalid answer: move.type: Invalid input: expected "choice"'],
+    ]);
+    const path = pathOf(log, "a0");
+    for (let t = 12; t <= 25; t++) expect(path[t], `tick ${t}`).not.toEqual(path[t - 1]); // the answers of tick 1 stand: still walking
+  });
+
+  it("rounds probabilities and confidence to 4 decimals and keeps only the schema's keys before logging and acting (R16, ISSUES I-018)", async () => {
+    const precise: DecisionProvider = {
+      decide: () =>
+        Promise.resolve({
+          model: "test",
+          answers: {
+            escalate: { type: "noul", noul: 0.1234567891 },
+            move: {
+              type: "choice",
+              choice: "forward",
+              probabilities: { forward: 0.6123456789, back: 0.0969135803, left: 0.0969135803, right: 0.0969135803, stop: 0.0969135802 },
+              confidence: 0.6123456789,
+              reasoning: "not part of an answer",
+            },
+            fire: { type: "noul", noul: 0.4999999999 },
+            mood: { type: "noul", noul: 1 },
+          },
+        } as unknown as DoerAnswer),
+    };
+    const log = await runMatch(openConfig(12), { map: OPEN, prompts: PROMPTS, providers: firstIs(precise) });
+    expect(doerOf(log, "a0")[0]?.answers).toEqual({
+      move: { type: "choice", choice: "forward", probabilities: { forward: 0.6123, back: 0.0969, left: 0.0969, right: 0.0969, stop: 0.0969 }, confidence: 0.6123 },
+      fire: { type: "noul", noul: 0.4999999999 }, // a noul is checked as given: below FIRE_THRESHOLD, so no shot
+      escalate: { type: "noul", noul: 0.1234567891 },
+    });
+    expect(Object.keys(doerOf(log, "a0")[0]?.answers ?? {})).toEqual(["move", "fire", "escalate"]); // the schema's order
+    expect(MatchLogSchema.parse(log)).toEqual(log);
+    expect(eventsOfKind(log, "Shot")).toEqual([]);
+    const replayed = await replayMatch(log, { map: OPEN });
+    expect(JSON.stringify(replayed)).toBe(JSON.stringify(log));
+  });
 });
 
 describe("runMatch: cancel (signal)", () => {
@@ -390,6 +443,29 @@ describe("runMatch: thinker events (pollEvents, row 31)", () => {
     await expect(runMatch(openConfig(10), { map: OPEN, prompts: PROMPTS, providers: firstIs(wrong) })).rejects.toThrow(
       /pollEvents\(3\)/,
     );
+  });
+
+  it("refuses a polled event that fails EventSchema, so a provider bug never reaches the log (R16)", async () => {
+    const invalid = [
+      { kind: "Thinker", tick: 3, requestedTick: 1, agent: "a0", input: {}, ok: true }, // ok without a plan
+      { kind: "Thinker", tick: 3, requestedTick: 4, agent: "a0", input: {}, ok: true, plan }, // asked for after it landed
+      { kind: "Thinker", tick: 3, requestedTick: 1, agent: "a0", input: undefined, ok: true, plan }, // no input to log (principle 4)
+      { kind: "Shot", tick: 3, agent: "a0", bullet: "" },
+    ];
+    for (const event of invalid) {
+      const wrong: DecisionProvider = { decide: still.decide, pollEvents: (tick) => (tick === 3 ? [event as Event] : []) };
+      await expect(runMatch(openConfig(10), { map: OPEN, prompts: PROMPTS, providers: firstIs(wrong) }), JSON.stringify(event)).rejects.toThrow(
+        new RegExp(`^pollEvents\\(3\\) returned an invalid ${event.kind} event: `),
+      );
+    }
+  });
+
+  it("logs a polled event as the schema reads it: unknown keys dropped", async () => {
+    const extra = { ...thinker("a0", 3, 1), debug: { raw: "provider internals" } } as unknown as Event;
+    const a0: DecisionProvider = { decide: still.decide, pollEvents: (tick) => (tick === 3 ? [extra] : []) };
+    const log = await runMatch(openConfig(5), { map: OPEN, prompts: PROMPTS, providers: firstIs(a0) });
+    expect(eventsOfKind(log, "Thinker")).toEqual([thinker("a0", 3, 1)]);
+    expect(MatchLogSchema.parse(log)).toEqual(log);
   });
 });
 

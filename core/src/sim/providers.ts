@@ -25,13 +25,18 @@ export interface DecisionProvider {
    * One call per due tick per living agent; the loop races it against the doer
    * timeout (R12). A rejection is logged as `Doer { ok: false, error }` with the
    * Error's message (its name when the message is empty, String(value) for a
-   * non-Error), and the agent keeps its action.
+   * non-Error), and the agent keeps its action. The answers are checked, not
+   * trusted (R16): probabilities and confidence are rounded to 4 decimals, then
+   * DoerAnswersSchema reads them (unknown keys dropped); what it rejects is
+   * logged as `invalid answer: <path>: <message>` and the agent keeps its action.
    */
   decide(ctx: DecisionContext): Promise<DoerAnswer>;
   /**
    * Thinker events that arrived since the last poll, each stamped `tick`; the loop
    * calls it at the start of every tick 1, 2, … for every slot, living or not, and
-   * appends the events before that tick's doer calls (row 31).
+   * appends the events before that tick's doer calls (row 31), as EventSchema
+   * reads their JSON form. An event stamped with another tick or failing the
+   * schema is a provider bug: runMatch rejects (R16).
    */
   pollEvents?(tick: number): Event[];
 }
