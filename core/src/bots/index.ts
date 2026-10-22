@@ -1,6 +1,8 @@
 // Scripted bots (DESIGN.md §6.2 Bots, rows 23 and 33; sim rulings R8, R13): the
 // quality floor and the minds of headless tests. They decide on the doer cadence
-// like every other slot and answer through the same DecisionProvider interface.
+// like every other slot and answer through the same DecisionProvider interface,
+// at once, from the observation alone: they ignore the plan and the call's
+// signal (R17).
 
 import type { BotKind } from "../schemas";
 import type { DecisionProvider, ProviderFactory } from "../sim/providers";

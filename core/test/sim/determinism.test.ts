@@ -86,12 +86,13 @@ describe("makeReplayingProvider", () => {
     ],
   };
 
-  /** What a replaying provider is asked at `tick`; it reads only the tick. */
+  /** What a replaying provider is asked at `tick`; it reads only the tick (an aborted signal changes nothing). */
   const asked = (tick: number): DecisionContext => ({
     tick,
     agent: "a0",
     observation: { self: { pos: { x: 0, y: 0 }, facing: 0, hp: 100, kills: 0, secondsLeft: 0 }, visible: [], heard: [], incoming: [] },
     plan: "",
+    signal: AbortSignal.abort(),
   });
 
   it("answers a recorded call with its recorded answers", async () => {

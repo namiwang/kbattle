@@ -96,7 +96,7 @@ describe("@kbattle/core entry point", () => {
       { kind: "bot", bot: "wanderer" },
     ];
     const world = core.spawn({ mapId: "arena-2", seed: 1, durationTicks: 100, slots }, core.getMap("arena-2"));
-    const ctx: core.DecisionContext = { tick: 1, agent: "a0", observation: core.perceive(world, "a0"), plan: "" };
+    const ctx: core.DecisionContext = { tick: 1, agent: "a0", observation: core.perceive(world, "a0"), plan: "", signal: new AbortController().signal };
     expect(core.DoerAnswerSchema.parse(await bot.decide(ctx)).model).toBe("bot:camper");
   });
 

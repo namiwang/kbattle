@@ -31,7 +31,7 @@ export const decisionTick = (n: number) => 1 + 10 * n;
 export async function decideAll(bot: DecisionProvider, views: Observation[], agent = "a0"): Promise<DoerAnswer[]> {
   const answers: DoerAnswer[] = [];
   for (const [n, observation] of views.entries()) {
-    answers.push(await bot.decide({ tick: decisionTick(n), agent, observation, plan: "" }));
+    answers.push(await bot.decide({ tick: decisionTick(n), agent, observation, plan: "", signal: new AbortController().signal }));
   }
   return answers;
 }

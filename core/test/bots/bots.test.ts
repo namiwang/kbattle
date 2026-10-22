@@ -14,7 +14,7 @@ describe("makeBot", () => {
   it("makes a DecisionProvider for each bot kind, whose decide returns a Promise", async () => {
     for (const kind of KINDS) {
       const bot = makeBot(kind, 1, 0);
-      const pending = bot.decide({ tick: 1, agent: "a0", observation: obs(), plan: "" });
+      const pending = bot.decide({ tick: 1, agent: "a0", observation: obs(), plan: "", signal: new AbortController().signal });
       expect(pending).toBeInstanceOf(Promise);
       expect((await pending).model).toBe(`bot:${kind}`);
     }

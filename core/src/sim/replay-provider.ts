@@ -16,8 +16,9 @@ import type { DecisionProvider } from "./providers";
  * `agentId`'s recorded mind. decide at tick t resolves with the answers of its
  * Doer event at t, or rejects with that event's error when the call failed; with
  * no Doer event at t it rejects with "replay: no recorded doer call …", so a
- * replay that drifted from its recording shows where. pollEvents(t) returns its
- * Thinker events stamped t, in log order.
+ * replay that drifted from its recording shows where. It answers at once and
+ * ignores the call's signal (R17): a recorded timeout is replayed as its error.
+ * pollEvents(t) returns its Thinker events stamped t, in log order.
  */
 export function makeReplayingProvider(log: MatchLog, agentId: AgentId): DecisionProvider {
   const calls = new Map<number, EventOf<"Doer">>();

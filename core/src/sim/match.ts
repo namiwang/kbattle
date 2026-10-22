@@ -20,9 +20,11 @@
 //   4. step: its Shot, Hit and Death events, then Tick(t);
 //   5. MatchEnd with the R11 ranking when at most one agent is alive or t is
 //      config.durationTicks.
-// Cancelling (deps.signal) ends the match after the tick in progress: its calls
-// in flight are logged as aborted, the floor is not waited out, and
-// MatchEnd { ranking: [] } follows that tick's Tick. A failed doer call never
+// Each doer call gets its own AbortSignal (DecisionContext.signal, R17), aborted
+// at its timeout and when the match is cancelled. Cancelling (deps.signal) ends
+// the match after the tick in progress: its calls in flight are logged as
+// aborted, the floor is not waited out, and MatchEnd { ranking: [] } follows
+// that tick's Tick. A failed doer call never
 // stops the loop. These are bugs, and runMatch rejects: a config or prompts that
 // do not validate, a provider factory that throws, and a pollEvents that throws
 // or returns an event stamped with another tick or failing EventSchema (R16).
@@ -120,7 +122,7 @@ export async function runMatch(config: MatchConfig, deps: RunMatchDeps): Promise
         .filter((agent) => agent.alive)
         .map((agent) => {
           const observation = perceive(world, agent.id);
-          const ctx: DecisionContext = { tick: t, agent: agent.id, observation, plan: plans.get(agent.id) ?? "" };
+          const ctx = { tick: t, agent: agent.id, observation, plan: plans.get(agent.id) ?? "" };
           return { agent, observation, outcome: ask(providers[agent.slot]!, ctx, timeoutMs, signal) };
         });
       const outcomes = await Promise.all(asked.map((call) => call.outcome));
@@ -206,21 +208,29 @@ type Outcome = { ok: true; answers: DoerAnswers } | { ok: false; error: string }
 /**
  * One doer call raced against the timeout and the cancel signal. Never rejects:
  * a rejection, a throw, a timeout, a cancel or an answer without answers is an
- * outcome with the error text to log.
+ * outcome with the error text to log. The provider gets the call's own signal
+ * (R17): aborted at the timeout, or by the match's signal whenever that fires
+ * (AbortSignal.any holds its sources weakly, so answered calls cost nothing).
  */
-function ask(provider: DecisionProvider, ctx: DecisionContext, timeoutMs: number, signal?: AbortSignal): Promise<Outcome> {
+function ask(provider: DecisionProvider, ctx: Omit<DecisionContext, "signal">, timeoutMs: number, signal?: AbortSignal): Promise<Outcome> {
   return new Promise((resolve) => {
     if (signal?.aborted) return resolve({ ok: false, error: ABORTED });
+    const call = new AbortController();
     const settle = (outcome: Outcome) => {
       clearTimeout(timer);
       signal?.removeEventListener("abort", onAbort);
       resolve(outcome); // the first settle wins; later ones change nothing
     };
     const onAbort = () => settle({ ok: false, error: ABORTED });
-    const timer = setTimeout(() => settle({ ok: false, error: `timeout: no answer within ${timeoutMs} ms` }), timeoutMs);
+    const timer = setTimeout(() => {
+      const error = `timeout: no answer within ${timeoutMs} ms`;
+      settle({ ok: false, error });
+      call.abort(new DOMException(error, "TimeoutError"));
+    }, timeoutMs);
     signal?.addEventListener("abort", onAbort, { once: true });
     try {
-      Promise.resolve(provider.decide(ctx)).then(
+      const callSignal = signal ? AbortSignal.any([call.signal, signal]) : call.signal;
+      Promise.resolve(provider.decide({ ...ctx, signal: callSignal })).then(
         (answer: unknown) => settle(answered(answer)),
         (error: unknown) => settle({ ok: false, error: errorText(error) }),
       );

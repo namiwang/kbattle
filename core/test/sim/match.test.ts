@@ -244,6 +244,26 @@ describe("runMatch: faults (R12, principle 5)", () => {
     expect(path[25]).not.toEqual(path[11]);
   });
 
+  it("gives each doer call its own signal and aborts it when the loop stops waiting for it, at the timeout (R17)", async () => {
+    const calls: { tick: number; signal: AbortSignal; told: boolean }[] = [];
+    const hangs: DecisionProvider = {
+      decide({ tick, signal }) {
+        const call = { tick, signal, told: false };
+        calls.push(call);
+        signal.addEventListener("abort", () => (call.told = true), { once: true });
+        return tick === 1 ? Promise.resolve(answer("forward")) : new Promise<DoerAnswer>(() => {});
+      },
+    };
+    const log = await runMatch(openConfig(12), { map: OPEN, prompts: PROMPTS, doerTimeoutMs: 5, providers: firstIs(hangs) });
+    expect(doerOf(log, "a0").map((e) => e.error)).toEqual([undefined, "timeout: no answer within 5 ms"]);
+    expect(calls.map((c) => [c.tick, c.signal.aborted, c.told])).toEqual([
+      [1, false, false], // answered in time: never aborted
+      [11, true, true],
+    ]);
+    expect(calls[0]?.signal).not.toBe(calls[1]?.signal);
+    expect(calls[1]?.signal.reason).toMatchObject({ name: "TimeoutError" });
+  });
+
   it("logs an answer without an answers object as ok:false instead of applying it", async () => {
     const broken: DecisionProvider = { decide: () => Promise.resolve({ model: "x" } as unknown as DoerAnswer) };
     const log = await runMatch(openConfig(5), { map: OPEN, prompts: PROMPTS, providers: firstIs(broken) });
@@ -354,6 +374,49 @@ describe("runMatch: cancel (signal)", () => {
       expect.objectContaining({ kind: "Tick", tick: 11 }),
       { kind: "MatchEnd", tick: 11, ranking: [] },
     ]);
+  });
+
+  it("aborts the signals of the match's doer calls when it is cancelled: the call in flight and those already answered (R17)", async () => {
+    const controller = new AbortController();
+    const signals = new Map<string, AbortSignal>();
+    const provider = (hangsAt11: boolean): DecisionProvider => ({
+      decide({ tick, agent, signal }) {
+        signals.set(`${agent}@${tick}`, signal);
+        if (!hangsAt11 || tick !== 11) return Promise.resolve(answer("stop"));
+        setTimeout(() => controller.abort(), 5);
+        return new Promise<DoerAnswer>(() => {});
+      },
+    });
+    let before: boolean[] = [];
+    const log = await runMatch(openConfig(100), {
+      map: OPEN,
+      prompts: PROMPTS,
+      doerTimeoutMs: 60_000,
+      signal: controller.signal,
+      providers: (_slot, i) => provider(i === 0),
+      onTick: (tick) => tick === 10 && (before = [...signals.values()].map((s) => s.aborted)),
+    });
+    expect(log.events.at(-1)).toEqual({ kind: "MatchEnd", tick: 11, ranking: [] });
+    expect(before).toEqual([false, false]); // tick 1's calls, answered, while the match ran on
+    expect([...signals].map(([call, signal]) => [call, signal.aborted])).toEqual([
+      ["a0@1", true],
+      ["a1@1", true],
+      ["a0@11", true],
+      ["a1@11", true],
+    ]);
+  });
+
+  it("a cancel between doer ticks reaches the providers too, through their latest calls' signals (R17)", async () => {
+    const controller = new AbortController();
+    const signals: AbortSignal[] = [];
+    const spy: DecisionProvider = {
+      decide({ signal }) {
+        signals.push(signal);
+        return Promise.resolve(answer("stop"));
+      },
+    };
+    await runMatch(openConfig(100), { map: OPEN, prompts: PROMPTS, providers: () => spy, signal: controller.signal, onTick: (tick) => tick === 15 && controller.abort() });
+    expect(signals.map((s) => s.aborted)).toEqual([true, true, true, true]); // ticks 1 and 11, two agents each
   });
 
   it("does not wait out the wall floor once cancelled", async () => {
