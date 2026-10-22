@@ -39,7 +39,8 @@ import { roundTo } from "./round";
  * The parts of the world perception reads. A WorldState is one; the mind panel
  * can build one from a log: positions, facing and HP from a Tick row, `alive`
  * from presence in it, kills from Death events, `moved` from consecutive Tick
- * rows, and lastTick from that tick's Shot and Hit events (near misses are not logged).
+ * rows, and lastTick from that tick's Shot and Hit events and its Tick row's
+ * `near` (ISSUES I-016).
  */
 export type PerceptionState = Pick<WorldState, "tick" | "durationTicks" | "map" | "lastTick"> & {
   readonly agents: readonly PerceivedAgent[];

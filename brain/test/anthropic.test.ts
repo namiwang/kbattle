@@ -3,48 +3,9 @@
 // §5.4 thinker contract, §5.5 fault model, row 29).
 import { describe, expect, it } from "vitest";
 import { THINKER_MODEL } from "@kbattle/core";
-import { makeAnthropicThinker } from "../src/providers/anthropic";
+import { makeAnthropicThinker, thinkingParamFor } from "../src/providers/anthropic";
 import type { ThinkerInput } from "../src/types";
-
-interface SentRequest {
-  url: string;
-  headers: Headers;
-  body: Record<string, unknown>;
-}
-
-/** A fetch that records each request and answers it with `status` and a JSON `body`. */
-function fakeFetch(status: number, body: unknown) {
-  const sent: SentRequest[] = [];
-  const fetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
-    sent.push({ url: String(input), headers: new Headers(init?.headers), body: JSON.parse(String(init?.body)) });
-    return new Response(JSON.stringify(body), {
-      status,
-      headers: { "content-type": "application/json", "request-id": "req_test" },
-    });
-  };
-  return { fetch, sent };
-}
-
-/** A Messages API reply whose only content block is the text `text`. */
-function reply(text: string, overrides: Record<string, unknown> = {}) {
-  return {
-    id: "msg_test",
-    type: "message",
-    role: "assistant",
-    model: THINKER_MODEL,
-    content: [{ type: "text", text, citations: null }],
-    stop_reason: "end_turn",
-    stop_sequence: null,
-    stop_details: null,
-    usage: { input_tokens: 812, output_tokens: 96, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
-    ...overrides,
-  };
-}
-
-/** A Messages API error body. */
-function apiError(type: string, message: string) {
-  return { type: "error", error: { type, message }, request_id: "req_test" };
-}
+import { apiError, fakeFetch, refusal, reply } from "./fake-anthropic";
 
 const PLAN = { text: "Hold the east wall; engage anyone crossing the gap.", scratchpad: "a3 likes the gap." };
 
@@ -74,8 +35,8 @@ describe("makeAnthropicThinker", () => {
     expect(request?.url).toBe("https://api.anthropic.com/v1/messages");
     expect(request?.headers.get("x-api-key")).toBe("sk-test");
     expect(request?.headers.get("anthropic-dangerous-direct-browser-access")).toBe("true");
-    // `thinking: disabled` is accepted by Haiku 5.5 at effort low..high; Sonnet 5.5
-    // and Opus 5.5 reject it with a 400. Moving THINKER_MODEL means revisiting it.
+    // thinkingParamFor knows Haiku, Sonnet and Opus 5.5 (below). Another THINKER_MODEL
+    // needs its row there and a re-run of these fault tests (ISSUES I-013).
     expect(THINKER_MODEL).toBe("claude-haiku-5-5");
     expect(request?.body).toEqual({
       model: THINKER_MODEL,
@@ -89,9 +50,11 @@ describe("makeAnthropicThinker", () => {
           type: "json_schema",
           schema: expect.objectContaining({
             type: "object",
+            // The lengths the harness prompt asks for, as hints (ISSUES I-013): the
+            // reply must fit max_tokens 600. PlanSchema still accepts up to 2000/4000.
             properties: {
-              text: expect.objectContaining({ type: "string" }),
-              scratchpad: expect.objectContaining({ type: "string" }),
+              text: { type: "string", description: expect.stringMatching(/maxLength: 600\b/) },
+              scratchpad: { type: "string", description: expect.stringMatching(/maxLength: 1200\b/) },
             },
             required: ["text", "scratchpad"],
             additionalProperties: false,
@@ -108,13 +71,38 @@ describe("makeAnthropicThinker", () => {
     expect(sent[0]?.body).toMatchObject({ model: "claude-sonnet-5-5", max_tokens: 12 });
   });
 
+  it("turns thinking off on Sonnet 5.5 with between_tools, its lowest setting (ISSUES I-013)", async () => {
+    const { fetch, sent } = fakeFetch(200, reply(JSON.stringify(PLAN)));
+    await makeAnthropicThinker({ apiKey: "sk-test", model: "claude-sonnet-5-5", fetch }).complete(INPUT);
+
+    expect(sent[0]?.body).toMatchObject({ thinking: { type: "between_tools" }, output_config: { effort: "low" } });
+  });
+
+  it("sends no thinking field to Opus 5.5, which cannot turn thinking off (ISSUES I-013)", async () => {
+    const { fetch, sent } = fakeFetch(200, reply(JSON.stringify(PLAN)));
+    await makeAnthropicThinker({ apiKey: "sk-test", model: "claude-opus-5-5", fetch }).complete(INPUT);
+
+    expect(sent[0]?.body).not.toHaveProperty("thinking");
+    expect(sent[0]?.body).toMatchObject({ model: "claude-opus-5-5", output_config: { effort: "low" } });
+  });
+
+  it("keeps a plan longer than the harness asks for: PlanSchema decides, not the hint", async () => {
+    const long = { text: "Hold the east wall. ".repeat(35), scratchpad: "a3 likes the gap. ".repeat(80) };
+    const { fetch } = fakeFetch(200, reply(JSON.stringify(long)));
+    const result = await makeAnthropicThinker({ apiKey: "sk-test", fetch }).complete(INPUT);
+
+    expect(long.text.length).toBeGreaterThan(600);
+    expect(long.scratchpad.length).toBeGreaterThan(1200);
+    expect(result).toMatchObject({ ok: true, plan: long });
+  });
+
   it("maps a reply cut off at max_tokens (not JSON) to invalid_output", async () => {
     const { fetch } = fakeFetch(200, reply('{"text": "Hold the ea', { stop_reason: "max_tokens" }));
     const result = await makeAnthropicThinker({ apiKey: "sk-test", fetch }).complete(INPUT);
 
     expect(result).toEqual({
       ok: false,
-      error: { kind: "invalid_output", message: expect.stringContaining("max_tokens") },
+      error: { kind: "invalid_output", fatal: false, message: expect.stringContaining("max_tokens") },
     });
   });
 
@@ -124,42 +112,37 @@ describe("makeAnthropicThinker", () => {
 
     expect(result).toEqual({
       ok: false,
-      error: { kind: "invalid_output", message: expect.stringContaining("scratchpad") },
+      error: { kind: "invalid_output", fatal: false, message: expect.stringContaining("scratchpad") },
     });
   });
 
   it("maps stop_reason refusal to refusal (row 16)", async () => {
-    const refused = reply("", {
-      content: [],
-      stop_reason: "refusal",
-      stop_details: { type: "refusal", category: "general_harms", explanation: "Declined by a safety classifier." },
-    });
-    const { fetch } = fakeFetch(200, refused);
+    const { fetch } = fakeFetch(200, refusal());
     const result = await makeAnthropicThinker({ apiKey: "sk-test", fetch }).complete(INPUT);
 
     expect(result).toEqual({
       ok: false,
-      error: { kind: "refusal", message: expect.stringContaining("general_harms") },
+      error: { kind: "refusal", fatal: false, message: expect.stringContaining("general_harms") },
     });
   });
 
-  it("maps HTTP 401 to auth with the status, the fatal kind (row 29)", async () => {
+  it("maps HTTP 401 to auth with the status, a fatal error (row 29)", async () => {
     const { fetch } = fakeFetch(401, apiError("authentication_error", "invalid x-api-key"));
     const result = await makeAnthropicThinker({ apiKey: "sk-bad", fetch }).complete(INPUT);
 
     expect(result).toEqual({
       ok: false,
-      error: { kind: "auth", status: 401, message: expect.stringContaining("invalid x-api-key") },
+      error: { kind: "auth", fatal: true, status: 401, message: expect.stringContaining("invalid x-api-key") },
     });
   });
 
-  it("maps HTTP 403 to auth with the status (row 29)", async () => {
+  it("maps HTTP 403 to auth with the status, a fatal error (row 29)", async () => {
     const { fetch } = fakeFetch(403, apiError("permission_error", "this key cannot use this model"));
     const result = await makeAnthropicThinker({ apiKey: "sk-test", fetch }).complete(INPUT);
 
     expect(result).toEqual({
       ok: false,
-      error: { kind: "auth", status: 403, message: expect.stringContaining("cannot use this model") },
+      error: { kind: "auth", fatal: true, status: 403, message: expect.stringContaining("cannot use this model") },
     });
   });
 
@@ -169,7 +152,7 @@ describe("makeAnthropicThinker", () => {
 
     expect(result).toEqual({
       ok: false,
-      error: { kind: "rate_limit", status: 429, message: expect.stringContaining("rate limited") },
+      error: { kind: "rate_limit", fatal: false, status: 429, message: expect.stringContaining("rate limited") },
     });
     expect(sent).toHaveLength(1);
   });
@@ -181,21 +164,48 @@ describe("makeAnthropicThinker", () => {
     const { fetch, sent } = fakeFetch(status, apiError(type, "try again later"));
     const result = await makeAnthropicThinker({ apiKey: "sk-test", fetch }).complete(INPUT);
 
-    expect(result).toEqual({ ok: false, error: { kind: "server", status, message: `${type}: try again later` } });
+    expect(result).toEqual({
+      ok: false,
+      error: { kind: "server", fatal: false, status, message: `${type}: try again later` },
+    });
     expect(sent).toHaveLength(1);
+  });
+
+  // ISSUES I-012: a key without credit (402) or a model the account cannot use (404)
+  // would leave the match stuck on its first plan, so they stop it like 401/403.
+  it("maps HTTP 402 to billing with the status, a fatal error (ISSUES I-012)", async () => {
+    const { fetch } = fakeFetch(402, apiError("billing_error", "your credit balance is too low"));
+    const result = await makeAnthropicThinker({ apiKey: "sk-test", fetch }).complete(INPUT);
+
+    expect(result).toEqual({
+      ok: false,
+      error: { kind: "billing", fatal: true, status: 402, message: "billing_error: your credit balance is too low" },
+    });
+  });
+
+  it("maps HTTP 404 to not_found with the status, a fatal error (ISSUES I-012)", async () => {
+    const { fetch } = fakeFetch(404, apiError("not_found_error", "model: claude-haiku-5-5"));
+    const result = await makeAnthropicThinker({ apiKey: "sk-test", fetch }).complete(INPUT);
+
+    expect(result).toEqual({
+      ok: false,
+      error: { kind: "not_found", fatal: true, status: 404, message: "not_found_error: model: claude-haiku-5-5" },
+    });
   });
 
   // §5.5 has no row for other error statuses; they keep the last plan like a 5xx,
   // and `status` tells them apart in the log.
   it.each([
     [400, "invalid_request_error"],
-    [402, "billing_error"],
-    [404, "not_found_error"],
-  ])("maps any other HTTP error, here %i, to server with the status", async (status, type) => {
+    [413, "request_too_large"],
+  ])("maps any other HTTP error, here %i, to server with the status, not fatal", async (status, type) => {
     const { fetch } = fakeFetch(status, apiError(type, "not this time"));
     const result = await makeAnthropicThinker({ apiKey: "sk-test", fetch }).complete(INPUT);
 
-    expect(result).toEqual({ ok: false, error: { kind: "server", status, message: `${type}: not this time` } });
+    expect(result).toEqual({
+      ok: false,
+      error: { kind: "server", fatal: false, status, message: `${type}: not this time` },
+    });
   });
 
   it("maps a rejected fetch (offline, DNS, CORS) to network", async () => {
@@ -204,7 +214,7 @@ describe("makeAnthropicThinker", () => {
     };
     const result = await makeAnthropicThinker({ apiKey: "sk-test", fetch }).complete(INPUT);
 
-    expect(result).toEqual({ ok: false, error: { kind: "network", message: expect.any(String) } });
+    expect(result).toEqual({ ok: false, error: { kind: "network", fatal: false, message: expect.any(String) } });
   });
 
   it("maps a timed-out connection to timeout", async () => {
@@ -213,7 +223,7 @@ describe("makeAnthropicThinker", () => {
     };
     const result = await makeAnthropicThinker({ apiKey: "sk-test", fetch }).complete(INPUT);
 
-    expect(result).toEqual({ ok: false, error: { kind: "timeout", message: expect.any(String) } });
+    expect(result).toEqual({ ok: false, error: { kind: "timeout", fatal: false, message: expect.any(String) } });
   });
 
   it("maps a call aborted through input.signal to timeout", async () => {
@@ -221,7 +231,7 @@ describe("makeAnthropicThinker", () => {
     const signal = AbortSignal.abort();
     const result = await makeAnthropicThinker({ apiKey: "sk-test", fetch }).complete({ ...INPUT, signal });
 
-    expect(result).toEqual({ ok: false, error: { kind: "timeout", message: expect.any(String) } });
+    expect(result).toEqual({ ok: false, error: { kind: "timeout", fatal: false, message: expect.any(String) } });
     expect(sent).toHaveLength(0);
   });
 
@@ -230,7 +240,7 @@ describe("makeAnthropicThinker", () => {
       new Response("<html>gateway login</html>", { status: 200, headers: { "content-type": "text/html" } });
     const result = await makeAnthropicThinker({ apiKey: "sk-test", fetch }).complete(INPUT);
 
-    expect(result).toEqual({ ok: false, error: { kind: "invalid_output", message: expect.any(String) } });
+    expect(result).toEqual({ ok: false, error: { kind: "invalid_output", fatal: false, message: expect.any(String) } });
   });
 
   it("maps a 200 whose body is not JSON at all to invalid_output", async () => {
@@ -238,7 +248,7 @@ describe("makeAnthropicThinker", () => {
       new Response("{ cut off", { status: 200, headers: { "content-type": "application/json" } });
     const result = await makeAnthropicThinker({ apiKey: "sk-test", fetch }).complete(INPUT);
 
-    expect(result).toEqual({ ok: false, error: { kind: "invalid_output", message: expect.any(String) } });
+    expect(result).toEqual({ ok: false, error: { kind: "invalid_output", fatal: false, message: expect.any(String) } });
   });
 
   it("maps a connection that drops while the body is read to network", async () => {
@@ -252,10 +262,35 @@ describe("makeAnthropicThinker", () => {
     };
     const result = await makeAnthropicThinker({ apiKey: "sk-test", fetch }).complete(INPUT);
 
-    expect(result).toEqual({ ok: false, error: { kind: "network", message: expect.stringContaining("terminated") } });
+    expect(result).toEqual({
+      ok: false,
+      error: { kind: "network", fatal: false, message: expect.stringContaining("terminated") },
+    });
   });
 
   it("refuses to make a thinker without a key", () => {
     expect(() => makeAnthropicThinker({ apiKey: "  " })).toThrow(/API key/);
+  });
+});
+
+// Which `thinking` value turns thinking off differs by model (ISSUES I-013). Sources:
+// the per-model thinking table of Anthropic's API reference (cached 2026-10-06), which
+// matches what v0.6 found; SDK 0.135.0 itself only says "depends on the model".
+describe("thinkingParamFor", () => {
+  it("turns thinking off on Haiku 5.5 with disabled, accepted at effort low to high", () => {
+    expect(thinkingParamFor("claude-haiku-5-5")).toEqual({ type: "disabled" });
+  });
+
+  it("uses between_tools on Sonnet 5.5, which answers disabled with a 400", () => {
+    expect(thinkingParamFor("claude-sonnet-5-5")).toEqual({ type: "between_tools" });
+  });
+
+  it("leaves thinking out on Opus 5.5, which answers disabled with a 400 at every effort", () => {
+    expect(thinkingParamFor("claude-opus-5-5")).toBeUndefined();
+  });
+
+  it("leaves thinking out on any other model: omitting it is accepted everywhere", () => {
+    expect(thinkingParamFor("claude-fable-5-1")).toBeUndefined();
+    expect(thinkingParamFor("constructor")).toBeUndefined();
   });
 });
