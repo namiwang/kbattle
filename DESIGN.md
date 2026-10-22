@@ -82,7 +82,7 @@ others superseded as noted. Rows 35 onward are v4.0.
 | 24–26 | Conventions, probability thresholds, actor cadence | Carried (`DOER_INTERVAL_TICKS` becomes `ACTOR_INTERVAL_TICKS`). |
 | 27 | Mind panel | Carried as the **agent panel**: every role's calls, not two fixed kinds. |
 | 28–29 | Worker guard, key failure | Carried. |
-| 30 | Artifact | Carried: this file plus one short design per arena; `plan/` re-planned after v4.0 is approved. |
+| 30 | Artifact | Three files: `DESIGN.md` (what and why, arenas included as §13–§15), `PLAN.md` (milestones with exit criteria ticked in place and a dated log), `ISSUES.md` (uncertainties, defects, decisions). The v3.0 `plan/` folder and per-arena design files are retired. |
 | 31–33 | Sim clock, doer-only slot, bot cadence | Carried: the actor is lockstep, the planner is asynchronous; a doer-only agent is an agent with no planner. |
 | 34 | Clef fallback | Carried for the Cloudflare adapter. |
 | 35 | Name | Decision Arena. Package scope `@decision-arena`. Nami renames the git repo and directory when the plan starts; nothing in the code depends on the directory name. Work continues on `main` directly (the `poc` branch was fast-forwarded into it). |
@@ -96,7 +96,7 @@ others superseded as noted. Rows 35 onward are v4.0.
 | 43 | Log envelope | `MatchLog` version 2: `{ version, arena, mode, config, agents, events }`. Platform events are `Call` and `MatchEnd`; `Tick` carries an arena-defined payload; every other event kind is the arena's. §5.5. |
 | 44 | First slice | The battle royale arena running through the new contracts with dummy agents and the replay, logs identical to today's apart from the envelope, before any real model is wired. The parity gate is a test, not a manual check. |
 | 45 | Timing | Now, before the remaining brains work, so the real models are wired once against the contracts. |
-| 46 | Second and third readers | `arenas/racing/DESIGN.md` and `arenas/extraction/DESIGN.md` are one-page sketches written as my calls, so every contract is checked against three arenas before R0 ends. Their needs are in §5.2: per-arena tick length and actor interval, a match outcome that is a ranking plus optional per-agent results, and `active(state)` for agents that leave the world alive. |
+| 46 | Second and third readers | §14 (racing) and §15 (extraction) are one-page sketches written as my calls, so every contract is checked against three arenas before R0 ends. Their needs are in §5.2: per-arena tick length and actor interval, a match outcome that is a ranking plus optional per-agent results, and `active(state)` for agents that leave the world alive. |
 | 47 | Old logs | Version-2 logs replace version 1 with no migration; uploading a version-1 file gets a clear "old format" message; the sample log and goldens are regenerated. |
 | 48 | Planner input | The planner gets the arena's static text (the map) as well as the observation; the planner input budget rises from 1,500 to 2,000 tokens (ISSUES I-022). |
 | 49 | Keys and the gateway | `ASSUMED` External-provider calls go from the browser to Nami's AI Gateway with the player's provider key passed through in the `Authorization` header; the gateway stores no keys, keeps no request bodies, and is unauthenticated (a stranger using it spends their own key, not Nami's). Workers AI models go through the Worker binding with the gateway option, paid by Nami and guarded as before. The anti-goal "a key leaves the browser for anything but the provider" is restated: a key goes only to the gateway and the provider, and is never stored. If the gateway cannot be called from a browser (CORS), the Worker proxies the call with the key passed through, never logged. Decided by a 30-minute spike at the start of R2. |
@@ -334,7 +334,7 @@ ids outside the catalog.
 | `worker/*` | `platform/worker`, route `/ask` | rename |
 | `web/src/replay/*`, `web/src/ui/*` | `platform/web` shell + `kits/shooter/render/*` | split |
 | `core/fixtures/sample-log.json`, goldens | regenerated as version 2 logs; goldens unchanged in content | regenerate |
-| `DESIGN.md`, `plan/`, `ISSUES.md` | this file; `arenas/battle-royale/DESIGN.md` for the shooter specifics (sections 6 of v3.0); `plan/` re-planned; ISSUES carried | rewrite |
+| `DESIGN.md`, `plan/`, `ISSUES.md` | this file (shooter specifics in §13); `PLAN.md` replaces `plan/`; ISSUES carried | rewrite |
 
 Parity gate for the move, as a test: the 873 tests pass in their new
 homes, the 16-bot log of `run-match` equals today's apart from the
@@ -350,7 +350,7 @@ both), and the replay smoke passes against it.
 | R2 Models | Model contract, catalog with timeouts, the workers-ai and gateway-chat adapters (after the CORS spike, row 49), planner glue with the static text, agent editor with role → model choice and the wall-clock projection | A dummy planner and a dummy actor run a match from the page; the real adapters pass today's fault tests; a Haiku planner answers a structured call through the gateway from the browser. |
 | R3 PoC | The remaining P3/P4 goals of v3.0 (default agents, cost measurement, anti-goal check, guard, deploy) against the new structure | v3.0 §8 P3 and P4 exits. |
 
-The task-level plan is written after this document is approved.
+The milestones are in `PLAN.md`.
 
 ## 8. Cost and time
 
@@ -364,8 +364,8 @@ list prices so the cost report is computed, not typed.
   functions, no events or callbacks per tick; the parity gate measures
   wall time.
 - **Leaky contract.** A shooter notion sneaking into `platform/core`.
-  Mitigation: the racing arena's shape is sketched in its design before
-  R0 ends, as a second reader of every contract.
+  Mitigation: the racing and extraction sketches (§14, §15) are read
+  against every contract before R0 ends.
 - **Model choice confuses players.** Mitigation: defaults preselected,
   dummies labelled, unsupported combinations greyed out.
 - **Two shooter arenas drift apart.** Mitigation: extraction is a rule
@@ -400,3 +400,119 @@ OpenAI all return it), estimated for dummies, and only authoritative when
 the house runs the match. Rewards concise prompts, derives cadence,
 leaves "keep the last answer" as the fallback. Open: one pool per agent
 or one budget per role; raw tokens or price-weighted credits.
+
+## 13. Arena: battle royale
+
+Status: carved from DESIGN.md v3.0 §6 on 2026-10-22; the shooter specifics that the platform design (§1–§12) no longer carries. Numbers marked ASSUMED are placeholders to tune (ISSUES I-017 among them). Rulings R1–R18 in the execution ledger refined these rules; the code under core/src/sim is the current truth until it moves to kits/shooter.
+
+### Rules
+
+#### Conventions (row 24)
+
+- `Vec2 { x, y }` in meters, y down (PixiJS convention, so the renderer
+  draws without flipping).
+- Angles in degrees, clockwise-positive, 0° = +x. `facing` is absolute.
+- Bearings in observations are relative to `facing`, normalized to
+  (−180, 180], positive = to the right.
+- Ticks are the time unit inside the sim; constants written in m/s or
+  seconds are converted once at load.
+- Ids: agents `a0`…`a15` in slot order, bullets `b<n>` ascending.
+- Seeded RNG for spawn and spread. Same seed and the same recorded
+  answers, replayed at their recorded ticks, reproduce the same log.
+  Tests prove this in Node with fake providers; cross-engine determinism
+  is not required because the renderer reads `Tick`.
+
+#### World and rules
+
+- **Arena.** Rectangular continuous map with polygonal obstacles, fully
+  known to every agent. Spawns spread around the edge. `ASSUMED` about
+  100 by 100 m so contact happens within a minute without a zone. Two
+  hand-authored maps as JSON in `core/`.
+- **Agent.** Position, facing, HP 100, one weapon with fixed stats (bullet
+  speed, damage, fire interval, spread). Fixed move speed relative to
+  facing, fixed turn rate.
+- **Actions per tick.** Move direction, turn direction, fire. The sim
+  clamps everything; the doer only picks discrete choices.
+- **Bullets.** Spawned at the muzzle with facing plus seeded spread,
+  travel per tick, removed on hitting an obstacle or an agent (damage).
+  Travel time and leading a moving target are real.
+- **Perception**, computed by the sim per agent per tick:
+  - Vision: enemies inside a cone (`ASSUMED` 90°, 60 m) with clear LOS.
+  - Hearing: shots within 80 m, footsteps within 15 m, as bearing plus a
+    coarse distance band.
+  - Incoming: bearing of bullets that hit or passed within 2 m this tick.
+  - Self: position, facing, HP, kills, time remaining.
+- **Bots.** Two scripted minds, used as the quality floor and in tests:
+  `wanderer` (roam, face and shoot anything visible) and `camper` (hold a
+  corner, shoot anything visible, relocate when hit). They decide on the
+  doer cadence (row 33) and emit the same `Action` shape.
+- **Match end.** Last agent alive, or `MATCH_DURATION_TICKS` (`ASSUMED`
+  6,000 = 5 min sim time). Ranking: survival, kills, HP.
+- **Out of scope.** See §1 non-goals.
+
+
+#### What this arena owns under v4.0
+
+- Config: the platform's slots plus `mapId`, `seed`, `durationTicks`; mode `solo`.
+- Questions: `move`, `turn`, `fire`, `target` as in v3.0 §5.4, with the fixed criteria texts; `target` omitted when nothing is visible.
+- Events: `Spawn`, `Shot`, `Hit`, `Death`; `Tick.data` = agent rows `[id, x, y, facing, hp]`, bullet rows, and `near` rows.
+- Ending: last agent alive or `durationTicks`; ranking survival, kills, HP (ties by slot, ISSUES I-023).
+- Bots: `bot/wanderer`, `bot/camper`.
+- Renderer: map, agents, bullet trails, follow camera, vision-cone overlay, incoming-fire ticks, state rebuilt from `Tick.data` for the agent panel.
+- Static text for the planner: the map's obstacles and the rules in a few lines (DESIGN.md row 48).
+
+## 14. Arena: racing (sketch)
+
+Status: one-page sketch, 2026-10-22, written as the controller's call (DESIGN.md row 46) so the platform contracts are checked against a game that shares nothing with the shooter. Not scheduled for implementation.
+
+### The game
+
+Cars on a closed 2D track. A map is a centerline polyline with a width; cars start on a grid. Each car has position, heading, speed. A match is N laps or a time limit. Ranking: laps completed, then distance along the track, then finish time; per-agent results `{ laps, finishTick | null, bestLapTicks }`.
+
+### Actions
+
+Two choice questions per decision: `throttle: gas | coast | brake` and `steer: left | straight | right`. The sim integrates: acceleration, drag, a grip limit so a fast car slides wide in a curve, and wall contact that scrubs speed. No weapons. Cars collide softly (a bump slows both).
+
+### Perception
+
+`self { speed, headingToTrack (deg), offCenter (m, signed), lap, progress (0–1) }`, `ahead: { curvature, distance }[]` for the next three track segments, `cars: { id, bearing, dist, closing }[]` within 30 m, `secondsLeft`. Static text: the lap count and the track's turn list ("turn 1 at 120 m: tight right").
+
+### What it needs from the platform
+
+- Its own `tickMs` (50) and `actorIntervalTicks` (5: steering needs faster hands than shooting).
+- `Tick.data` of car poses, arena-defined.
+- `active(state)`: every car until it finishes; finished cars stop being asked.
+- `ended` with `results` per car.
+- Bots: `bot/follower` (holds the centerline at a safe speed) and `bot/racer` (brakes before tight turns, overtakes on straights).
+- Renderer: track from the map, cars as arrows, lap counter in the agent panel.
+
+### What it must not need
+
+Anything about bullets, line of sight or hearing, or the shooter's `Observation` shape; the planner's digest must work from a racing observation without changes.
+
+## 15. Arena: extraction (sketch)
+
+Status: one-page sketch, 2026-10-22, written as the controller's call (DESIGN.md row 46) from the RaidRank research (`research/ai-extraction-fps/en`), so the contracts are checked against a second shooter arena. Not scheduled for implementation.
+
+### The game
+
+The shooter kit's world with two additions on the map: loot spots, each holding a value, and extraction points. Agents spawn around the edge, collect value by standing on loot spots, and must reach an extraction point before the time limit to keep it. Dying loses everything. An extracted agent leaves the world. Ranking: extracted value, then alive at the end, then kills; per-agent results `{ outcome: extracted | dead | timed_out, value, extractTick | null }`.
+
+### Actions
+
+The shooter's questions (`move`, `turn`, `fire`, `target`) with two extra turn options the arena adds to `turn`'s criteria: `face_loot` (nearest loot spot) and `face_extract` (nearest extraction point). The planner's plan text decides when to stop looting and leave.
+
+### Perception
+
+The shooter's observation plus `objective { carried, nearestLoot { bearing, dist, value } | null, nearestExtract { bearing, dist }, extractOpen: boolean }`. Static text: the map, the loot and extraction layout, the time limit.
+
+### What it needs from the platform and the kit
+
+- Kit map format with optional `features` (loot spots, extraction points) so battle royale maps stay valid.
+- `active(state)` excludes extracted agents; `ended` returns `results`.
+- Events `Loot { tick, agent, value }` and `Extract { tick, agent, value }` in the arena's event union; the renderer draws loot and extraction markers.
+- Bots: `bot/looter` (loot then extract) and `bot/camper` at an extraction point.
+
+### What it must not need
+
+Changes to the platform loop, the log envelope or the replay shell. Its renderer reuses the kit's map, agents, bullets and overlay parts.
