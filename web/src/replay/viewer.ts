@@ -1,7 +1,9 @@
 // The replay viewer: a MatchLog in, a Pixi scene of the clock's tick out, with
-// playback controls under it and a view row (follow camera, bullet trails,
-// vision cone). It reads Tick events only (DESIGN.md §5.3); nothing here runs
-// the sim. The overlay's perception is recomputed from the log with core.perceive.
+// playback controls under it, a view row (follow camera, bullet trails, vision
+// cone), and the mind panel of the followed agent (v2.4) beside the canvas,
+// its markers under the timeline. The scene reads Tick events only (DESIGN.md
+// §5.3); nothing here runs the sim. The overlay's and the panel's perception
+// is recomputed from the log with core.perceive.
 
 import { getMap, type MatchLog } from "@kbattle/core";
 import { UPDATE_PRIORITY } from "pixi.js";
@@ -14,6 +16,8 @@ import type { Transform } from "./coords";
 import type { DrawnAgent } from "./debug";
 import { indexLog, type LogIndex } from "./log-index";
 import { drawMap } from "./map";
+import { createMindPanel } from "./mind-panel";
+import type { DrawnMind } from "./mind-selectors";
 import { createOverlayLayer, overlayModel, type DrawnOverlay } from "./overlay";
 import { createStage, type Stage } from "./stage";
 import { createStateAt } from "./state-from-tick";
@@ -33,12 +37,15 @@ export interface ReplayViewer {
   drawnBullets(): DrawnBullets;
   /** What the perception overlay shows, or null while it is off or nobody is followed. */
   drawnOverlay(): DrawnOverlay | null;
+  /** What the mind panel shows for the followed agent, or null while nobody is followed. */
+  drawnMind(): DrawnMind | null;
   /** Settles once the scene has been rendered for the first time (tick 0), or on destroy. */
   readonly firstFrame: Promise<void>;
   /**
    * Releases everything mountReplay took: the document keydown listener, the
    * ResizeObserver, the Pixi app (ticker, scene, WebGL context, canvas), and the
-   * elements it added to the host. mountReplay can then run again on the same host.
+   * elements it added to the host (the mind panel and its markers among them).
+   * mountReplay can then run again on the same host.
    * Calling it twice is harmless; the viewer is unusable afterwards.
    */
   destroy(): void;
@@ -72,11 +79,15 @@ export async function mountReplay(host: HTMLElement, log: MatchLog): Promise<Rep
   view.className = "replay-view";
   view.append(followLabel, trailsToggle.label, coneToggle.label);
 
+  const stateAt = createStateAt(index, log); // one rebuilt world per tick, shared by camera, overlay and mind panel
+  const mind = createMindPanel({ index, stateAt, seek: (t) => clock.seek(t) });
+  controls.element.append(mind.markers); // the controls grid puts them under the timeline
+
   const root = document.createElement("div");
   root.className = "replay";
   const stageHost = document.createElement("div");
   stageHost.className = "replay-stage";
-  root.append(stageHost, controls.element, view);
+  root.append(stageHost, controls.element, view, mind.element);
   host.append(root);
 
   let stage: Stage;
@@ -102,7 +113,6 @@ export async function mountReplay(host: HTMLElement, log: MatchLog): Promise<Rep
 
   const trails = createTrailBuffer();
   const bulletsAt = (t: number) => index.byTick(t).bullets;
-  const stateAt = createStateAt(index, log); // one rebuilt world per tick, shared by camera and overlay
   const followed = () => (follow.value === FREE ? null : follow.value);
 
   let tick = clock.tick;
@@ -115,6 +125,7 @@ export async function mountReplay(host: HTMLElement, log: MatchLog): Promise<Rep
     const agent = state?.agents.find((a) => a.id === id);
     stage.setCenter(agent ? agent.pos : null); // a dead agent stays centered where it was last seen
     overlay.render(state && agent && coneToggle.input.checked ? overlayModel(state, agent.id) : null);
+    mind.render(tick, id); // a no-op unless the tick or the followed agent changed
   };
   draw();
 
@@ -152,6 +163,7 @@ export async function mountReplay(host: HTMLElement, log: MatchLog): Promise<Rep
     drawnAgents: () => agents.drawn(),
     drawnBullets: () => bullets.drawn(),
     drawnOverlay: () => overlay.drawn(),
+    drawnMind: () => mind.drawn(),
     firstFrame,
     destroy() {
       if (destroyed) return;

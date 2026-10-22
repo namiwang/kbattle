@@ -13,6 +13,10 @@ export type TickEvent = EventOf<"Tick">;
 export type SpawnEvent = EventOf<"Spawn">;
 export type ShotEvent = EventOf<"Shot">;
 export type DeathEvent = EventOf<"Death">;
+/** One doer call (DESIGN.md §5.3, §5.5): answers when ok, else the error, and the agent keeps its last answers. */
+export type DoerEvent = EventOf<"Doer">;
+/** One thinker call: applied (or failed) at `tick`, asked for at `requestedTick` (§5.3). */
+export type ThinkerEvent = EventOf<"Thinker">;
 export type SlotKind = Slot["kind"];
 
 export interface LogIndex {
@@ -29,6 +33,10 @@ export interface LogIndex {
   readonly deaths: ReadonlyMap<string, DeathEvent>;
   /** Shot events by bullet id: who fired each bullet, and when. */
   readonly shots: ReadonlyMap<string, ShotEvent>;
+  /** Each agent's Doer events in tick order (log order within a tick); agents without any are absent. */
+  readonly doerCalls: ReadonlyMap<string, readonly DoerEvent[]>;
+  /** Each agent's Thinker events in tick order (log order within a tick); agents without any are absent. */
+  readonly thinkerCalls: ReadonlyMap<string, readonly ThinkerEvent[]>;
   /** The frame at `tick`, floored and clamped to 0..lastTick. */
   byTick(tick: number): TickEvent;
   /** The events logged at exactly `tick`, in log order; empty when there are none. */
@@ -49,6 +57,8 @@ export function indexLog(log: MatchLog): LogIndex {
   const spawns = new Map<string, SpawnEvent>();
   const deaths = new Map<string, DeathEvent>();
   const shots = new Map<string, ShotEvent>();
+  const doerCalls = new Map<string, DoerEvent[]>();
+  const thinkerCalls = new Map<string, ThinkerEvent[]>();
   const recorded: (TickEvent | undefined)[] = new Array(lastTick + 1);
   const atTick: (Event[] | undefined)[] = new Array(lastTick + 1);
   for (const event of log.events) {
@@ -57,7 +67,11 @@ export function indexLog(log: MatchLog): LogIndex {
     else if (event.kind === "Spawn") spawns.set(event.agent, event);
     else if (event.kind === "Death") deaths.set(event.agent, event);
     else if (event.kind === "Shot") shots.set(event.bullet, event);
+    else if (event.kind === "Doer") listOf(doerCalls, event.agent).push(event);
+    else if (event.kind === "Thinker") listOf(thinkerCalls, event.agent).push(event);
   }
+  // The writer logs in tick order; a file written by hand may not. Sorting is stable.
+  for (const calls of [...doerCalls.values(), ...thinkerCalls.values()]) calls.sort((a, b) => a.tick - b.tick);
 
   let frame: TickEvent = {
     kind: "Tick",
@@ -81,6 +95,8 @@ export function indexLog(log: MatchLog): LogIndex {
     spawns,
     deaths,
     shots,
+    doerCalls,
+    thinkerCalls,
     byTick(tick) {
       const t = clampTick(tick, lastTick);
       const found = ticks[t];
@@ -95,4 +111,10 @@ export function indexLog(log: MatchLog): LogIndex {
       return slot === undefined ? undefined : log.config.slots[Number(slot)]?.kind;
     },
   };
+}
+
+function listOf<T>(lists: Map<string, T[]>, key: string): T[] {
+  let list = lists.get(key);
+  if (!list) lists.set(key, (list = []));
+  return list;
 }
