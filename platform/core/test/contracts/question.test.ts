@@ -92,6 +92,8 @@ describe("NoulQuestion: a yes/no question answered with P(yes)", () => {
   it.each([
     ["a criteria side that is not text", { ...ready, criteria: { true: 1 } }, ["criteria", "true"]],
     ["missing instructions", without(ready, "instructions"), ["instructions"]],
+    ["empty instructions", { ...ready, instructions: "" }, ["instructions"]],
+    ["another type", { ...ready, type: "text" }, ["type"]],
   ])("rejects %s", (_name, value, path) => {
     expect(issuePaths(NoulQuestionSchema, value)).toContainEqual(path);
   });
@@ -109,6 +111,8 @@ describe("TextQuestion: free text up to maxChars", () => {
     ["maxChars 8001", { ...note, maxChars: 8001 }, ["maxChars"]],
     ["a fractional maxChars", { ...note, maxChars: 1.5 }, ["maxChars"]],
     ["missing maxChars", without(note, "maxChars"), ["maxChars"]],
+    ["instructions over 500 characters", { ...note, instructions: "x".repeat(501) }, ["instructions"]],
+    ["another type", { ...note, type: "choice" }, ["type"]],
   ])("rejects %s", (_name, value, path) => {
     expect(issuePaths(TextQuestionSchema, value)).toContainEqual(path);
   });

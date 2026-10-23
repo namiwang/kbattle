@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import {
   ACTOR_TIMEOUT_MS,
   botSpec,
@@ -10,7 +10,10 @@ import {
   QUESTION_TYPES,
   type AgentSpec,
   type Arena,
+  type ArenaTypes,
   type AskRequest,
+  type MatchLog,
+  type MatchLogFor,
   type Model,
   type Reply,
 } from "../../src/contracts";
@@ -687,6 +690,13 @@ describe("runMatch: the envelope, the RNG and the clock (R22.b, i)", () => {
     expect(at).toHaveLength(7);
     for (let i = 1; i < at.length; i++) expect(at[i]! - at[i - 1]!, `tick ${i - 1} to ${i}`).toBeGreaterThanOrEqual(14.5);
     expect(JSON.stringify(floored)).toBe(JSON.stringify(plain));
+  });
+
+  it("returns the log typed for its arena, which is a MatchLog, also for a plain Arena (R22)", async () => {
+    const log = await runMatch(fakeArena, counterConfig({ durationTicks: 1 }), [upper, upper]);
+    expectTypeOf(log).toEqualTypeOf<MatchLogFor<CounterTypes>>();
+    expectTypeOf(log).toExtend<MatchLog>();
+    expectTypeOf<Awaited<ReturnType<typeof runMatch<ArenaTypes>>>>().toExtend<MatchLog>();
   });
 
   it("plays the same match to the same bytes", async () => {
