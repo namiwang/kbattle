@@ -360,3 +360,18 @@ on 2026-10-21, obsolete under v4.0) is still registered; removing a
 worktree is a deletion the controller's permissions do not allow. Nami:
 `git worktree remove --force .worktrees/p0` and, if wanted,
 `git branch -D p0 p1 p2` (p1 and p2 are merged). Cost if wrong: none.
+
+## I-031 After the map rename: old logs refused, map `features` deferred — open (R0.5, extraction arena)
+
+R0.3 renamed the bundled maps `arena-1` and `arena-2` to `map-1` and
+`map-2` (ruling R23). A version-1 log saved before that names `arena-1`
+in its config, and the viewer refuses it as an unknown map
+(`Unknown map "arena-1"; this viewer has map-1, map-2`); a match form stored in the
+browser with the old id loads with the default map (`storage.ts`). No
+alias was added: R0.5 refuses every version-1 file as "old format"
+anyway. Separately, PLAN's R0.3 goal names "the map format with optional
+`features`" (loot spots and extraction points, DESIGN §15); R0.3 was a
+move only, so the format is unchanged and `features` is left to the
+extraction arena, its first user (controller ruling). Cost if wrong: an
+old log is regenerated with the kit's `run-match.ts` (or its `mapId`
+edited) until R0.5; `features` is one optional schema field when needed.

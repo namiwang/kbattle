@@ -35,8 +35,8 @@ Depends on: R0.1.
 ### R0.3 Shooter kit
 Goal: `kits/shooter` holds vec2, angles, units, the physics step, collision, perception, bots, the map format with optional `features`, and maps `map-1`, `map-2` (DESIGN §13, row 36).
 Depends on: R0.2.
-- [ ] Moved with their tests and goldens; kit tests green; perception window and determinism tests unchanged.
-- [ ] `platform/core` imports nothing from the kit; the kit imports from `platform/core` only the RNG and the contract types.
+- [x] Moved with their tests and goldens; kit tests green; perception window and determinism tests unchanged.
+- [x] `platform/core` imports nothing from the kit; the kit imports from `platform/core` only the RNG and the contract types.
 
 ### R0.4 Battle royale arena and the generic loop
 Goal: `arenas/battle-royale` implements `Arena` over the kit; `platform/core` runs any arena with the actor and planner roles, memory, timeouts, aborts, validation, rounding, `Call` events, cancellation and the replaying model (DESIGN §5.2, §5.5, row 39–40).
@@ -159,3 +159,4 @@ commit c509a40.
 - 2026-10-21 — v0.1–v0.4, v1.1–v1.4, v2.1–v2.2, v2.5, v4.1, v0.6 and v0.5 (offline) shipped by opus subagents on `poc`; notable deviations: libraries consumed as TypeScript source, DoerAnswer and Plan strip unknown keys, MapSpec pulled forward, `Tick.near` added, four doer fields (escalate fixed).
 - 2026-10-22 — v1.5, v1.6, v3.2, v2.3, v2.4 shipped; final review found the perception-window aliasing (ISSUES I-021), fixed with rulings R15–R18; `poc` fast-forwarded into `main`; DESIGN v4.0 written; this plan replaces `plan/`.
 - 2026-10-22 — R0.1 shipped on `main` (cd01f54 move, a8462fa scope and names, 17f9486 strings); counts unchanged (core 548, models 70, web 212, worker 43; smoke 245); deviations: DESIGN.md and README's history note keep the old name on purpose (controller ruling); comments naming old repo-root paths now say `platform/…`; the thinker harness and the spike prompt drop the product name rather than swap it (budget 1,484 of 1,500 tokens); old `kbattle:v1:*` storage is left behind (ISSUES I-024); the smoke's 16-agent fps check failed once under load and passed on rerun (ISSUES I-025).
+- 2026-10-23 — R0.3 shipped on `r0.3` (1cfe596 rng and round, 9576686 map ids, 7406eac kit and core/legacy); counts core 139 + kit 409 = 548, models 70, web 212, worker 43; smoke 245; deviations, as ruled by the controller: the kit also takes `roundTo`, `TICK_MS`, `DOER_INTERVAL_TICKS` (and, in its version-1 loop, `DOER_TIMEOUT_MS`) from core, its bots and loop import `@decision-arena/core/legacy`, and `sim/{actions,world,step}.ts` import three version-1 types from it until R0.4 retypes them; the /decide fixtures stay in core with `DecideRequestSchema`; the map format's optional `features` waits for the extraction arena and pre-R0.3 logs naming `arena-1` are refused (ISSUES I-031); `parity/v1-run.json` differs from the 0279b8b capture only in `config.mapId` (sha256 dfb9477b…415f28), and the kit's `run-match.ts` rewrites it byte for byte.
