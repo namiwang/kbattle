@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { AGENT_HP, AGENT_RADIUS_M } from "../../src/constants";
 import type { MapSpec } from "../../src/schemas";
 import { circleInsideArena, circleOverlapsPolygon } from "../../src/sim/collision";
-import { createRng, nextFloat, type RngState } from "../../src/sim/rng";
+import { createRng, nextFloat, type RngState } from "../../src/rng";
 import { step, type StepActions } from "../../src/sim/step";
 import { MOVE_CHOICES, TURN_CHOICES, type Action, type WorldState } from "../../src/types";
 import { arena1, makeAgent, makeWorld } from "./helpers";

@@ -36,7 +36,7 @@ import {
   segmentLeavesArenaT,
   segmentPolygonT,
 } from "./collision";
-import { nextFloat } from "./rng";
+import { nextFloat } from "../rng";
 import { spawnBullet, spreadDeg } from "./weapons";
 
 /** New actions from this tick's doer answers, by agent id; an agent without one keeps its current action. */

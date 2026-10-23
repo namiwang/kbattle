@@ -42,7 +42,7 @@ import {
 import type { Agent, AgentId, HearingBand, Observation, TickFacts, WorldState } from "../types";
 import { dist, type Vec2 } from "../vec2";
 import { hasLineOfSight } from "./collision";
-import { roundTo } from "./round";
+import { roundTo } from "../round";
 
 /**
  * The parts of the world perception reads. A WorldState is one; the mind panel

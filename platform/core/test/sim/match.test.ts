@@ -17,7 +17,7 @@ import {
 import { rankAgents, runMatch } from "../../src/sim/match";
 import { replayMatch } from "../../src/sim/replay-provider";
 import type { DecisionContext, DecisionProvider } from "../../src/sim/providers";
-import { roundTo } from "../../src/sim/round";
+import { roundTo } from "../../src/round";
 import type { MoveChoice, TurnChoice, WorldState } from "../../src/types";
 import { makeAgent } from "./helpers";
 

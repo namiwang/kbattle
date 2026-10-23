@@ -3,7 +3,7 @@ import { headingTo } from "../../src/angles";
 import { AGENT_HP } from "../../src/constants";
 import { getMap } from "../../src/maps";
 import type { MapSpec, MatchConfig, Slot } from "../../src/schemas";
-import { createRng } from "../../src/sim/rng";
+import { createRng } from "../../src/rng";
 import { spawn } from "../../src/sim/world";
 import { STOP_ACTION } from "../../src/types";
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { AGENT_RADIUS_M, DOER_INTERVAL_TICKS, HEAR_SHOT_RANGE_M, MOVE_SPEED_MPS, VISION_CONE_DEG, VISION_RANGE_M } from "../../src/constants";
 import { circleInsideArena, circleOverlapsPolygon } from "../../src/sim/collision";
 import { perceive } from "../../src/sim/perceive";
-import { createRng, nextFloat, type RngState } from "../../src/sim/rng";
+import { createRng, nextFloat, type RngState } from "../../src/rng";
 import { HEARING_BANDS, type Agent, type Observation, type TickFacts, type WorldState } from "../../src/types";
 import { mpsToMetersPerTick } from "../../src/units";
 import { dist, fromAngle, scale, add } from "../../src/vec2";

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { normalizeDeg } from "../../src/angles";
 import { AGENT_RADIUS_M, BULLET_SPEED_MPS, FIRE_INTERVAL_TICKS, SPREAD_DEG } from "../../src/constants";
-import { nextFloat } from "../../src/sim/rng";
+import { nextFloat } from "../../src/rng";
 import { step, type StepEvent } from "../../src/sim/step";
 import { BULLET_STEP_M, MUZZLE_OFFSET_M, spawnBullet, spreadDeg } from "../../src/sim/weapons";
 import type { Action, WorldState } from "../../src/types";

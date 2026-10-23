@@ -7,7 +7,7 @@ import { MatchLogSchema, type DoerAnswer, type Event, type MapSpec, type MatchCo
 import { runMatch } from "../../src/sim/match";
 import type { DecisionContext, DecisionProvider } from "../../src/sim/providers";
 import { makeReplayingProvider, replayMatch } from "../../src/sim/replay-provider";
-import { createRng, nextFloat } from "../../src/sim/rng";
+import { createRng, nextFloat } from "../../src/rng";
 
 // v1.6 exit (DESIGN.md §6.1): the same seed and the same recorded answers,
 // replayed at their recorded ticks, reproduce the same log, byte for byte; and a

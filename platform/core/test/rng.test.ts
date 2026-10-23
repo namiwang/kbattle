@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createRng, nextFloat, nextUint32, type RngState } from "../../src/sim/rng";
+import { createRng, nextFloat, nextUint32, type RngState } from "../src/rng";
 
 // R3: splitmix32, pure integer arithmetic, plain-data state that lives in WorldState.
 

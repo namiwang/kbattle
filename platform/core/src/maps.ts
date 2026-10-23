@@ -8,7 +8,7 @@ import arena2 from "../maps/arena-2.json" with { type: "json" };
 import { AGENT_RADIUS_M } from "./constants";
 import { MapSpecSchema, type MapSpec } from "./schemas";
 import { pointPolygonDistance, segmentsIntersect } from "./sim/collision";
-import { roundTo } from "./sim/round";
+import { roundTo } from "./round";
 import { dist, type Vec2 } from "./vec2";
 
 const BUNDLED: Readonly<Record<string, unknown>> = { "arena-1": arena1, "arena-2": arena2 };

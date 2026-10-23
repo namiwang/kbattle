@@ -5,7 +5,7 @@
 import { normalizeDeg } from "../angles";
 import { DOER_INTERVAL_TICKS, MOVE_SPEED_MPS, TURN_RATE_DPS } from "../constants";
 import type { BotKind, DoerAnswer } from "../schemas";
-import { createRng, nextFloat, nextUint32, type RngState } from "../sim/rng";
+import { createRng, nextFloat, nextUint32, type RngState } from "../rng";
 import type { AgentId, MoveChoice, TurnChoice } from "../types";
 import { dpsToDegreesPerTick, mpsToMetersPerTick } from "../units";
 import { dist, type Vec2 } from "../vec2";

@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { AGENT_HP } from "../../src/constants";
 import { getMap } from "../../src/maps";
 import type { MapSpec } from "../../src/schemas";
-import { createRng } from "../../src/sim/rng";
+import { createRng } from "../../src/rng";
 import { STOP_ACTION, type Agent, type Bullet, type WorldState } from "../../src/types";
 import type { Vec2 } from "../../src/vec2";
 

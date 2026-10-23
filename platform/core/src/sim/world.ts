@@ -4,7 +4,7 @@ import { headingTo } from "../angles";
 import { AGENT_HP } from "../constants";
 import type { MapSpec, MatchConfig } from "../schemas";
 import { STOP_ACTION, type Agent, type WorldState } from "../types";
-import { createRng, nextFloat, type RngState } from "./rng";
+import { createRng, nextFloat, type RngState } from "../rng";
 
 /**
  * The world at tick 0: one agent per slot, `a0`… in slot order, standing on the

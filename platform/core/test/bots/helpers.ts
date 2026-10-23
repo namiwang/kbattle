@@ -3,7 +3,7 @@
 
 import type { DoerAnswer } from "../../src/schemas";
 import type { DecisionProvider } from "../../src/sim/providers";
-import { createRng, nextFloat, type RngState } from "../../src/sim/rng";
+import { createRng, nextFloat, type RngState } from "../../src/rng";
 import type { AgentId, Observation } from "../../src/types";
 
 type Self = Observation["self"];

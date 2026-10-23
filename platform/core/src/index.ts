@@ -14,7 +14,7 @@ export * from "./log";
 // The sim (DESIGN.md §5.1 core role, §6.2): seeded RNG, world setup, one tick,
 // perception, doer answers to actions, and the match loop with its log writer.
 // Geometry lives under `collision` (collision.hasLineOfSight, ...).
-export { createRng, nextFloat, nextUint32, type Draw, type RngState } from "./sim/rng";
+export { createRng, nextFloat, nextUint32, type Draw, type RngState } from "./rng";
 export { spawn } from "./sim/world";
 export { step, type StepActions, type StepEvent, type StepResult } from "./sim/step";
 export { perceive, type PerceivedAgent, type PerceptionState } from "./sim/perceive";

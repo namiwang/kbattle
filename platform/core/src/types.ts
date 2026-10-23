@@ -5,7 +5,7 @@
 // Units (§6.1): meters, y down, degrees clockwise-positive with 0° = +x, ticks.
 
 import type { MapSpec } from "./schemas";
-import type { RngState } from "./sim/rng";
+import type { RngState } from "./rng";
 import type { Vec2 } from "./vec2";
 
 /** `a0`…`a15` in slot order (§6.1). */

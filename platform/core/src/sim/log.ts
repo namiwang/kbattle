@@ -14,7 +14,7 @@ import { normalizeDeg } from "../angles";
 import type { EventOf } from "../log";
 import type { Event, MatchConfig, MatchLog, Prompts } from "../schemas";
 import type { AgentId, WorldState } from "../types";
-import { roundTo } from "./round";
+import { roundTo } from "../round";
 
 export interface LogWriter {
   /** A Spawn event per agent (slot order), then the Tick snapshot of that world (R1: tick 0). */

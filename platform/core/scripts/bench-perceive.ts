@@ -16,7 +16,7 @@ import { DOER_INTERVAL_TICKS } from "../src/constants";
 import { getMap } from "../src/maps";
 import type { MapSpec, Slot } from "../src/schemas";
 import { perceive } from "../src/sim/perceive";
-import { createRng, nextFloat, type RngState } from "../src/sim/rng";
+import { createRng, nextFloat, type RngState } from "../src/rng";
 import { step } from "../src/sim/step";
 import { spawn } from "../src/sim/world";
 import { MOVE_CHOICES, TURN_CHOICES, type Action, type TickFacts, type WorldState } from "../src/types";
