@@ -1,5 +1,7 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
+import { TICK_MS } from "../../src/constants";
 import {
+  ACTOR_INTERVAL_TICKS,
   ACTOR_TIMEOUT_MS,
   botSpec,
   callsOf,
@@ -17,7 +19,7 @@ import {
   type Model,
   type Reply,
 } from "../../src/contracts";
-import { runMatch } from "../../src/match";
+import { actorIntervalOf, runMatch, tickMsOf } from "../../src/match";
 import { createRng } from "../../src/rng";
 import { counterConfig, fakeArena, stepAnswer, type CounterTypes, type Direction, type StepEvent } from "../fake-arena";
 
@@ -223,8 +225,9 @@ describe("runMatch: what the actor is asked (R22.d)", () => {
     const spy = scripted("dummy/spy", () => answered("dummy/spy", "up"), seen);
     const bot = scripted("bot/upper", () => answered("bot/upper", "up"), seen);
     const arena: Arena<CounterTypes> = { ...fakeArena, bots: { upper: () => bot } };
-    const planned = player("dummy/spy", { roles: { actor: { model: "dummy/spy" }, planner: { model: "dummy/spy" } } });
-    await runMatch(arena, counterConfig({ durationTicks: 1 }), [player("dummy/spy"), upper, planned], { models: resolver(spy) });
+    // The planner (R0.4) is its own model, so `seen` holds only the actor's requests.
+    const planned = player("dummy/spy", { roles: { actor: { model: "dummy/spy" }, planner: { model: "dummy/planner" } } });
+    await runMatch(arena, counterConfig({ durationTicks: 1 }), [player("dummy/spy"), upper, planned], { models: resolver(spy, always("dummy/planner", "up")) });
     const observation = { counter: 0, ticksLeft: 1 };
     expect(seen.map((req) => req.state)).toEqual([
       { observation, plan: "Go up." },
@@ -702,6 +705,28 @@ describe("runMatch: the envelope, the RNG and the clock (R22.b, i)", () => {
   it("plays the same match to the same bytes", async () => {
     const run = () => runMatch(fakeArena, counterConfig({ durationTicks: 30 }), [upper, player("dummy/down")], { models: () => always("dummy/down", "down") });
     expect(JSON.stringify(await run())).toBe(JSON.stringify(await run()));
+  });
+});
+
+describe("an arena's own clock: tickMs and actorIntervalTicks (DESIGN.md §5.2, row 46)", () => {
+  it("actorIntervalOf is the arena's actorIntervalTicks, else ACTOR_INTERVAL_TICKS; the loop asks on its due ticks", () => {
+    expect(actorIntervalOf(fakeArena)).toBe(2);
+    expect(actorIntervalOf({ ...fakeArena, actorIntervalTicks: undefined })).toBe(ACTOR_INTERVAL_TICKS);
+  });
+
+  it("tickMsOf is the arena's tickMs, else TICK_MS", () => {
+    expect(tickMsOf(fakeArena)).toBe(100);
+    expect(tickMsOf({ ...fakeArena, tickMs: undefined })).toBe(TICK_MS);
+  });
+
+  it("a runner that plays in real time paces the fake arena at its own 100 ms ticks", async () => {
+    const at: number[] = [];
+    const log = await runMatch(fakeArena, counterConfig({ durationTicks: 3 }), [upper, upper], {
+      minWallMsPerTick: tickMsOf(fakeArena),
+      onTick: () => at.push(performance.now()),
+    });
+    for (let i = 1; i < at.length; i++) expect(at[i]! - at[i - 1]!, `tick ${i - 1} to ${i}`).toBeGreaterThanOrEqual(99.5);
+    expect(log.events.at(-1)).toMatchObject({ kind: "MatchEnd", tick: 3 });
   });
 });
 
