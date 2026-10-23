@@ -70,7 +70,7 @@ import {
   type Reply,
   type Role,
 } from "../contracts";
-import { createRng } from "../sim/rng";
+import { createRng } from "../rng";
 
 export interface RunMatchDeps<State = unknown> {
   /** The match's mode; the arena's first when absent. */

@@ -10,7 +10,7 @@
 // Namespace import on purpose: `import { z }` keeps every zod locale in a bundle
 // (measured for v1: a Worker importing the schemas, 464 KiB minified vs 110 KiB).
 import * as z from "zod";
-import { roundTo } from "../sim/round";
+import { roundTo } from "../round";
 
 /** A question's key in a question set: lower snake case, 1 to 64 characters ("step", "turn_to"). */
 export const QuestionIdSchema = z

@@ -308,8 +308,11 @@ by code nobody has touched. Captured on 2026-10-23 at commit 0279b8b
 with `scripts/run-match.ts` (arena-1, seed 7, 6,000 ticks): three runs
 byte-identical, 2,083 events, ends at tick 1168 with a9 (camper) alive,
 510,782 bytes, sha256 7de1324b…d27f0337, stored as
-`platform/core/fixtures/parity/v1-run.json` (it moves with the fixtures
-to the kit in R0.3 and to the arena in R0.4). Wall time of the version-1
+`platform/core/fixtures/parity/v1-run.json`; R0.3 moved it to
+`kits/shooter/fixtures/parity/` with only `config.mapId` rewritten to
+`map-1` (sha256 dfb9477b…58415f28, 510,780 bytes, events untouched, and
+the kit's `run-match.ts` reproduces it byte for byte); R0.4 moves it to
+the arena. Wall time of the version-1
 loop on this machine: 44, 40 and 38 ms for the match, so the "within 2×"
 gate is judged against a same-session median, not this number. Cost if
 wrong: none; regenerate from 0279b8b.
@@ -375,3 +378,26 @@ move only, so the format is unchanged and `features` is left to the
 extraction arena, its first user (controller ruling). Cost if wrong: an
 old log is regenerated with the kit's `run-match.ts` (or its `mapId`
 edited) until R0.5; `features` is one optional schema field when needed.
+
+## I-032 Contract details decided in R0.2 — resolved (controller may override)
+
+Beyond rulings R21–R22, the R0.2 agent settled, and the controller
+accepted: `arena.actionFrom(answers, obs, previous)` gets `previous`
+as `undefined` before an agent's first accepted answer (no contract
+member supplies an initial action; the kit's step keeps its own stop
+action for agents without one), and `step` receives only the active
+agents that have an action; the arena type bag has no `Answers` member
+(arenas narrow the platform's checked answers themselves); failure
+kinds: a rejected or throwing `ask` and a malformed reply are
+`invalid_output` ("ask failed: …", "invalid reply: …"), checked answers
+that fail are `invalid_output` ("invalid answer: <path>: <message>"), a
+timeout is `timeout`, a cancel is `aborted`; a failed `Call` logs the
+spec's model id and no usage (replay stays byte-identical; the tokens a
+rejected answer cost are not reported, a minor for R3.3); an agent with
+a planner starts with an empty plan and scratchpad; answers are logged
+in the questions' order; `escalate` is a reserved question id; noul
+answers are rounded to 4 decimals like probabilities (v1 logged them as
+given; bots answer 0 or 1, so parity holds); `EventSchema` is a loose
+object with a dispatch transform because zod's discriminated union
+takes no catch-all, so it has no JSON Schema form. Cost if wrong: each
+is a one-file change in `platform/core`.

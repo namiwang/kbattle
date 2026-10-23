@@ -10,7 +10,7 @@ import {
   type Model,
   type Questions,
 } from "../../src/contracts";
-import { createRng, type RngState } from "../../src/sim/rng";
+import { createRng, type RngState } from "../../src/rng";
 import { counterConfig, fakeArena, stepAnswer, type CounterState, type CounterTypes } from "../fake-arena";
 import { issuePaths, roundTrip, without } from "./helpers";
 

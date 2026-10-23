@@ -18,7 +18,7 @@ import {
   type Reply,
 } from "../../src/contracts";
 import { runMatch } from "../../src/match";
-import { createRng } from "../../src/sim/rng";
+import { createRng } from "../../src/rng";
 import { counterConfig, fakeArena, stepAnswer, type CounterTypes, type Direction, type StepEvent } from "../fake-arena";
 
 // The generic match loop, skeleton (DESIGN.md §5.2, §5.5, rows 39–40; rulings

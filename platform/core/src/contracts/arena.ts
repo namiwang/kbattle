@@ -6,7 +6,7 @@
 // pairs an arena with its renderer (R1.1).
 
 import * as z from "zod";
-import type { RngState } from "../sim/rng";
+import type { RngState } from "../rng";
 import type { AgentId, Memory } from "./agent";
 import type { Model } from "./model";
 import type { Answers, QuestionId, Questions } from "./question";
