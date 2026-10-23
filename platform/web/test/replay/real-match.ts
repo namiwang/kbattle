@@ -4,8 +4,7 @@
 // network), with the live world of every tick kept from runMatch's onTick. The
 // log is what the viewer opens; the live worlds are what the agents perceived.
 
-import { MATCH_DURATION_TICKS } from "@decision-arena/core";
-import { MatchConfigSchema, type MatchLog, type Slot } from "@decision-arena/core/legacy";
+import { MATCH_DURATION_TICKS, MatchConfigSchema, type MatchLog, type Slot } from "@decision-arena/core/legacy";
 import { botProviders, runMatch, type WorldState } from "@decision-arena/kit-shooter";
 
 export interface RealMatch {

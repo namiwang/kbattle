@@ -1,4 +1,4 @@
-import { DOER_MODEL } from "@decision-arena/core";
+import { DOER_MODEL } from "@decision-arena/core/legacy";
 import type { DecideRequest } from "@decision-arena/core/legacy";
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi, type MockInstance } from "vitest";
 import decideRequest from "../../core/fixtures/decide-request.json" with { type: "json" };

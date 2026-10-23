@@ -1,5 +1,5 @@
-import { DOER_INTERVAL_TICKS, MATCH_DURATION_TICKS, TICK_MS } from "@decision-arena/core";
-import { eventsOfKind, type MatchConfig, type Prompts } from "@decision-arena/core/legacy";
+import { TICK_MS } from "@decision-arena/core";
+import { DOER_INTERVAL_TICKS, eventsOfKind, MATCH_DURATION_TICKS, type MatchConfig, type Prompts } from "@decision-arena/core/legacy";
 import { describe, expect, it } from "vitest";
 import { botProviders } from "../../src/bots";
 import { runMatch } from "../../src/legacy/match";

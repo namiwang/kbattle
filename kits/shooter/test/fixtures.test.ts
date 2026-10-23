@@ -3,8 +3,7 @@
 // replay viewer can rely on in the sample. Moved from platform/core/test/schemas.test.ts
 // and log.test.ts with the fixtures (ruling R23).
 
-import { DOER_INTERVAL_TICKS } from "@decision-arena/core";
-import { eventsOfKind, EventSchema, lastTick, MatchLogSchema, type MatchLog } from "@decision-arena/core/legacy";
+import { DOER_INTERVAL_TICKS, eventsOfKind, EventSchema, lastTick, MatchLogSchema, type MatchLog } from "@decision-arena/core/legacy";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type * as z from "zod";

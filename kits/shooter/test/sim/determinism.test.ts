@@ -1,5 +1,5 @@
-import { createRng, MATCH_DURATION_TICKS, nextFloat } from "@decision-arena/core";
-import { eventsOfKind, MatchLogSchema, type DoerAnswer, type Event, type MatchConfig, type MatchLog, type Prompts, type Slot } from "@decision-arena/core/legacy";
+import { createRng, nextFloat } from "@decision-arena/core";
+import { eventsOfKind, MATCH_DURATION_TICKS, MatchLogSchema, type DoerAnswer, type Event, type MatchConfig, type MatchLog, type Prompts, type Slot } from "@decision-arena/core/legacy";
 import { readdirSync, readFileSync } from "node:fs";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { botProviders } from "../../src/bots";

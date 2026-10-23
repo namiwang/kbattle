@@ -2,7 +2,7 @@
 // perception to the thinker, see the parsed Plan or the fault (DESIGN.md §5.4-§5.6).
 // The key lives in localStorage and goes only to api.anthropic.com (§7, §10).
 import { makeAnthropicThinker } from "@decision-arena/models";
-import { THINKER_MODEL } from "@decision-arena/core";
+import { THINKER_MODEL } from "@decision-arena/core/legacy";
 import { applyResult, initialSpikeState, type SpikeState } from "./spike-thinker-state";
 
 const KEY_STORAGE = "decision-arena:v1:anthropic-key";

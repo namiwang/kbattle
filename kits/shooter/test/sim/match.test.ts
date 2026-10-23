@@ -1,6 +1,8 @@
-import { DOER_INTERVAL_TICKS, MATCH_DURATION_TICKS, roundTo } from "@decision-arena/core";
+import { roundTo } from "@decision-arena/core";
 import {
+  DOER_INTERVAL_TICKS,
   eventsOfKind,
+  MATCH_DURATION_TICKS,
   MatchLogSchema,
   type DoerAnswer,
   type Event,

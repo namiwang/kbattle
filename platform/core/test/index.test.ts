@@ -10,14 +10,15 @@ describe("@decision-arena/core entry point", () => {
     expect(core.nextFloat(rng).value).toBe(0.3678755429573357);
     expect(core.nextUint32(rng).value).toBe(1580013426);
     expect([core.roundTo(2.345678, 2), core.roundTo(-0.004, 2)]).toEqual([2.35, 0]);
-    expect([core.TICK_MS, core.DOER_INTERVAL_TICKS, core.THINKER_MODEL]).toEqual([50, 10, "claude-haiku-5-5"]);
+    expect([core.TICK_MS, core.ACTOR_INTERVAL_TICKS, core.ESCALATE_THRESHOLD]).toEqual([50, 10, 0.7]);
     // The shooter lives in kits/shooter (ruling R23).
     for (const name of ["vec2", "getMap", "MAP_IDS", "spawn", "step", "perceive", "collision", "makeBot", "STOP_ACTION", "AGENT_HP", "FIRE_THRESHOLD"]) {
       expect(core, name).not.toHaveProperty(name);
     }
   });
 
-  it("keeps the version-1 schemas, log helpers and choice lists under ./legacy, each boundary type z.infer of its schema", () => {
+  it("keeps the version-1 schemas, log helpers, choice lists and constants under ./legacy, each boundary type z.infer of its schema", () => {
+    expect([legacy.DOER_INTERVAL_TICKS, legacy.THINKER_MODEL, legacy.MATCH_DURATION_TICKS]).toEqual([10, "claude-haiku-5-5", 6000]);
     const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { exports: Record<string, string> };
     expect(pkg.exports["./legacy"]).toBe("./src/legacy/index.ts");
     expect(legacy.schemas.MatchLog).toBe(legacy.MatchLogSchema);

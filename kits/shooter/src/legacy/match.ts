@@ -47,8 +47,10 @@
 // A cancelled match replays by cancelling after the same tick. Cross-engine
 // determinism is not required (§6.1): the renderer reads Tick rows.
 
-import { DOER_INTERVAL_TICKS, DOER_TIMEOUT_MS, roundTo } from "@decision-arena/core";
+import { roundTo } from "@decision-arena/core";
 import {
+  DOER_INTERVAL_TICKS,
+  DOER_TIMEOUT_MS,
   DoerAnswersSchema,
   EventSchema,
   MatchConfigSchema,

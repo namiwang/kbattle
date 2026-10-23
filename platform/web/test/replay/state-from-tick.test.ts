@@ -1,4 +1,4 @@
-import { DOER_INTERVAL_TICKS } from "@decision-arena/core";
+import { PERCEPTION_WINDOW_TICKS } from "@decision-arena/kit-shooter";
 import { MatchLogSchema, type Event as LogEvent, type MatchLog } from "@decision-arena/core/legacy";
 import { normalizeDeg, perceive, type Observation, type TickFacts, type Vec2 } from "@decision-arena/kit-shooter";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -57,7 +57,7 @@ describe("stateFromTick on the sample log", () => {
 
   it("tick 115: each step's shots and hits stand where the shooter stood at that tick (b6 was a1's, fired at 101)", () => {
     const state = stateFromTick(index, sample, 115);
-    expect(state.recent).toHaveLength(DOER_INTERVAL_TICKS); // ticks 106..115
+    expect(state.recent).toHaveLength(PERCEPTION_WINDOW_TICKS); // ticks 106..115
     expect(state.recent[5]).toEqual({ ...NO_FACTS, shots: [{ agent: "a0", pos: { x: 26.5, y: 50 } }, { agent: "a1", pos: { x: 68.25, y: 50 } }] }); // 111
     expect(state.recent[8]).toEqual({ ...NO_FACTS, hits: [{ target: "a1", from: { x: 26.5, y: 50 } }] }); // 114: b5, a0's
     expect(state.recent[9]).toEqual({ ...NO_FACTS, hits: [{ target: "a0", from: { x: 67.25, y: 50 } }] }); // 115: b6, a1's

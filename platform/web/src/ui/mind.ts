@@ -3,7 +3,7 @@
 // instruction is fixed by Decision Arena (§5.4), so Prompts has no field for it. A blank
 // instruction uses the default (ISSUES I-005), which the field shows as its placeholder.
 
-import { DOER_INTERVAL_TICKS, TICK_MS } from "@decision-arena/core";
+import { ACTOR_INTERVAL_TICKS, TICK_MS } from "@decision-arena/core";
 import { MOVE_CHOICES, PromptsSchema, TURN_CHOICES, type Prompts } from "@decision-arena/core/legacy";
 import { DEFAULT_PROMPTS } from "./defaults";
 import { el, showText } from "./dom";
@@ -13,7 +13,7 @@ type Question = keyof Prompts["doerInstructions"];
 
 const THINKER_MAX = PromptsSchema.shape.thinkerSystem.maxLength ?? 8000;
 const DOER_MAX = PromptsSchema.shape.doerInstructions.shape.move.maxLength ?? 500;
-const DOER_SECONDS = (DOER_INTERVAL_TICKS * TICK_MS) / 1000;
+const DOER_SECONDS = (ACTOR_INTERVAL_TICKS * TICK_MS) / 1000;
 
 const oneOf = (choices: readonly string[]) => `${choices.slice(0, -1).join(", ")} or ${choices.at(-1)}`;
 

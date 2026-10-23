@@ -2,7 +2,7 @@
 // SDK's request with a canned HTTP response and checks the ThinkerResult (DESIGN.md
 // §5.4 thinker contract, §5.5 fault model, row 29).
 import { describe, expect, it } from "vitest";
-import { THINKER_MODEL } from "@decision-arena/core";
+import { THINKER_MODEL } from "@decision-arena/core/legacy";
 import { makeAnthropicThinker, thinkingParamFor } from "../src/providers/anthropic";
 import type { ThinkerInput } from "../src/types";
 import { apiError, fakeFetch, refusal, reply } from "./fake-anthropic";

@@ -1,7 +1,7 @@
 // The pure half of scripts/measure.ts (plan v0.5): turns the calls it made into the printed report.
 // Latency is nearest-rank per HTTP status; cost comes from usage.input_tokens of the valid answers.
 
-import { DOER_INTERVAL_TICKS, MATCH_DURATION_TICKS } from "@decision-arena/core";
+import { DOER_INTERVAL_TICKS, MATCH_DURATION_TICKS } from "@decision-arena/core/legacy";
 import { DoerAnswerSchema, type DoerAnswer } from "@decision-arena/core/legacy";
 
 /** clef-flash price per million input tokens (Workers AI model page, 2026-10-21); output tokens are free. */

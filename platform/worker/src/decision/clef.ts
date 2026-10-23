@@ -1,4 +1,4 @@
-import { DOER_MODEL } from "@decision-arena/core";
+import { DOER_MODEL } from "@decision-arena/core/legacy";
 import { DoerAnswerSchema, type DecideRequest, type DoerAnswer } from "@decision-arena/core/legacy";
 
 /**

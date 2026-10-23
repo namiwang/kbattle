@@ -31,16 +31,16 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
-import { DOER_INTERVAL_TICKS, MATCH_DURATION_TICKS } from "@decision-arena/core";
 import {
   eventsOfKind,
+  MATCH_DURATION_TICKS,
   MatchConfigSchema,
   MatchLogSchema,
   type Event as LogEvent,
   type MatchLog,
   type Slot,
 } from "@decision-arena/core/legacy";
-import { botProviders, getMap, normalizeDeg, perceive, runMatch, vec2, type Vec2 } from "@decision-arena/kit-shooter";
+import { botProviders, getMap, normalizeDeg, PERCEPTION_WINDOW_TICKS, perceive, runMatch, vec2, type Vec2 } from "@decision-arena/kit-shooter";
 import { chromium, type Locator, type Page } from "playwright";
 import { createServer, type ViteDevServer } from "vite";
 import { TRAIL_TICKS, type DrawnBullets } from "../src/replay/bullets";
@@ -1709,7 +1709,7 @@ async function realMatchLog(): Promise<MatchLog> {
 
 /**
  * Where the fire on `agent` that perceive reports at `tick` came from, read straight off the log,
- * not through stateFromTick. Perception holds the last DOER_INTERVAL_TICKS steps (R15), so: for
+ * not through stateFromTick. Perception holds the last PERCEPTION_WINDOW_TICKS steps (R15), so: for
  * each tick of that window, oldest first, the owner of each bullet that hit it where that tick's
  * row puts the owner; then, again oldest first, the rows' `near` entries for it. Null when an
  * owner is gone from its row (the log has no position for it then).
@@ -1717,7 +1717,7 @@ async function realMatchLog(): Promise<MatchLog> {
 function fireFrom(index: LogIndex, tick: number, agent: string): Vec2[] | null {
   const hits: Vec2[] = [];
   const near: Vec2[] = [];
-  for (let s = Math.max(1, tick - DOER_INTERVAL_TICKS + 1); s <= tick; s++) {
+  for (let s = Math.max(1, tick - PERCEPTION_WINDOW_TICKS + 1); s <= tick; s++) {
     const row = index.byTick(s);
     for (const event of index.eventsAt(s)) {
       if (event.kind !== "Hit" || event.target !== agent) continue;

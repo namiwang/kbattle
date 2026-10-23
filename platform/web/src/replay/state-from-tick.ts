@@ -8,8 +8,8 @@
 // death), HP 0. kills: Death events up to the tick naming the agent as killer.
 // moved: the position differs from the previous tick's row.
 //
-// The perception window (`recent`): the steps of the last DOER_INTERVAL_TICKS
-// ticks up to this one (ticks 1..t while t < DOER_INTERVAL_TICKS), oldest
+// The perception window (`recent`): the steps of the last PERCEPTION_WINDOW_TICKS
+// ticks up to this one (ticks 1..t while t < PERCEPTION_WINDOW_TICKS), oldest
 // first, as the sim keeps it. Each step s: its Shot events, standing where the
 // shooter's row of tick s puts it; its Hit events, from where the bullet's
 // owner (its Shot event) stood at tick s, as step() reports them; near misses
@@ -18,10 +18,10 @@
 // of tick s (it died in that step or before) stands at its last row
 // (ISSUES I-019).
 
-import { DOER_INTERVAL_TICKS } from "@decision-arena/core";
 import type { MatchLog } from "@decision-arena/core/legacy";
 import {
   getMap,
+  PERCEPTION_WINDOW_TICKS,
   type PerceivedAgent,
   type PerceptionState,
   type TickFacts,
@@ -55,7 +55,7 @@ export function stateFromTick(index: LogIndex, log: MatchLog, tick: number): Per
   });
 
   const recent: TickFacts[] = [];
-  for (let s = Math.max(1, t - DOER_INTERVAL_TICKS + 1); s <= t; s++) recent.push(stepFacts(index, s));
+  for (let s = Math.max(1, t - PERCEPTION_WINDOW_TICKS + 1); s <= t; s++) recent.push(stepFacts(index, s));
 
   return { tick: t, durationTicks: log.config.durationTicks, map: getMap(log.config.mapId), agents, recent };
 }

@@ -8,8 +8,7 @@
 // counts, size, wall time) goes to stdout when the log goes to a file, and to
 // stderr when the log goes to stdout, so `> match.json` captures the log alone.
 
-import { MATCH_DURATION_TICKS } from "@decision-arena/core";
-import { eventsOfKind, MatchConfigSchema, MatchLogSchema, type Prompts, type Slot } from "@decision-arena/core/legacy";
+import { eventsOfKind, MATCH_DURATION_TICKS, MatchConfigSchema, MatchLogSchema, type Prompts, type Slot } from "@decision-arena/core/legacy";
 import { writeFileSync } from "node:fs";
 import { botProviders } from "../src/bots";
 import { runMatch } from "../src/legacy/match";

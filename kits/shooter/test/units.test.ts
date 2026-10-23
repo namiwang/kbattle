@@ -1,4 +1,5 @@
-import { MATCH_DURATION_TICKS, TICK_MS } from "@decision-arena/core";
+import { TICK_MS } from "@decision-arena/core";
+import { MATCH_DURATION_TICKS } from "@decision-arena/core/legacy";
 import { PERCEPTION_WINDOW_TICKS } from "../src/constants";
 import { describe, expect, it } from "vitest";
 import { dpsToDegreesPerTick, mpsToMetersPerTick, secondsToTicks } from "../src/units";

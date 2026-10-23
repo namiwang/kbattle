@@ -13,8 +13,16 @@
 // Thinker results landing this tick, Doer calls due this tick, Shot, Hit,
 // Death, Tick (positions after the step), MatchEnd.
 
-import { DOER_INTERVAL_TICKS, DOER_TIMEOUT_MS, ESCALATE_THRESHOLD } from "@decision-arena/core";
-import { MatchLogSchema, type DoerAnswers, type Event, type MatchLog, type Plan } from "@decision-arena/core/legacy";
+import { ESCALATE_THRESHOLD } from "@decision-arena/core";
+import {
+  DOER_INTERVAL_TICKS,
+  DOER_TIMEOUT_MS,
+  MatchLogSchema,
+  type DoerAnswers,
+  type Event,
+  type MatchLog,
+  type Plan,
+} from "@decision-arena/core/legacy";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { headingTo, normalizeDeg, turnToward } from "../src/angles";
 import {
