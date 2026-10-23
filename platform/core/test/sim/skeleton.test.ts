@@ -5,7 +5,7 @@ import { step } from "../../src/sim/step";
 import { spawn } from "../../src/sim/world";
 import type { Action, WorldState } from "../../src/types";
 import { GOLDEN_DIR, singleBulletGolden, singleBulletWorld } from "./golden-scenarios";
-import { arena1, deepFreeze, makeAgent, makeBullet, makeWorld } from "./helpers";
+import { map1, deepFreeze, makeAgent, makeBullet, makeWorld } from "./helpers";
 
 // v1.1: step(state, actions) → { state, events } advances time and moves bullets
 // in straight lines; it is pure (R2): same inputs, same outputs, input untouched.
@@ -105,13 +105,13 @@ describe("golden: one bullet over 50 ticks (v1.1-single-bullet.json)", () => {
 
 describe("determinism: the same scenario with the same seed twice", () => {
   const sixteen = (seed: number): MatchConfig => ({
-    mapId: "arena-1",
+    mapId: "map-1",
     seed,
     durationTicks: 6000,
     slots: Array.from({ length: 16 }, (): Slot => ({ kind: "bot", bot: "camper" })),
   });
   const scenario = (seed: number) => {
-    const state = spawn(sixteen(seed), arena1);
+    const state = spawn(sixteen(seed), map1);
     const bullets = state.agents.map((a, n) => makeBullet(n, a.id, a.pos, { x: 1, y: n / 16 - 0.5 }));
     return run({ ...state, bullets, nextBulletId: bullets.length }, 50);
   };

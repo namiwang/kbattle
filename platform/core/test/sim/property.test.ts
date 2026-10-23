@@ -5,12 +5,12 @@ import { circleInsideArena, circleOverlapsPolygon } from "../../src/sim/collisio
 import { createRng, nextFloat, type RngState } from "../../src/rng";
 import { step, type StepActions } from "../../src/sim/step";
 import { MOVE_CHOICES, TURN_CHOICES, type Action, type WorldState } from "../../src/types";
-import { arena1, makeAgent, makeWorld } from "./helpers";
+import { map1, makeAgent, makeWorld } from "./helpers";
 
 // Property (v1.2): random seeded action streams never put an agent body outside
 // the arena or into an obstacle, and never produce a non-finite number.
 
-const OPEN: MapSpec = { id: "open", width: 100, height: 100, obstacles: [], spawns: arena1.spawns };
+const OPEN: MapSpec = { id: "open", width: 100, height: 100, obstacles: [], spawns: map1.spawns };
 const R = AGENT_RADIUS_M;
 const AGENTS = 4;
 const TICKS = 150;
@@ -89,11 +89,11 @@ function stream(map: MapSpec, seed: number): { blocked: number; shots: number } 
 }
 
 describe("property: random action streams stay in bounds and finite", () => {
-  it("200 seeded streams on arena-1", () => {
+  it("200 seeded streams on map-1", () => {
     let blocked = 0;
     let shots = 0;
     for (let seed = 0; seed < 200; seed++) {
-      const r = stream(arena1, seed);
+      const r = stream(map1, seed);
       blocked += r.blocked;
       shots += r.shots;
     }

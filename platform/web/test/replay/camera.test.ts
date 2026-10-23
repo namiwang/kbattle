@@ -72,7 +72,7 @@ describe("followChoices", () => {
     }));
     const log: MatchLog = {
       version: 1,
-      config: { mapId: "arena-1", seed: 1, durationTicks: 10, slots: Array.from({ length: 16 }, () => ({ kind: "doer" as const })) },
+      config: { mapId: "map-1", seed: 1, durationTicks: 10, slots: Array.from({ length: 16 }, () => ({ kind: "doer" as const })) },
       seed: 1,
       prompts: { thinkerSystem: "", doerInstructions: { move: "", turn: "", fire: "", target: "" } },
       events,

@@ -6,7 +6,7 @@ import { createRng, nextFloat, type RngState } from "../../src/rng";
 import { HEARING_BANDS, type Agent, type Observation, type TickFacts, type WorldState } from "../../src/types";
 import { mpsToMetersPerTick } from "../../src/units";
 import { dist, fromAngle, scale, add } from "../../src/vec2";
-import { arena1, deepFreeze, makeAgent, makeBullet, makeWorld } from "./helpers";
+import { map1, deepFreeze, makeAgent, makeBullet, makeWorld } from "./helpers";
 
 // Property (v1.3 exit criterion): perceive has no non-determinism. 100 seeded
 // random states (random positions, facings, HP, deaths, movement, bullets and a
@@ -38,7 +38,7 @@ function randomState(seed: number): WorldState {
     do pos = { x: draw.float() * 100, y: draw.float() * 100 };
     while (
       !circleInsideArena(pos, AGENT_RADIUS_M, 100, 100) ||
-      arena1.obstacles.some((o) => circleOverlapsPolygon(pos, AGENT_RADIUS_M, o.vertices))
+      map1.obstacles.some((o) => circleOverlapsPolygon(pos, AGENT_RADIUS_M, o.vertices))
     );
     const alive = draw.float() < 0.85;
     return makeAgent(slot, pos, draw.float() * 360 - 180, {

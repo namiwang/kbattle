@@ -4,7 +4,7 @@
 //
 //   pnpm --filter core exec tsx scripts/make-sample-log.ts
 //
-// The sample is a scripted fight on arena-1, not a sim run (the sim is P1):
+// The sample is a scripted fight on map-1, not a sim run (the sim is P1):
 // straight-line motion at the constants' speeds, scripted doer answers for a0,
 // a scripted wanderer for a1, and hits found by plain geometry. It gives the
 // replay viewer and the mind panel every event kind to draw (DESIGN.md §5.3).
@@ -36,7 +36,7 @@ import { MOVE_CHOICES, TURN_CHOICES, type Action, type Agent, type Bullet, type 
 import { dpsToDegreesPerTick, mpsToMetersPerTick } from "../src/units";
 import { add, dist, fromAngle, scale, sub, type Vec2 } from "../src/vec2";
 
-const MAP = getMap("arena-1");
+const MAP = getMap("map-1");
 const STEP_M = mpsToMetersPerTick(MOVE_SPEED_MPS);
 const BULLET_STEP_M = mpsToMetersPerTick(BULLET_SPEED_MPS);
 const TURN_STEP_DEG = dpsToDegreesPerTick(TURN_RATE_DPS);
@@ -174,7 +174,7 @@ function spawnAgent(id: string, slot: number, spawn: Vec2): Agent {
 function buildSampleLog(): MatchLog {
   const west = MAP.spawns.find((s) => s.x === 4 && s.y === 50);
   const east = MAP.spawns.find((s) => s.x === 96 && s.y === 50);
-  if (!west || !east) throw new Error("arena-1 lost its middle-lane spawns");
+  if (!west || !east) throw new Error("map-1 lost its middle-lane spawns");
   const a0 = spawnAgent("a0", 0, west);
   const a1 = spawnAgent("a1", 1, east);
   const agents = [a0, a1];

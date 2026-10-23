@@ -19,7 +19,7 @@ const PROMPTS: Prompts = {
 };
 
 const SIXTEEN: MatchConfig = {
-  mapId: "arena-1",
+  mapId: "map-1",
   seed: 7,
   durationTicks: MATCH_DURATION_TICKS,
   slots: Array.from({ length: 16 }, (_, i): Slot => ({ kind: "bot", bot: i % 2 === 0 ? "wanderer" : "camper" })),
@@ -123,7 +123,7 @@ describe("makeReplayingProvider", () => {
   });
 });
 
-describe("determinism harness: 16 bots on arena-1, seed 7 (v1.6 exit)", () => {
+describe("determinism harness: 16 bots on map-1, seed 7 (v1.6 exit)", () => {
   let recorded: MatchLog; // log A
 
   beforeAll(async () => {

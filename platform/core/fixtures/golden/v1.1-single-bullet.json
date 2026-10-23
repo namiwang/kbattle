@@ -1,5 +1,5 @@
 {
-  "scenario": "arena-1; a0 at (10, 50) facing 0, stopped; b0 (owner a0) at (10.6, 50) moving (1.5, -0.05) m/tick; 50 ticks",
+  "scenario": "map-1; a0 at (10, 50) facing 0, stopped; b0 (owner a0) at (10.6, 50) moving (1.5, -0.05) m/tick; 50 ticks",
   "trace": [
     [1,12.1,49.95],
     [2,13.6,49.9],

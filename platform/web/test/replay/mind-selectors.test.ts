@@ -260,7 +260,7 @@ const plan = (text: string) => ({ text, scratchpad: "" });
 // a1: its first doer call fails (1), later calls answer. a2: answers every call.
 const crafted: MatchLog = {
   version: 1,
-  config: { mapId: "arena-1", seed: 5, durationTicks: 60, slots: [{ kind: "prompted" }, { kind: "doer" }, { kind: "bot", bot: "camper" }] },
+  config: { mapId: "map-1", seed: 5, durationTicks: 60, slots: [{ kind: "prompted" }, { kind: "doer" }, { kind: "bot", bot: "camper" }] },
   seed: 5,
   prompts: { thinkerSystem: "", doerInstructions: { move: "", turn: "", fire: "", target: "" } },
   events: [

@@ -19,9 +19,9 @@ import { dist, type Vec2 } from "../../src/vec2";
 
 const PROMPTS: Prompts = { thinkerSystem: "", doerInstructions: { move: "", turn: "", fire: "", target: "" } };
 
-/** The v1.5 match: 16 bots, wanderers and campers alternating, on arena-1, seed 7. */
+/** The v1.5 match: 16 bots, wanderers and campers alternating, on map-1, seed 7. */
 const SIXTEEN: MatchConfig = {
-  mapId: "arena-1",
+  mapId: "map-1",
   seed: 7,
   durationTicks: MATCH_DURATION_TICKS,
   slots: Array.from({ length: 16 }, (_, i): Slot => ({ kind: "bot", bot: i % 2 === 0 ? "wanderer" : "camper" })),
@@ -67,7 +67,7 @@ function maxMatching<A, B>(as: readonly A[], bs: readonly B[], fits: (a: A, b: B
   return taken;
 }
 
-describe("perception window: 16 bots on arena-1, seed 7 (R15, review C1)", () => {
+describe("perception window: 16 bots on map-1, seed 7 (R15, review C1)", () => {
   let log: MatchLog;
   const decisions: Decision[] = [];
   /** Where the log puts each agent at a tick: its row; `approx` when the row omits it (it died in or before that step: its last row, ISSUES I-019). */

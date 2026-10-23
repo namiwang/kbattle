@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import { MatchLogSchema, type MatchConfig, type Prompts } from "../../src/schemas";
 import { createLogWriter, spawnEvents, tickEvent } from "../../src/sim/log";
 import { spawn } from "../../src/sim/world";
-import { arena1, makeAgent, makeBullet, makeWorld } from "./helpers";
+import { map1, makeAgent, makeBullet, makeWorld } from "./helpers";
 
 // The log writer (v1.5; sim ruling R10; ISSUES I-014, I-016): Spawn and Tick
 // rows built from the world, rounded as people and the mind panel read them;
 // events appended in order; every tick within 0..config.durationTicks.
 
 const config: MatchConfig = {
-  mapId: "arena-1",
+  mapId: "map-1",
   seed: 9,
   durationTicks: 50,
   slots: [{ kind: "prompted" }, { kind: "bot", bot: "camper" }, { kind: "doer" }],
@@ -91,7 +91,7 @@ describe("spawnEvents", () => {
 });
 
 describe("createLogWriter", () => {
-  const world = spawn(config, arena1);
+  const world = spawn(config, map1);
 
   it("spawn writes a Spawn per agent, then the Tick(0) snapshot (R1)", () => {
     const writer = createLogWriter(config, prompts);

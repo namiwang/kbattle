@@ -24,7 +24,7 @@ describe("stateFromTick on the sample log", () => {
     const state = stateFromTick(index, sample, 0);
     expect(state.tick).toBe(0);
     expect(state.durationTicks).toBe(200); // from log.config
-    expect(state.map.id).toBe("arena-1");
+    expect(state.map.id).toBe("map-1");
     expect(state.agents).toEqual([
       { id: "a0", pos: { x: 4, y: 50 }, facing: 0, hp: 100, alive: true, kills: 0, moved: false },
       { id: "a1", pos: { x: 96, y: 50 }, facing: 180, hp: 100, alive: true, kills: 0, moved: false },
@@ -98,7 +98,7 @@ describe("stateFromTick on the sample log", () => {
 function miniLog(events: (LogEvent | TickEvent)[]): MatchLog {
   return {
     version: 1,
-    config: { mapId: "arena-1", seed: 3, durationTicks: 50, slots: [{ kind: "prompted" }, { kind: "doer" }, { kind: "bot", bot: "camper" }] },
+    config: { mapId: "map-1", seed: 3, durationTicks: 50, slots: [{ kind: "prompted" }, { kind: "doer" }, { kind: "bot", bot: "camper" }] },
     seed: 3,
     prompts: { thinkerSystem: "", doerInstructions: { move: "", turn: "", fire: "", target: "" } },
     events: events as LogEvent[],

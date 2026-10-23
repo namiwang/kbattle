@@ -16,7 +16,7 @@ import { mpsToMetersPerTick } from "../src/units";
 const log: MatchLog = {
   version: 1,
   config: {
-    mapId: "arena-1",
+    mapId: "map-1",
     seed: 3,
     durationTicks: 100,
     slots: [{ kind: "prompted" }, { kind: "bot", bot: "camper" }],
@@ -73,10 +73,10 @@ describe("the sample log", () => {
   const sample = (): MatchLog =>
     MatchLogSchema.parse(JSON.parse(readFileSync(new URL("../fixtures/sample-log.json", import.meta.url), "utf8")));
 
-  it("is a 2-slot match on arena-1: a0 prompted, a1 a wanderer bot, seed 1, 200-tick limit", () => {
+  it("is a 2-slot match on map-1: a0 prompted, a1 a wanderer bot, seed 1, 200-tick limit", () => {
     const { config, seed } = sample();
     expect(config).toEqual({
-      mapId: "arena-1",
+      mapId: "map-1",
       seed: 1,
       durationTicks: 200,
       slots: [{ kind: "prompted" }, { kind: "bot", bot: "wanderer" }],
@@ -84,10 +84,10 @@ describe("the sample log", () => {
     expect(seed).toBe(1);
   });
 
-  it("spawns both agents at tick 0 on arena-1 spawn points", () => {
+  it("spawns both agents at tick 0 on map-1 spawn points", () => {
     const spawns = eventsOfKind(sample(), "Spawn");
     expect(spawns.map((s) => [s.agent, s.tick])).toEqual([["a0", 0], ["a1", 0]]);
-    for (const s of spawns) expect(getMap("arena-1").spawns).toContainEqual(s.pos);
+    for (const s of spawns) expect(getMap("map-1").spawns).toContainEqual(s.pos);
   });
 
   it("has a Tick at every tick from 0 to the end, and ends with MatchEnd ranking a0 first", () => {

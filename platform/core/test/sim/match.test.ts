@@ -27,9 +27,9 @@ import { makeAgent } from "./helpers";
 
 const PROMPTS: Prompts = { thinkerSystem: "", doerInstructions: { move: "", turn: "", fire: "", target: "" } };
 
-/** v1.5 exit: 16 bots, 8 wanderers and 8 campers, on arena-1, seed 7, the default 6,000 ticks. */
+/** v1.5 exit: 16 bots, 8 wanderers and 8 campers, on map-1, seed 7, the default 6,000 ticks. */
 const SIXTEEN: MatchConfig = {
-  mapId: "arena-1",
+  mapId: "map-1",
   seed: 7,
   durationTicks: MATCH_DURATION_TICKS,
   slots: Array.from({ length: 16 }, (_, i): Slot => ({ kind: "bot", bot: i % 2 === 0 ? "wanderer" : "camper" })),
@@ -79,7 +79,7 @@ const pathOf = (log: MatchLog, agent: string) =>
 
 const due = (tick: number) => (tick - 1) % DOER_INTERVAL_TICKS === 0;
 
-describe("runMatch: 16 bots on arena-1, seed 7, 6,000 ticks (v1.5 exit)", () => {
+describe("runMatch: 16 bots on map-1, seed 7, 6,000 ticks (v1.5 exit)", () => {
   let log: MatchLog;
   let wallMs: number;
   let final: WorldState;
@@ -109,12 +109,12 @@ describe("runMatch: 16 bots on arena-1, seed 7, 6,000 ticks (v1.5 exit)", () => 
     expect(Buffer.byteLength(JSON.stringify(log))).toBeLessThanOrEqual(5 * 1024 * 1024);
   });
 
-  it("starts with a Spawn per agent on arena-1's spawns and Tick(0), then has one Tick per tick (R1)", () => {
+  it("starts with a Spawn per agent on map-1's spawns and Tick(0), then has one Tick per tick (R1)", () => {
     const spawns = log.events.slice(0, 16);
     expect(spawns.map((e) => [e.kind, e.tick, e.kind === "Spawn" && e.agent])).toEqual(
       Array.from({ length: 16 }, (_, i) => ["Spawn", 0, `a${i}`]),
     );
-    for (const e of eventsOfKind(log, "Spawn")) expect(getMap("arena-1").spawns).toContainEqual(e.pos);
+    for (const e of eventsOfKind(log, "Spawn")) expect(getMap("map-1").spawns).toContainEqual(e.pos);
     expect(log.events[16]).toMatchObject({ kind: "Tick", tick: 0 });
     const end = log.events.at(-1)!;
     expect(eventsOfKind(log, "Tick").map((t) => t.tick)).toEqual(Array.from({ length: end.tick + 1 }, (_, t) => t));

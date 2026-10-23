@@ -23,9 +23,9 @@ export const DEFAULT_PROMPTS: Prompts = Object.freeze({
   }),
 });
 
-/** Row 23 [Q5]: 8 slots, 1 prompted, 0 doer-only, so 7 bots; arena-1, seed 1, the full match length. */
+/** Row 23 [Q5]: 8 slots, 1 prompted, 0 doer-only, so 7 bots; map-1, seed 1, the full match length. */
 export const DEFAULT_CONFIG: MatchForm = Object.freeze({
-  mapId: "arena-1",
+  mapId: "map-1",
   seed: 1,
   slots: 8,
   prompted: 1,

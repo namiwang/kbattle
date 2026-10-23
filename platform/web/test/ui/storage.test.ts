@@ -17,7 +17,7 @@ const saved: UiState = {
     thinkerSystem: "Hide until two are left, then hunt.",
     doerInstructions: { move: "Hug the walls.", turn: "Face the gap.", fire: "", target: "The nearest one." },
   },
-  config: { mapId: "arena-1", seed: 77, slots: 12, prompted: 2, doerOnly: 3, durationTicks: 2400 },
+  config: { mapId: "map-1", seed: 77, slots: 12, prompted: 2, doerOnly: 3, durationTicks: 2400 },
 };
 
 describe("saveState and loadState", () => {

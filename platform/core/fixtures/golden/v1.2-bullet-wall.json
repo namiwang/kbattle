@@ -1,5 +1,5 @@
 {
-  "scenario": "arena-1; a0 at (10, 24) facing 0, stopped; its bullets from (10.6, 24) at 3 m/tick: b0 at 0 deg into the north block (x = 42), b1 toward (24, 33) on the west triangle, b2 at -120 deg into the boundary x = 0, b3 toward (42, 17.8) past the block's corner to x = 100; 32 ticks",
+  "scenario": "map-1; a0 at (10, 24) facing 0, stopped; its bullets from (10.6, 24) at 3 m/tick: b0 at 0 deg into the north block (x = 42), b1 toward (24, 33) on the west triangle, b2 at -120 deg into the boundary x = 0, b3 toward (42, 17.8) past the block's corner to x = 100; 32 ticks",
   "removedAt": {
     "b0": 11,
     "b1": 6,

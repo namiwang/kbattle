@@ -108,7 +108,7 @@ const plan = { text: "Hold the east wall.", scratchpad: "a3 camps the gap." };
 
 // Row 23 default: 8 slots, 1 prompted, 7 bots.
 const matchConfig = {
-  mapId: "arena-1",
+  mapId: "map-1",
   seed: 42,
   durationTicks: 6000,
   slots: [
@@ -351,7 +351,7 @@ describe("DecideRequest: browser → Worker", () => {
     ["an unknown hearing band", { state: { ...state, heard: [{ kind: "shot", bearing: 3, dist: "close" }] } }, ["state", "heard", 0, "dist"]],
     ["an unknown sound", { state: { ...state, heard: [{ kind: "voice", bearing: 3, dist: "near" }] } }, ["state", "heard", 0, "kind"]],
     ["negative kills", { state: { ...state, self: { ...state.self, kills: -1 } } }, ["state", "self", "kills"]],
-    ["an unexpected state key", { state: { ...state, map: "arena-1" } }, ["state"]],
+    ["an unexpected state key", { state: { ...state, map: "map-1" } }, ["state"]],
     ["a client-chosen model (the Worker sets it)", { model: "@cf/cloudflare/clef" }, []],
   ])("rejects %s", (_name, change, path) => {
     expect(issuePaths(DecideRequestSchema, { ...decideRequest, ...change })).toContainEqual(path);

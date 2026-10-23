@@ -17,7 +17,7 @@ import {
   segmentsIntersect,
 } from "../../src/sim/collision";
 import { bulletWallGolden, GOLDEN_DIR } from "./golden-scenarios";
-import { arena1, makeAgent, makeBullet, makeWorld } from "./helpers";
+import { map1, makeAgent, makeBullet, makeWorld } from "./helpers";
 
 // Geometry under the sim (R4, R5, R7). Segments are p0 → p1 with t in [0, 1].
 
@@ -110,8 +110,8 @@ describe("pointInPolygon (even-odd rule)", () => {
     expect(pointInPolygon({ x: 7, y: 2 }, cShape)).toBe(true);
   });
 
-  it("arena-1's west triangle", () => {
-    const triangle = arena1.obstacles[1]!.vertices; // (18,30) (30,36) (18,42)
+  it("map-1's west triangle", () => {
+    const triangle = map1.obstacles[1]!.vertices; // (18,30) (30,36) (18,42)
     expect(pointInPolygon({ x: 20, y: 36 }, triangle)).toBe(true);
     expect(pointInPolygon({ x: 29, y: 33 }, triangle)).toBe(false);
   });
@@ -179,11 +179,11 @@ describe("the arena box", () => {
 });
 
 describe("hasLineOfSight: the center-to-center segment misses every obstacle edge (R7)", () => {
-  it("arena-1", () => {
-    expect(hasLineOfSight({ x: 35, y: 24 }, { x: 65, y: 24 }, arena1.obstacles)).toBe(false); // north block
-    expect(hasLineOfSight({ x: 35, y: 10 }, { x: 65, y: 10 }, arena1.obstacles)).toBe(true);
-    expect(hasLineOfSight({ x: 10, y: 50 }, { x: 90, y: 50 }, arena1.obstacles)).toBe(true); // middle lane
-    expect(hasLineOfSight({ x: 30, y: 18 }, { x: 70, y: 18 }, arena1.obstacles)).toBe(false); // grazes an edge
+  it("map-1", () => {
+    expect(hasLineOfSight({ x: 35, y: 24 }, { x: 65, y: 24 }, map1.obstacles)).toBe(false); // north block
+    expect(hasLineOfSight({ x: 35, y: 10 }, { x: 65, y: 10 }, map1.obstacles)).toBe(true);
+    expect(hasLineOfSight({ x: 10, y: 50 }, { x: 90, y: 50 }, map1.obstacles)).toBe(true); // middle lane
+    expect(hasLineOfSight({ x: 30, y: 18 }, { x: 70, y: 18 }, map1.obstacles)).toBe(false); // grazes an edge
   });
 });
 

@@ -765,8 +765,8 @@ async function checkUiShell(page: Page): Promise<void> {
     seconds: await text(page.locator(".ui-seconds")),
   };
   check(
-    "first visit: the default form, arena-1, seed 1, 8 slots, 0 doer-only, 6000 ticks shown as 300 s",
-    isDeepStrictEqual(form, { map: "arena-1", seed: "1", slots: "8", doerOnly: "0", duration: "6000", seconds: "= 300 s" }),
+    "first visit: the default form, map-1, seed 1, 8 slots, 0 doer-only, 6000 ticks shown as 300 s",
+    isDeepStrictEqual(form, { map: "map-1", seed: "1", slots: "8", doerOnly: "0", duration: "6000", seconds: "= 300 s" }),
     JSON.stringify(form),
   );
   check(
@@ -1451,7 +1451,7 @@ function syntheticLog(bytes: number): MatchLog {
   }
   events.push({ kind: "MatchEnd", tick: tick - 1, ranking: ["a0"] });
   const slots: MatchLog["config"]["slots"] = [{ kind: "prompted" }, ...Array.from({ length: n - 1 }, () => ({ kind: "bot" as const, bot: "wanderer" as const }))];
-  return { version: 1, config: { mapId: "arena-1", seed: 7, durationTicks: tick, slots }, seed: 7, prompts: log.prompts, events };
+  return { version: 1, config: { mapId: "map-1", seed: 7, durationTicks: tick, slots }, seed: 7, prompts: log.prompts, events };
 }
 
 /** Returns the leak counts of one mounted viewer, the baseline later re-mounts are held to. */
@@ -1637,7 +1637,7 @@ function busyLog(ticks: number): MatchLog {
   }
   events.push({ kind: "MatchEnd", tick: ticks - 1, ranking: [] });
   const slots = Array.from({ length: n }, (_, i) => ({ kind: "bot" as const, bot: i % 2 === 0 ? ("wanderer" as const) : ("camper" as const) }));
-  return { version: 1, config: { mapId: "arena-1", seed: 16, durationTicks: ticks, slots }, seed: 16, prompts: log.prompts, events };
+  return { version: 1, config: { mapId: "map-1", seed: 16, durationTicks: ticks, slots }, seed: 16, prompts: log.prompts, events };
 }
 
 async function checkBusyLog(page: Page): Promise<void> {
@@ -1697,7 +1697,7 @@ async function checkBusyLog(page: Page): Promise<void> {
 // ---- a real 16-bot match: incoming fire, a death, re-mounting while following (v2.3) ----
 
 /**
- * The match core's scripts/run-match.ts writes by default (16 bots on arena-1, seed 7, wanderers
+ * The match core's scripts/run-match.ts writes by default (16 bots on map-1, seed 7, wanderers
  * and campers alternating), run here in-process: same config, same log, byte for byte.
  * DECISION_ARENA_MATCH_LOG=<file> opens a log that script wrote instead (any map or seed).
  */
@@ -1705,7 +1705,7 @@ async function realMatchLog(): Promise<MatchLog> {
   const file = process.env.DECISION_ARENA_MATCH_LOG;
   if (file) return MatchLogSchema.parse(JSON.parse(readFileSync(file, "utf8")));
   const config = MatchConfigSchema.parse({
-    mapId: "arena-1",
+    mapId: "map-1",
     seed: 7,
     durationTicks: MATCH_DURATION_TICKS,
     slots: Array.from({ length: 16 }, (_, i): Slot => ({ kind: "bot", bot: i % 2 === 0 ? "wanderer" : "camper" })),

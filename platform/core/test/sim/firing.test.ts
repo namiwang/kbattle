@@ -37,7 +37,7 @@ function run(state: WorldState, ticks: number, plan: Record<number, Action> = {}
 
 const shotTicks = (events: StepEvent[]) => events.filter((e) => e.kind === "Shot").map((e) => e.tick);
 
-/** a0's spread for every shot it fires while spinning in the open middle of arena-1. */
+/** a0's spread for every shot it fires while spinning in the open middle of map-1. */
 function spreads(seed: number, ticks: number): number[] {
   let state = makeWorld({ seed, agents: [makeAgent(0, { x: 50, y: 50 }, 0, { action: firing({ turn: "right" }) })] });
   const out: number[] = [];

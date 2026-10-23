@@ -22,12 +22,12 @@ import { deepFreeze, loadScene, makeAgent, makeWorld } from "./helpers";
 
 const NO_FACTS: TickFacts = { shots: [], hits: [], nearMisses: [] };
 
-/** A world on arena-1 at `tick` with these agents; `facts` are the newest step's, the only one in its window. */
+/** A world on map-1 at `tick` with these agents; `facts` are the newest step's, the only one in its window. */
 function world(agents: Agent[], facts: Partial<TickFacts> = {}, tick = 0): WorldState {
   return { ...makeWorld({ agents, tick }), recent: [{ ...NO_FACTS, ...facts }] };
 }
 
-/** A world on arena-1 at `tick` whose window holds `steps`, oldest first: the last is the step that produced `tick`. */
+/** A world on map-1 at `tick` whose window holds `steps`, oldest first: the last is the step that produced `tick`. */
 function windowed(agents: Agent[], steps: Partial<TickFacts>[], tick: number): WorldState {
   return { ...makeWorld({ agents, tick }), recent: steps.map((facts) => ({ ...NO_FACTS, ...facts })) };
 }
@@ -95,7 +95,7 @@ describe("vision: cone, range, line of sight (R7)", () => {
   });
 
   it("an obstacle between blocks sight, and so does a line that only touches its corner", () => {
-    // arena-1's north block spans x 42..58, y 18..30.
+    // map-1's north block spans x 42..58, y 18..30.
     const behind = [makeAgent(0, { x: 50, y: 10 }, 90), makeAgent(1, { x: 50, y: 40 })];
     expect(perceive(world(behind), "a0").visible).toEqual([]);
     const me = makeAgent(0, { x: 30, y: 30 }, -45);
@@ -113,7 +113,7 @@ describe("vision: cone, range, line of sight (R7)", () => {
 
 describe("hearing: shots within 80 m and footsteps within 15 m, through walls (R7)", () => {
   it("hears other agents' shots this tick as a bearing and a band; never its own", () => {
-    // a0 north of arena-1's north block; a1 south of it (30 m), a2 exactly 80 m away, a3 80.5 m.
+    // a0 north of map-1's north block; a1 south of it (30 m), a2 exactly 80 m away, a3 80.5 m.
     const agents = [
       makeAgent(0, { x: 50, y: 10 }, 0),
       makeAgent(1, { x: 50, y: 40 }),
@@ -267,7 +267,7 @@ describe("contract", () => {
     const state: PerceptionState = {
       tick: 10,
       durationTicks: 100,
-      map: getMap("arena-1"),
+      map: getMap("map-1"),
       recent: [NO_FACTS],
       agents: [
         { id: "a0", pos: { x: 50, y: 50 }, facing: 0, hp: 100, alive: true, kills: 0, moved: false },
@@ -319,9 +319,9 @@ describe("scene fixtures are consistent world states", () => {
     });
   }
 
-  it("the combined scene is on arena-1, with 4 agents", () => {
+  it("the combined scene is on map-1, with 4 agents", () => {
     const { state } = loadScene("combined");
-    expect(state.map).toEqual(getMap("arena-1"));
+    expect(state.map).toEqual(getMap("map-1"));
     expect(state.agents).toHaveLength(4);
   });
 });
@@ -370,7 +370,7 @@ describe("scene goldens agree with the rules worked out by hand (a0's view)", ()
     expect(view.heard).toEqual([{ kind: "shot", bearing: 133, dist: "mid" }]); // a1 fired b12 at tick 2992, 21.9 m away
   });
 
-  it("combined on arena-1: one enemy seen, two shots (one 6 ticks old) and footsteps heard, one near miss", () => {
+  it("combined on map-1: one enemy seen, two shots (one 6 ticks old) and footsteps heard, one near miss", () => {
     expect(a0("combined")).toEqual({
       self: { pos: { x: 50, y: 50 }, facing: 0, hp: 100, kills: 0, secondsLeft: 270 },
       visible: [{ id: "a1", bearing: -9, dist: 30, moving: true }],

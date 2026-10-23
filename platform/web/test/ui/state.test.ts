@@ -19,7 +19,7 @@ const W: Slot = { kind: "bot", bot: "wanderer" };
 const C: Slot = { kind: "bot", bot: "camper" };
 
 const form = (patch: Partial<MatchForm> = {}): MatchForm => ({
-  mapId: "arena-1",
+  mapId: "map-1",
   seed: 1,
   slots: 8,
   prompted: 1,
@@ -55,10 +55,10 @@ describe("slotsFor", () => {
 
 describe("toMatchConfig", () => {
   it("builds the MatchConfig of a valid form", () => {
-    const result = toMatchConfig({ mapId: "arena-1", seed: 42, slots: 5, prompted: 1, doerOnly: 2, durationTicks: 1200 });
+    const result = toMatchConfig({ mapId: "map-1", seed: 42, slots: 5, prompted: 1, doerOnly: 2, durationTicks: 1200 });
     expect(result).toEqual({
       ok: true,
-      value: { mapId: "arena-1", seed: 42, durationTicks: 1200, slots: [P, D, D, W, C] },
+      value: { mapId: "map-1", seed: 42, durationTicks: 1200, slots: [P, D, D, W, C] },
     });
   });
 
@@ -66,7 +66,7 @@ describe("toMatchConfig", () => {
     const result = toMatchConfig(DEFAULT_CONFIG);
     expect(result).toEqual({
       ok: true,
-      value: { mapId: "arena-1", seed: 1, durationTicks: 6000, slots: [P, W, C, W, C, W, C, W] },
+      value: { mapId: "map-1", seed: 1, durationTicks: 6000, slots: [P, W, C, W, C, W, C, W] },
     });
     if (result.ok) expect(MatchConfigSchema.parse(result.value)).toEqual(result.value);
   });
@@ -146,7 +146,7 @@ describe("validateForm", () => {
     const prompts: Prompts = { thinkerSystem: "Hide.", doerInstructions: { move: "m", turn: "t", fire: "", target: "x" } };
     expect(validateForm(state({ prompts }))).toEqual({
       ok: true,
-      config: { mapId: "arena-1", seed: 1, durationTicks: 6000, slots: [P, W, C, W, C, W, C, W] },
+      config: { mapId: "map-1", seed: 1, durationTicks: 6000, slots: [P, W, C, W, C, W, C, W] },
       prompts,
     });
   });

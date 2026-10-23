@@ -1,7 +1,7 @@
 {
   "version": 1,
   "config": {
-    "mapId": "arena-1",
+    "mapId": "map-1",
     "seed": 1,
     "durationTicks": 200,
     "slots": [

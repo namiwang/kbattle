@@ -1,5 +1,5 @@
 {
-  "scenario": "arena-1, seed 7; a0 at (50, 50) facing 0, action { stop, right, fire }; 50 ticks",
+  "scenario": "map-1, seed 7; a0 at (50, 50) facing 0, action { stop, right, fire }; 50 ticks",
   "shots": [
     [1,"b0",11.362174],
     [11,"b1",101.882343],

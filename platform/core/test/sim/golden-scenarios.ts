@@ -21,7 +21,7 @@ export function round6(value: number): number {
 // ---- v1.1: one bullet in a straight line ----
 
 /**
- * a0 at (10, 50) facing 0° on arena-1, holding still; b0 pre-placed at its
+ * a0 at (10, 50) facing 0° on map-1, holding still; b0 pre-placed at its
  * muzzle moving (1.5, -0.05) m per tick. The middle lane is open, so the bullet
  * stays in the arena and clear of obstacles for all 50 ticks.
  */
@@ -44,7 +44,7 @@ export function singleBulletGolden() {
   }
   return {
     scenario:
-      "arena-1; a0 at (10, 50) facing 0, stopped; b0 (owner a0) at (10.6, 50) moving (1.5, -0.05) m/tick; 50 ticks",
+      "map-1; a0 at (10, 50) facing 0, stopped; b0 (owner a0) at (10.6, 50) moving (1.5, -0.05) m/tick; 50 ticks",
     trace, // [tick, b0 x, b0 y] after each step
   };
 }
@@ -55,7 +55,7 @@ const WALL_MUZZLE = { x: 10.6, y: 24 };
 const toward = (p: Vec2) => scale(norm(sub(p, WALL_MUZZLE)), BULLET_STEP_M);
 
 /**
- * a0 at (10, 24) facing 0 on arena-1, holding still, with four bullets of its
+ * a0 at (10, 24) facing 0 on map-1, holding still, with four bullets of its
  * own pre-placed at its muzzle at bullet speed: b0 straight at the north block's
  * west face (x = 42), b1 at the west triangle's slanted face at (24, 33), b2 at
  * -120° into the arena boundary x = 0, b3 clearing the block's corner (42, 18)
@@ -87,7 +87,7 @@ export function bulletWallGolden() {
   }
   return {
     scenario:
-      "arena-1; a0 at (10, 24) facing 0, stopped; its bullets from (10.6, 24) at 3 m/tick: " +
+      "map-1; a0 at (10, 24) facing 0, stopped; its bullets from (10.6, 24) at 3 m/tick: " +
       "b0 at 0 deg into the north block (x = 42), b1 toward (24, 33) on the west triangle, " +
       "b2 at -120 deg into the boundary x = 0, b3 toward (42, 17.8) past the block's corner to x = 100; 32 ticks",
     removedAt, // bullet id → the tick its path crossed a wall (null: still flying)
@@ -97,7 +97,7 @@ export function bulletWallGolden() {
 
 // ---- v1.2: an agent firing while turning ----
 
-/** a0 alone at the center of arena-1 facing 0, turning right and firing every chance it gets; seed 7. */
+/** a0 alone at the center of map-1 facing 0, turning right and firing every chance it gets; seed 7. */
 export function turnFireWorld(): WorldState {
   const action = { move: "stop", turn: "right", fire: true, target: null } as const;
   return makeWorld({ seed: 7, agents: [makeAgent(0, { x: 50, y: 50 }, 0, { action })] });
@@ -119,7 +119,7 @@ export function turnFireGolden() {
     trace.push([state.tick, round6(state.agents[0]!.facing), state.bullets.length]);
   }
   return {
-    scenario: "arena-1, seed 7; a0 at (50, 50) facing 0, action { stop, right, fire }; 50 ticks",
+    scenario: "map-1, seed 7; a0 at (50, 50) facing 0, action { stop, right, fire }; 50 ticks",
     shots, // [tick, bullet id, heading in degrees] per Shot
     trace, // [tick, a0 facing, bullets in flight] after each step
   };

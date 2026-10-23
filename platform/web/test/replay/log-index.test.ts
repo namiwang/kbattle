@@ -9,7 +9,7 @@ const sample = MatchLogSchema.parse(sampleJson);
 function craftedLog(events: LogEvent[]): MatchLog {
   return {
     version: 1,
-    config: { mapId: "arena-1", seed: 7, durationTicks: 20, slots: [{ kind: "doer" }, { kind: "bot", bot: "camper" }] },
+    config: { mapId: "map-1", seed: 7, durationTicks: 20, slots: [{ kind: "doer" }, { kind: "bot", bot: "camper" }] },
     seed: 7,
     prompts: { thinkerSystem: "", doerInstructions: { move: "", turn: "", fire: "", target: "" } },
     events,

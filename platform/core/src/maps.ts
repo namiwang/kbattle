@@ -3,15 +3,15 @@
 // validateMap, then cached and deeply frozen, so a caller that mutates a spawn
 // point fails loudly instead of corrupting the shared map.
 
-import arena1 from "../maps/arena-1.json" with { type: "json" };
-import arena2 from "../maps/arena-2.json" with { type: "json" };
+import map1 from "../maps/map-1.json" with { type: "json" };
+import map2 from "../maps/map-2.json" with { type: "json" };
 import { AGENT_RADIUS_M } from "./constants";
 import { MapSpecSchema, type MapSpec } from "./schemas";
 import { pointPolygonDistance, segmentsIntersect } from "./sim/collision";
 import { roundTo } from "./round";
 import { dist, type Vec2 } from "./vec2";
 
-const BUNDLED: Readonly<Record<string, unknown>> = { "arena-1": arena1, "arena-2": arena2 };
+const BUNDLED: Readonly<Record<string, unknown>> = { "map-1": map1, "map-2": map2 };
 
 /** Ids of the bundled maps. */
 export const MAP_IDS: readonly string[] = Object.freeze(Object.keys(BUNDLED));

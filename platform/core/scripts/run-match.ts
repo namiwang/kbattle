@@ -3,7 +3,7 @@
 //
 //   pnpm --filter core exec tsx scripts/run-match.ts [out.json | -] [mapId] [seed]
 //
-// Defaults: stdout, arena-1, seed 7, MATCH_DURATION_TICKS. The log is checked
+// Defaults: stdout, map-1, seed 7, MATCH_DURATION_TICKS. The log is checked
 // against MatchLogSchema before it is written. The summary (how it ended, event
 // counts, size, wall time) goes to stdout when the log goes to a file, and to
 // stderr when the log goes to stdout, so `> match.json` captures the log alone.
@@ -15,7 +15,7 @@ import { eventsOfKind } from "../src/log";
 import { MatchConfigSchema, MatchLogSchema, type Prompts, type Slot } from "../src/schemas";
 import { runMatch } from "../src/sim/match";
 
-const [out = "-", mapId = "arena-1", seed = "7"] = process.argv.slice(2);
+const [out = "-", mapId = "map-1", seed = "7"] = process.argv.slice(2);
 const say = (line: string) => (out === "-" ? process.stderr : process.stdout).write(`${line}\n`);
 
 const config = MatchConfigSchema.parse({

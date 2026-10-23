@@ -4,7 +4,7 @@
 //
 //   pnpm --filter core exec tsx scripts/bench-perceive.ts
 //
-// Worlds: 16 agents on arena-1 (4 obstacles) and on arena-1 plus four more
+// Worlds: 16 agents on map-1 (4 obstacles) and on map-1 plus four more
 // boxes (8 obstacles); "played" = spawned then 300 ticks of seeded random
 // actions (bullets, and shots, hits and near misses in the perception window),
 // "dense" = all 16 alive in a 50 m ring facing its center, so nearly every
@@ -21,11 +21,11 @@ import { step } from "../src/sim/step";
 import { spawn } from "../src/sim/world";
 import { MOVE_CHOICES, TURN_CHOICES, type Action, type TickFacts, type WorldState } from "../src/types";
 
-const arena1 = getMap("arena-1");
+const map1 = getMap("map-1");
 const box = (x: number, y: number) => ({
   vertices: [{ x, y }, { x: x + 4, y }, { x: x + 4, y: y + 4 }, { x, y: y + 4 }],
 });
-const eight: MapSpec = { ...arena1, id: "arena-1+4", obstacles: [...arena1.obstacles, box(30, 12), box(66, 84), box(84, 36), box(12, 60)] };
+const eight: MapSpec = { ...map1, id: "map-1+4", obstacles: [...map1.obstacles, box(30, 12), box(66, 84), box(84, 36), box(12, 60)] };
 
 const slots: Slot[] = Array.from({ length: 16 }, () => ({ kind: "bot", bot: "wanderer" }));
 
@@ -93,7 +93,7 @@ function bench(label: string, state: WorldState): void {
 }
 
 console.log(`node ${process.version}, ${process.arch}`);
-bench("arena-1 (4 obstacles), played", played(arena1));
-bench("arena-1 (4 obstacles), dense", dense(arena1));
-bench("arena-1+4 (8 obstacles), played", played(eight));
-bench("arena-1+4 (8 obstacles), dense", dense(eight));
+bench("map-1 (4 obstacles), played", played(map1));
+bench("map-1 (4 obstacles), dense", dense(map1));
+bench("map-1+4 (8 obstacles), played", played(eight));
+bench("map-1+4 (8 obstacles), dense", dense(eight));

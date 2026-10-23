@@ -55,10 +55,10 @@ describe("parseMatchLogText", () => {
   });
 
   it("reports a map this viewer does not have at config.mapId", () => {
-    const text = JSON.stringify({ ...sample, config: { ...sample.config, mapId: "arena-9" } });
+    const text = JSON.stringify({ ...sample, config: { ...sample.config, mapId: "map-9" } });
     expect(parseMatchLogText(text)).toEqual({
       ok: false,
-      error: { kind: "schema", issues: [{ path: "config.mapId", message: expect.stringContaining('"arena-9"') }] },
+      error: { kind: "schema", issues: [{ path: "config.mapId", message: expect.stringContaining('"map-9"') }] },
     });
   });
 
@@ -81,8 +81,8 @@ describe("openMatchLogFile", () => {
 
 describe("matchLogFileName", () => {
   it("is decision-arena-<mapId>-<seed>.json", () => {
-    expect(matchLogFileName(sample)).toBe("decision-arena-arena-1-1.json");
-    expect(matchLogFileName({ ...sample, seed: 42, config: { ...sample.config, seed: 42 } })).toBe("decision-arena-arena-1-42.json");
+    expect(matchLogFileName(sample)).toBe("decision-arena-map-1-1.json");
+    expect(matchLogFileName({ ...sample, seed: 42, config: { ...sample.config, seed: 42 } })).toBe("decision-arena-map-1-42.json");
   });
 });
 

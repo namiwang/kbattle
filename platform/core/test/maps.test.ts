@@ -5,8 +5,8 @@ import { MapSpecSchema, type MapSpec } from "../src/schemas";
 import { dist, type Vec2 } from "../src/vec2";
 
 describe("bundled maps", () => {
-  it("MAP_IDS lists arena-1 and arena-2 and is frozen", () => {
-    expect(MAP_IDS).toEqual(["arena-1", "arena-2"]);
+  it("MAP_IDS lists map-1 and map-2 and is frozen", () => {
+    expect(MAP_IDS).toEqual(["map-1", "map-2"]);
     expect(Object.isFrozen(MAP_IDS)).toBe(true);
   });
 
@@ -23,13 +23,13 @@ describe("bundled maps", () => {
   });
 
   it("throws on an unknown id, naming the known ones", () => {
-    expect(() => getMap("arena-9")).toThrow(/unknown map id "arena-9".*arena-1/);
+    expect(() => getMap("map-9")).toThrow(/unknown map id "map-9".*map-1/);
     expect(() => getMap("toString")).toThrow(/unknown map id "toString"/);
   });
 
   it("parses once: repeat calls return the same deeply frozen map", () => {
-    const map = getMap("arena-1");
-    expect(getMap("arena-1")).toBe(map);
+    const map = getMap("map-1");
+    expect(getMap("map-1")).toBe(map);
     expect(Object.isFrozen(map)).toBe(true);
     expect(Object.isFrozen(map.spawns)).toBe(true);
     expect(Object.isFrozen(map.spawns[0])).toBe(true);
@@ -37,8 +37,8 @@ describe("bundled maps", () => {
   });
 });
 
-describe("arena-1", () => {
-  const map = getMap("arena-1");
+describe("map-1", () => {
+  const map = getMap("map-1");
   const wallDistance = (p: Vec2) => Math.min(p.x, p.y, map.width - p.x, map.height - p.y);
 
   it("is the §6.2 arena, about 100 by 100 m", () => {
@@ -82,8 +82,8 @@ describe("arena-1", () => {
   });
 });
 
-describe("arena-2 (v1.4)", () => {
-  const map = getMap("arena-2");
+describe("map-2 (v1.4)", () => {
+  const map = getMap("map-2");
   const wallDistance = (p: Vec2) => Math.min(p.x, p.y, map.width - p.x, map.height - p.y);
 
   it("is the §6.2 arena, about 100 by 100 m", () => {
@@ -113,7 +113,7 @@ describe("arena-2 (v1.4)", () => {
     expect(boxes.some((b) => b.long >= 40 && b.thick <= 3)).toBe(true);
   });
 
-  it("is asymmetric: no mirror or half-turn maps its obstacles onto themselves (arena-1 has a half-turn)", () => {
+  it("is asymmetric: no mirror or half-turn maps its obstacles onto themselves (map-1 has a half-turn)", () => {
     const vertexSet = (m: MapSpec, f: (v: Vec2) => Vec2 = (v) => v) =>
       new Set(m.obstacles.flatMap((o) => o.vertices.map((v) => JSON.stringify(f(v)))));
     const turns = {
@@ -122,8 +122,8 @@ describe("arena-2 (v1.4)", () => {
       halfTurn: (v: Vec2) => ({ x: 100 - v.x, y: 100 - v.y }),
     };
     for (const [name, f] of Object.entries(turns)) expect(vertexSet(map, f), name).not.toEqual(vertexSet(map));
-    const arena1 = getMap("arena-1");
-    expect(vertexSet(arena1, turns.halfTurn)).toEqual(vertexSet(arena1));
+    const map1 = getMap("map-1");
+    expect(vertexSet(map1, turns.halfTurn)).toEqual(vertexSet(map1));
   });
 });
 
@@ -213,7 +213,7 @@ describe("validateMap: geometry sanity (v1.4)", () => {
 });
 
 describe("loadMap: parse, check, freeze (the bundled-map loader)", () => {
-  const raw = () => JSON.parse(JSON.stringify(getMap("arena-2"))) as MapSpec;
+  const raw = () => JSON.parse(JSON.stringify(getMap("map-2"))) as MapSpec;
 
   it("returns a deeply frozen MapSpec equal to its input", () => {
     const map = loadMap(raw());
@@ -230,7 +230,7 @@ describe("loadMap: parse, check, freeze (the bundled-map loader)", () => {
     bad.spawns[0] = { x: 50, y: 61 }; // inside the long wall, obstacle 0
     bad.spawns[1] = { x: 50, y: 66 }; // 4 m from the long wall, 5 m from spawn 0
     expect(() => loadMap(bad)).toThrow(
-      /^map "arena-2" is not sound:\n- spawn 0 at \(50, 61\) is inside obstacle 0\n- spawns 0 and 1 are 5 m apart/,
+      /^map "map-2" is not sound:\n- spawn 0 at \(50, 61\) is inside obstacle 0\n- spawns 0 and 1 are 5 m apart/,
     );
   });
 });

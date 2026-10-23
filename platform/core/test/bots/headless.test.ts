@@ -12,7 +12,7 @@ import type { WorldState } from "../../src/types";
 // doer cadence, ticks 1, 11, 21, … (sim ruling R1; DESIGN.md rows 32, 33).
 
 const config: MatchConfig = {
-  mapId: "arena-1",
+  mapId: "map-1",
   seed: 1,
   durationTicks: MATCH_DURATION_TICKS,
   slots: [
@@ -46,7 +46,7 @@ async function play(match: MatchConfig, wrap = (bot: DecisionProvider) => bot) {
   return { log, final: final! };
 }
 
-describe("headless wanderer vs camper on arena-1, seed 1", () => {
+describe("headless wanderer vs camper on map-1, seed 1", () => {
   it("runs to its end in under 5 s and ends with MatchEnd", async () => {
     const started = performance.now();
     const { log, final } = await play(config);

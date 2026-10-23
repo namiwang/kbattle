@@ -2,7 +2,7 @@
 //
 //   pnpm --filter core exec tsx scripts/run-bots.ts [mapId] [seed] [bot,bot,...]
 //
-// Defaults: arena-1, seed 1, wanderer vs camper, MATCH_DURATION_TICKS. Prints
+// Defaults: map-1, seed 1, wanderer vs camper, MATCH_DURATION_TICKS. Prints
 // who decided when, the first Death, who is alive at the end, and the MatchEnd.
 
 import { botProviders } from "../src/bots";
@@ -12,7 +12,7 @@ import { BotKindSchema, MatchConfigSchema, type MatchConfig } from "../src/schem
 import { runMatch } from "../src/sim/match";
 import type { WorldState } from "../src/types";
 
-const [mapId = "arena-1", seed = "1", kinds = "wanderer,camper"] = process.argv.slice(2);
+const [mapId = "map-1", seed = "1", kinds = "wanderer,camper"] = process.argv.slice(2);
 const config: MatchConfig = MatchConfigSchema.parse({
   mapId,
   seed: Number(seed),
