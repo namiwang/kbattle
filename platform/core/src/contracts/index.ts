@@ -7,3 +7,4 @@ export * from "./agent";
 export * from "./constants";
 export * from "./arena";
 export * from "./registry";
+export * from "./log";
