@@ -1,30 +1,21 @@
-import { DOER_INTERVAL_TICKS, eventsOfKind, MATCH_DURATION_TICKS, type MatchConfig, type MatchLog, type Prompts, type Slot } from "@decision-arena/core/legacy";
+import { eventsOfKind, runMatch, type Arena, type MatchLogFor, type Model } from "@decision-arena/core";
+import { bearingTo, HEAR_SHOT_RANGE_M, HEARING_BANDS_M, normalizeDeg, PERCEPTION_WINDOW_TICKS, vec2, type AgentId, type HearingBand, type Observation, type Vec2 } from "@decision-arena/kit-shooter";
 import { beforeAll, describe, expect, it } from "vitest";
-import { bearingTo, normalizeDeg } from "../../src/angles";
-import { botProviders } from "../../src/bots";
-import { HEAR_SHOT_RANGE_M, HEARING_BANDS_M } from "../../src/constants";
-import { runMatch } from "../../src/legacy/match";
-import type { AgentId, HearingBand, Observation } from "../../src/types";
-import { dist, type Vec2 } from "../../src/vec2";
+import { battleRoyale, type BattleRoyaleTypes } from "../src";
+import { SIXTEEN_BOTS } from "./helpers";
 
-// The perception window (sim ruling R15, review C1). Every slot decides on ticks
-// 1, 11, 21, … (R1) from the world before that tick's step, and a weapon cools
-// down over exactly DOER_INTERVAL_TICKS, so shots land on decision ticks: when
-// perception read only the newest step, no decision ever heard a shot. Perception
-// now merges the shots, hits and near misses of the last DOER_INTERVAL_TICKS
-// steps, so each one reaches the next decision of every agent that perceives it,
-// exactly once. Checked from outside the sim: a spy records the observation of
-// every doer call of a 16-bot match, and the log says what happened.
+// The perception window (sim ruling R15, review C1; moved from the kit's
+// version-1 loop tests in R0.4). Every agent decides on ticks 1, 11, 21, … (R1)
+// from the world before that tick's step, and a weapon cools down over exactly
+// PERCEPTION_WINDOW_TICKS, so shots land on decision ticks: when perception read
+// only the newest step, no decision ever heard a shot. Perception merges the
+// shots, hits and near misses of the last PERCEPTION_WINDOW_TICKS steps, so each
+// one reaches the next decision of every agent that perceives it, exactly once.
+// Checked from outside the sim: spies record the observation of every bot call
+// of a 16-bot match, and the log says what happened.
 
-const PROMPTS: Prompts = { thinkerSystem: "", doerInstructions: { move: "", turn: "", fire: "", target: "" } };
-
-/** The v1.5 match: 16 bots, wanderers and campers alternating, on map-1, seed 7. */
-const SIXTEEN: MatchConfig = {
-  mapId: "map-1",
-  seed: 7,
-  durationTicks: MATCH_DURATION_TICKS,
-  slots: Array.from({ length: 16 }, (_, i): Slot => ({ kind: "bot", bot: i % 2 === 0 ? "wanderer" : "camper" })),
-};
+type Log = MatchLogFor<BattleRoyaleTypes>;
+const SIXTEEN = { seed: 7, durationTicks: 6000, mapId: "map-1" };
 
 interface Decision {
   tick: number;
@@ -67,27 +58,31 @@ function maxMatching<A, B>(as: readonly A[], bs: readonly B[], fits: (a: A, b: B
 }
 
 describe("perception window: 16 bots on map-1, seed 7 (R15, review C1)", () => {
-  let log: MatchLog;
+  let log: Log;
   const decisions: Decision[] = [];
   /** Where the log puts each agent at a tick: its row; `approx` when the row omits it (it died in or before that step: its last row, ISSUES I-019). */
   let placed: (tick: number, id: AgentId) => { pos: Vec2; approx: boolean } | undefined;
   let rows: Map<number, Map<AgentId, Vec2>>;
 
   beforeAll(async () => {
-    const bots = botProviders(SIXTEEN.seed);
-    log = await runMatch(SIXTEEN, {
-      prompts: PROMPTS,
-      providers: (slot, slotIndex) => {
-        const bot = bots(slot, slotIndex);
-        return {
-          decide(ctx) {
-            decisions.push({ tick: ctx.tick, agent: ctx.agent, observation: structuredClone(ctx.observation) });
-            return bot.decide(ctx);
-          },
-        };
+    let tick = 1;
+    /** The arena's bot, recording what it is asked at which tick. */
+    const spy = (bot: Model, slot: number): Model => ({
+      ...bot,
+      ask(req) {
+        decisions.push({ tick, agent: `a${slot}`, observation: structuredClone((req.state as { observation: Observation }).observation) });
+        return bot.ask(req);
       },
     });
-    rows = new Map(eventsOfKind(log, "Tick").map((e) => [e.tick, new Map(e.agents.map(([id, x, y]): [AgentId, Vec2] => [id, { x, y }]))]));
+    const spied: Arena<BattleRoyaleTypes> = {
+      ...battleRoyale,
+      bots: {
+        wanderer: (seed, slot) => spy(battleRoyale.bots.wanderer!(seed, slot), slot),
+        camper: (seed, slot) => spy(battleRoyale.bots.camper!(seed, slot), slot),
+      },
+    };
+    log = await runMatch(spied, SIXTEEN, SIXTEEN_BOTS, { onTick: (t) => (tick = t + 1) });
+    rows = new Map(eventsOfKind(log, "Tick").map((e) => [e.tick, new Map(e.data.agents.map(([id, x, y]): [AgentId, Vec2] => [id, { x, y }]))]));
     const deaths = new Map(eventsOfKind(log, "Death").map((e) => [e.agent, e.tick]));
     placed = (tick, id) => {
       const pos = rows.get(tick)?.get(id);
@@ -99,7 +94,7 @@ describe("perception window: 16 bots on map-1, seed 7 (R15, review C1)", () => {
   }, 30_000);
 
   /** The ticks whose steps a decision at `tick` perceives: the steps since the previous decision, t − 10 … t − 1. */
-  const windowOf = (tick: number) => ({ from: Math.max(1, tick - DOER_INTERVAL_TICKS), to: tick - 1 });
+  const windowOf = (tick: number) => ({ from: Math.max(1, tick - PERCEPTION_WINDOW_TICKS), to: tick - 1 });
   const heardShots = (o: Observation) => o.heard.filter((h) => h.kind === "shot");
 
   it("some decisions hear shots and some feel incoming fire", () => {
@@ -114,7 +109,7 @@ describe("perception window: 16 bots on map-1, seed 7 (R15, review C1)", () => {
     let pairs = 0;
     for (const shot of eventsOfKind(log, "Shot")) {
       const from = placed(shot.tick, shot.agent)!.pos;
-      for (const [id, pos] of rows.get(shot.tick)!) if (id !== shot.agent && dist(pos, from) <= HEAR_SHOT_RANGE_M) pairs++;
+      for (const [id, pos] of rows.get(shot.tick)!) if (id !== shot.agent && vec2.dist(pos, from) <= HEAR_SHOT_RANGE_M) pairs++;
     }
     const heard = decisions.reduce((n, d) => n + heardShots(d.observation).length, 0);
     expect(pairs).toBeGreaterThan(500);
@@ -140,7 +135,7 @@ describe("perception window: 16 bots on map-1, seed 7 (R15, review C1)", () => {
         .filter((s) => s.tick >= from && s.tick <= to && s.agent !== agent)
         .map((s) => {
           const at = placed(s.tick, s.agent)!;
-          const d = dist(me.pos, at.pos);
+          const d = vec2.dist(me.pos, at.pos);
           return { bullet: s.bullet, d, band: band(d), bearing: normalizeDeg(Math.round(bearingTo(me.pos, me.facing, at.pos))), approx: at.approx };
         })
         .filter((e) => e.d <= HEAR_SHOT_RANGE_M || borderline(e.d, e.approx));
@@ -167,7 +162,7 @@ describe("perception window: 16 bots on map-1, seed 7 (R15, review C1)", () => {
     // tick) and the Tick rows' `near` entries naming it (ISSUES I-016), ticks t − 10 … t − 1.
     const hits = eventsOfKind(log, "Hit");
     const owner = new Map(eventsOfKind(log, "Shot").map((s) => [s.bullet, s.agent]));
-    const near = eventsOfKind(log, "Tick").flatMap((t) => (t.near ?? []).map(([target, x, y]) => ({ tick: t.tick, target, from: { x, y } })));
+    const near = eventsOfKind(log, "Tick").flatMap((t) => (t.data.near ?? []).map(([target, x, y]) => ({ tick: t.tick, target, from: { x, y } })));
     const wrong: string[] = [];
     let felt = 0;
     for (const { tick, agent, observation } of decisions) {

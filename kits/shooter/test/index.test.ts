@@ -116,43 +116,11 @@ describe("@decision-arena/kit-shooter entry point", () => {
     expect(legacy.DoerAnswerSchema.parse(await bot.decide(ctx)).model).toBe("bot:camper");
   });
 
-  it("exposes the v1.5 match loop: runMatch with bot providers, the log writer and its Tick rows", async () => {
-    const config: legacy.MatchConfig = {
-      mapId: "map-2",
-      seed: 3,
-      durationTicks: 30,
-      slots: [
-        { kind: "bot", bot: "wanderer" },
-        { kind: "bot", bot: "camper" },
-      ],
-    };
-    const prompts: legacy.Prompts = { thinkerSystem: "", doerInstructions: { move: "", turn: "", fire: "", target: "" } };
-    const providers: kit.ProviderFactory = kit.botProviders(config.seed);
-    const deps: kit.RunMatchDeps = { providers, prompts };
-    const log: legacy.MatchLog = await kit.runMatch(config, deps);
-    expect(legacy.MatchLogSchema.parse(log)).toEqual(log);
-    expect(legacy.eventsOfKind(log, "MatchEnd")[0]?.ranking).toHaveLength(2);
-    const world = kit.spawn(config, kit.getMap("map-2"));
-    const writer: kit.LogWriter = kit.createLogWriter(config, prompts);
-    writer.spawn(world);
-    expect(writer.log().events).toEqual([...kit.spawnEvents(world), kit.tickEvent(world)]);
-    expect(kit.rankAgents(world.agents)).toEqual(["a0", "a1"]);
-  });
-
-  it("exposes the v1.6 determinism harness: a replay of a match is the same bytes", async () => {
-    const config: legacy.MatchConfig = {
-      mapId: "map-1",
-      seed: 5,
-      durationTicks: 60,
-      slots: [
-        { kind: "bot", bot: "camper" },
-        { kind: "bot", bot: "wanderer" },
-      ],
-    };
-    const prompts: legacy.Prompts = { thinkerSystem: "", doerInstructions: { move: "", turn: "", fire: "", target: "" } };
-    const log = await kit.runMatch(config, { providers: kit.botProviders(config.seed), prompts });
-    const replayer: kit.DecisionProvider = kit.makeReplayingProvider(log, "a1");
-    expect(replayer.pollEvents?.(1)).toEqual([]);
-    expect(JSON.stringify(await kit.replayMatch(log))).toBe(JSON.stringify(log));
+  it("still exports the version-1 loop for the web until R0.5 (ruling R20): its tests moved to the battle royale arena in R0.4", () => {
+    for (const name of ["runMatch", "rankAgents", "createLogWriter", "spawnEvents", "tickEvent", "makeReplayingProvider", "replayMatch", "botProviders", "makeBot"] as const) {
+      expect(typeof kit[name], name).toBe("function");
+    }
+    const world = kit.spawn({ mapId: "map-2", seed: 3, durationTicks: 30, slots: [{}, {}] }, kit.getMap("map-2"));
+    expect(kit.tickEvent(world)).toMatchObject({ kind: "Tick", tick: 0 });
   });
 });
