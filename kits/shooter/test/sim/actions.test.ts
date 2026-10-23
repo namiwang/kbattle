@@ -1,7 +1,7 @@
 import type { DoerAnswers } from "@decision-arena/core/legacy";
 import { describe, expect, it } from "vitest";
 import { FIRE_THRESHOLD } from "../../src/constants";
-import { actionFromAnswers } from "../../src/sim/actions";
+import { actionFromAnswers, type ActionAnswers } from "../../src/sim/actions";
 import { STOP_ACTION } from "../../src/types";
 
 // R9: doer answers → the Action the sim applies until the next answer.
@@ -66,6 +66,13 @@ describe("actionFromAnswers", () => {
     const { move, turn, fire, target } = full;
     expect(actionFromAnswers(full, ["a3"])).toEqual(actionFromAnswers({ move, turn, fire, target }, ["a3"]));
     expect(actionFromAnswers({ escalate: noul(1) }, [])).toEqual(STOP_ACTION);
+  });
+
+  it("reads only the picks and the P(yes) it needs, from any answers of that shape (ActionAnswers, R0.4)", () => {
+    // The battle royale arena hands it version-2 answers, the kit's legacy loop version-1 DoerAnswers.
+    const answers: ActionAnswers = { move: { choice: "left" }, turn: { choice: "face_target" }, fire: { noul: 0.6 }, target: { choice: "a2" } };
+    expect(actionFromAnswers(answers, ["a2"])).toEqual({ move: "left", turn: "face_target", fire: true, target: "a2" });
+    expect(actionFromAnswers(full satisfies ActionAnswers, ["a3"])).toEqual({ move: "forward", turn: "face_target", fire: true, target: "a3" });
   });
 
   it("returns a fresh object, never the frozen STOP_ACTION", () => {

@@ -1,7 +1,6 @@
-import { DOER_INTERVAL_TICKS } from "@decision-arena/core";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { AGENT_HP, BULLET_DAMAGE, INCOMING_RADIUS_M } from "../../src/constants";
+import { AGENT_HP, BULLET_DAMAGE, INCOMING_RADIUS_M, PERCEPTION_WINDOW_TICKS } from "../../src/constants";
 import { step, type StepEvent } from "../../src/sim/step";
 import type { Action, Agent, TickFacts, WorldState } from "../../src/types";
 import {
@@ -392,17 +391,17 @@ describe("near misses (R4 step 5, R6)", () => {
     expect(newest(state)?.nearMisses).toEqual([]);
   });
 
-  it("the window keeps the newest DOER_INTERVAL_TICKS steps, oldest first; older ones drop out (R15)", () => {
+  it("the window keeps the newest PERCEPTION_WINDOW_TICKS steps, oldest first; older ones drop out (R15)", () => {
     const empty: TickFacts = { shots: [], hits: [], nearMisses: [] };
     const missed: TickFacts = { ...empty, nearMisses: [{ target: "a1", from: { x: 10, y: 50 } }] };
     let state = step(pass(1.5), {}).state;
     expect(state.recent).toEqual([missed]); // step 1: the window holds that step alone
     state = step(state, {}).state;
     expect(state.recent).toEqual([missed, empty]); // step 2 is the newest, step 1 still in the window
-    for (let t = 3; t <= DOER_INTERVAL_TICKS; t++) state = step(state, {}).state;
-    expect(state.recent).toHaveLength(DOER_INTERVAL_TICKS);
+    for (let t = 3; t <= PERCEPTION_WINDOW_TICKS; t++) state = step(state, {}).state;
+    expect(state.recent).toHaveLength(PERCEPTION_WINDOW_TICKS);
     expect(state.recent[0]).toEqual(missed); // step 1 is the oldest of steps 1..10
     state = step(state, {}).state;
-    expect(state.recent).toEqual(Array.from({ length: DOER_INTERVAL_TICKS }, () => empty)); // step 11 pushed step 1 out
+    expect(state.recent).toEqual(Array.from({ length: PERCEPTION_WINDOW_TICKS }, () => empty)); // step 11 pushed step 1 out
   });
 });

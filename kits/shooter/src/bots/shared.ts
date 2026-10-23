@@ -2,20 +2,33 @@
 // private RNG, the Clef-shaped answer they give, when they fire, and how they
 // notice they are stuck. Bots know only their Observation (§3 principle 3).
 
-import { createRng, DOER_INTERVAL_TICKS, nextFloat, nextUint32, type RngState } from "@decision-arena/core";
-import type { BotKind, DoerAnswer } from "@decision-arena/core/legacy";
+import { createRng, nextFloat, nextUint32, type RngState } from "@decision-arena/core";
+import type { DoerAnswer } from "@decision-arena/core/legacy";
 import { normalizeDeg } from "../angles";
-import { MOVE_SPEED_MPS, TURN_RATE_DPS } from "../constants";
-import type { AgentId, MoveChoice, TurnChoice } from "../types";
+import { MOVE_SPEED_MPS, PERCEPTION_WINDOW_TICKS, TURN_RATE_DPS } from "../constants";
+import type { AgentId, MoveChoice, Observation, TurnChoice } from "../types";
 import { dpsToDegreesPerTick, mpsToMetersPerTick } from "../units";
 import { dist, type Vec2 } from "../vec2";
 
-/** What a bot wants until its next decision; it answers it as crisp Clef answers. */
+/** The scripted bots by name (DESIGN.md §13): the battle royale arena's `bot/wanderer` and `bot/camper`. */
+export const BOT_KINDS = Object.freeze(["wanderer", "camper"] as const);
+export type BotKind = (typeof BOT_KINDS)[number];
+
+/** What a bot wants until its next decision; each adapter words it as crisp answers. */
 export interface BotIntent {
   move: MoveChoice;
   turn: TurnChoice;
   fire: boolean;
   target: AgentId | null; // the visible enemy it faces, or nobody
+}
+
+/**
+ * A bot's mind (R13): asked once per decision, in order, with the decision's tick
+ * and the agent's observation, it answers its intent. It keeps its own memory and
+ * RNG between decisions, so it is made fresh for each agent of each match.
+ */
+export interface BotMind {
+  decide(tick: number, observation: Observation): BotIntent;
 }
 
 /** Bots fire when the target is at most this far off their facing (R13). */
@@ -24,8 +37,8 @@ export const FIRE_CONE_DEG = 10;
 /** Decisions in a row without headway before a bot changes course (R13). */
 export const STUCK_DECISIONS = 3;
 
-/** A decision interval of turning: 90° at 180°/s and 10 ticks. */
-export const TURN_PER_DECISION_DEG = dpsToDegreesPerTick(TURN_RATE_DPS) * DOER_INTERVAL_TICKS;
+/** A decision interval of turning: 90° at 180°/s and 10 ticks (bots decide once per perception window). */
+export const TURN_PER_DECISION_DEG = dpsToDegreesPerTick(TURN_RATE_DPS) * PERCEPTION_WINDOW_TICKS;
 
 const MOVE_STEP_M = mpsToMetersPerTick(MOVE_SPEED_MPS);
 
@@ -44,9 +57,10 @@ export function floats(rng: RngState): () => number {
 }
 
 /**
- * The intent in Clef's shape (§5.4): each choice crisp (probability 1, confidence
- * 1), fire 0 or 1, escalate always 0 (bots have no thinker), and a target answer
- * only when there is one, as a target question is only asked when someone is visible (ISSUES I-005).
+ * The intent as a version-1 answer, in Clef's shape (§5.4): each choice crisp
+ * (probability 1, confidence 1), fire 0 or 1, escalate always 0 (bots have no
+ * thinker), and a target answer only when there is one, as a target question is
+ * only asked when someone is visible (ISSUES I-005).
  */
 export function botAnswer(kind: BotKind, intent: BotIntent): DoerAnswer {
   return {

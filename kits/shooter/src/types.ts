@@ -91,9 +91,9 @@ export interface WorldState {
   rng: RngState; // seeded from MatchConfig.seed; the spawn shuffle and bullet spread draw from it (R3)
   /**
    * The perception window (R15): the facts of the newest steps, oldest first, at
-   * most DOER_INTERVAL_TICKS of them; the last entry is the step that produced
+   * most PERCEPTION_WINDOW_TICKS of them; the last entry is the step that produced
    * `tick`, and spawn starts it empty. Every slot decides once per
-   * DOER_INTERVAL_TICKS ticks (R1), so each fact reaches exactly one decision.
+   * PERCEPTION_WINDOW_TICKS ticks (R1), so each fact reaches exactly one decision.
    */
   recent: TickFacts[];
 }

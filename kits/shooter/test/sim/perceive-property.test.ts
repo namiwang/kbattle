@@ -1,6 +1,6 @@
-import { createRng, DOER_INTERVAL_TICKS, nextFloat, type RngState } from "@decision-arena/core";
+import { createRng, nextFloat, type RngState } from "@decision-arena/core";
 import { describe, expect, it } from "vitest";
-import { AGENT_RADIUS_M, HEAR_SHOT_RANGE_M, MOVE_SPEED_MPS, VISION_CONE_DEG, VISION_RANGE_M } from "../../src/constants";
+import { AGENT_RADIUS_M, HEAR_SHOT_RANGE_M, MOVE_SPEED_MPS, PERCEPTION_WINDOW_TICKS, VISION_CONE_DEG, VISION_RANGE_M } from "../../src/constants";
 import { circleInsideArena, circleOverlapsPolygon } from "../../src/sim/collision";
 import { perceive } from "../../src/sim/perceive";
 import { HEARING_BANDS, type Agent, type Observation, type TickFacts, type WorldState } from "../../src/types";
@@ -11,7 +11,7 @@ import { map1, deepFreeze, makeAgent, makeBullet, makeWorld } from "./helpers";
 // Property (v1.3 exit criterion): perceive has no non-determinism. 100 seeded
 // random states (random positions, facings, HP, deaths, movement, bullets and a
 // perception window of shots, hits and near misses over the last
-// DOER_INTERVAL_TICKS steps, R15), every agent's view computed twice:
+// PERCEPTION_WINDOW_TICKS steps, R15), every agent's view computed twice:
 // deep-equal, never NaN, bearings in (−180, 180], ordering per R7, and exactly
 // the window's shots in range and the window's fire on the agent.
 
@@ -50,10 +50,10 @@ function randomState(seed: number): WorldState {
     });
   });
   const anyone = () => draw.pick(agents);
-  // The window: one entry per step, oldest first, min(tick, DOER_INTERVAL_TICKS) of them. About
+  // The window: one entry per step, oldest first, min(tick, PERCEPTION_WINDOW_TICKS) of them. About
   // a third of the agents fired once in it, standing within walking reach of where they are now;
   // hits and near misses come from anywhere.
-  const recent: TickFacts[] = Array.from({ length: Math.min(tick, DOER_INTERVAL_TICKS) }, () => ({ shots: [], hits: [], nearMisses: [] }));
+  const recent: TickFacts[] = Array.from({ length: Math.min(tick, PERCEPTION_WINDOW_TICKS) }, () => ({ shots: [], hits: [], nearMisses: [] }));
   if (recent.length > 0) {
     for (const a of agents) {
       if (draw.float() >= 0.3) continue;

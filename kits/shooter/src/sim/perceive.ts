@@ -5,8 +5,8 @@
 // it from the log (§5.3), so it reads only what a replay can rebuild.
 //
 // Shots, hits and near misses come from the perception window, state.recent:
-// the last DOER_INTERVAL_TICKS steps. Every slot decides once per
-// DOER_INTERVAL_TICKS ticks (R1), so each of them reaches exactly one decision,
+// the last PERCEPTION_WINDOW_TICKS steps. Every slot decides once per
+// PERCEPTION_WINDOW_TICKS ticks (R1), so each of them reaches exactly one decision,
 // the first after it, however the step it happened in falls on the cadence.
 //
 // - Vision: living enemies within VISION_RANGE_M, |bearing| ≤ VISION_CONE_DEG / 2,
@@ -48,7 +48,7 @@ import { hasLineOfSight } from "./collision";
  * can build one from a log: positions, facing and HP from a Tick row, `alive`
  * from presence in it, kills from Death events, `moved` from consecutive Tick
  * rows, and the window from the Shot and Hit events and Tick rows' `near` of
- * the last DOER_INTERVAL_TICKS ticks (ISSUES I-016).
+ * the last PERCEPTION_WINDOW_TICKS ticks (ISSUES I-016).
  */
 export type PerceptionState = Pick<WorldState, "tick" | "durationTicks" | "map"> & {
   readonly agents: readonly PerceivedAgent[];

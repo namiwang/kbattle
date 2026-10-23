@@ -9,9 +9,10 @@
 // actions (bullets, and shots, hits and near misses in the perception window),
 // "dense" = all 16 alive in a 50 m ring facing its center, so nearly every
 // pair needs a line-of-sight test, all walking, and every agent's shot plus
-// hits and near misses spread over the window's DOER_INTERVAL_TICKS steps (R15).
+// hits and near misses spread over the window's PERCEPTION_WINDOW_TICKS steps (R15).
 
-import { createRng, DOER_INTERVAL_TICKS, nextFloat, type RngState } from "@decision-arena/core";
+import { createRng, nextFloat, type RngState } from "@decision-arena/core";
+import { PERCEPTION_WINDOW_TICKS } from "../src/constants";
 import type { Slot } from "@decision-arena/core/legacy";
 import { headingTo } from "../src/angles";
 import { getMap, type MapSpec } from "../src/maps";
@@ -57,8 +58,8 @@ function dense(map: MapSpec): WorldState {
     const pos = { x: 50 + 25 * Math.cos(angle) + 0.3 * i, y: 50 + 25 * Math.sin(angle) };
     return { ...a, pos, facing: headingTo(pos, center), moved: true };
   });
-  const recent: TickFacts[] = Array.from({ length: DOER_INTERVAL_TICKS }, (_, step) => ({
-    shots: agents.filter((_, i) => i % DOER_INTERVAL_TICKS === step).map((a) => ({ agent: a.id, pos: a.pos })),
+  const recent: TickFacts[] = Array.from({ length: PERCEPTION_WINDOW_TICKS }, (_, step) => ({
+    shots: agents.filter((_, i) => i % PERCEPTION_WINDOW_TICKS === step).map((a) => ({ agent: a.id, pos: a.pos })),
     hits: agents.slice(0, 4).map((a, i) => ({ target: a.id, from: agents[i + 8]!.pos })),
     nearMisses: agents.slice(4, 8).map((a, i) => ({ target: a.id, from: agents[i + 10]!.pos })),
   }));

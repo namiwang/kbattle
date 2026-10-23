@@ -13,14 +13,14 @@
 
 import { headingTo, normalizeDeg } from "../angles";
 import { ARENA_HEIGHT_M, ARENA_WIDTH_M } from "../constants";
-import type { DecisionContext, DecisionProvider } from "../legacy/providers";
+import type { Observation } from "../types";
 import { secondsToTicks } from "../units";
-import { botAnswer, botRng, engage, floats, headwayWatch, steer, STUCK_DECISIONS, type BotIntent } from "./shared";
+import { botRng, engage, floats, headwayWatch, steer, STUCK_DECISIONS, type BotIntent, type BotMind } from "./shared";
 
 /** About 4 s between heading changes while it walks freely (R13). */
 export const WANDER_REPICK_TICKS = secondsToTicks(4);
 
-export function makeWanderer(seed: number, slot: number): DecisionProvider {
+export function wandererMind(seed: number, slot: number): BotMind {
   const draw = floats(botRng(seed, slot));
   const headway = headwayWatch();
   let heading: number | null = null; // absolute, degrees
@@ -32,7 +32,7 @@ export function makeWanderer(seed: number, slot: number): DecisionProvider {
     pickedAt = tick;
   };
 
-  function intent({ tick, observation }: DecisionContext): BotIntent {
+  function intent(tick: number, observation: Observation): BotIntent {
     const { self, visible } = observation;
     const stuck = headway.check(tick, self.pos);
     const target = visible[0]; // nearest first
@@ -52,10 +52,10 @@ export function makeWanderer(seed: number, slot: number): DecisionProvider {
   }
 
   return {
-    decide(ctx) {
-      const next = intent(ctx);
-      headway.note(ctx.tick, ctx.observation.self.pos, next.move !== "stop");
-      return Promise.resolve(botAnswer("wanderer", next));
+    decide(tick, observation) {
+      const next = intent(tick, observation);
+      headway.note(tick, observation.self.pos, next.move !== "stop");
+      return next;
     },
   };
 }

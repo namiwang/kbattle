@@ -1,7 +1,9 @@
-import type { DoerState, Event, MatchLog } from "@decision-arena/core/legacy";
+import type { DoerState, Event, MatchConfig, MatchLog } from "@decision-arena/core/legacy";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { HEARING_BANDS_M } from "../src/constants";
 import type { MapSpec } from "../src/maps";
+import type { DeathEvent, HitEvent, ShotEvent, StepEvent } from "../src/sim/step";
+import type { SpawnConfig } from "../src/sim/world";
 import {
   HEARING_BANDS,
   MOVE_CHOICES,
@@ -14,6 +16,7 @@ import {
   type SoundKind,
   type TurnChoice,
   type WorldState,
+  type AgentId,
 } from "../src/types";
 
 describe("STOP_ACTION, the default action", () => {
@@ -80,5 +83,21 @@ describe("inferred types agree with the internal types", () => {
   it("the sim's WorldState uses the schema's MapSpec, and a log's events are Events", () => {
     expectTypeOf<WorldState["map"]>().toEqualTypeOf<MapSpec>();
     expectTypeOf<MatchLog["events"][number]>().toEqualTypeOf<Event>();
+  });
+});
+
+// R0.4 (R23.1 retyped): the sim's own types, which the version-1 ones still fit
+// while the kit's legacy loop uses them (until R0.5).
+describe("the sim types its own events and spawn config", () => {
+  it("a step's events are the kit's Shot, Hit and Death", () => {
+    expectTypeOf<StepEvent>().toEqualTypeOf<ShotEvent | HitEvent | DeathEvent>();
+    expectTypeOf<ShotEvent>().toEqualTypeOf<{ kind: "Shot"; tick: number; agent: AgentId; bullet: string }>();
+    expectTypeOf<HitEvent>().toEqualTypeOf<{ kind: "Hit"; tick: number; bullet: string; target: AgentId; damage: number }>();
+    expectTypeOf<DeathEvent>().toEqualTypeOf<{ kind: "Death"; tick: number; agent: AgentId; killer: AgentId }>();
+  });
+
+  it("they still fit the version-1 shapes the kit's legacy loop writes", () => {
+    expectTypeOf<StepEvent>().toExtend<Event>();
+    expectTypeOf<MatchConfig>().toExtend<SpawnConfig>();
   });
 });

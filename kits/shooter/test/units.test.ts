@@ -1,4 +1,5 @@
-import { DOER_INTERVAL_TICKS, MATCH_DURATION_TICKS, TICK_MS } from "@decision-arena/core";
+import { MATCH_DURATION_TICKS, TICK_MS } from "@decision-arena/core";
+import { PERCEPTION_WINDOW_TICKS } from "../src/constants";
 import { describe, expect, it } from "vitest";
 import { dpsToDegreesPerTick, mpsToMetersPerTick, secondsToTicks } from "../src/units";
 
@@ -20,7 +21,7 @@ describe("per-tick conversions", () => {
 
   it("secondsToTicks matches the design's stated equivalences", () => {
     expect(secondsToTicks(300)).toBe(MATCH_DURATION_TICKS); // §6.2: 6,000 ticks = 5 min
-    expect(secondsToTicks(0.5)).toBe(DOER_INTERVAL_TICKS); // row 26: one decision per 500 ms
+    expect(secondsToTicks(0.5)).toBe(PERCEPTION_WINDOW_TICKS); // row 26: one decision per 500 ms, one window
   });
 
   it("secondsToTicks returns whole ticks, rounding to the nearest", () => {

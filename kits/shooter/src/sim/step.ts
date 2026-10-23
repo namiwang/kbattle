@@ -8,11 +8,10 @@
 // Order inside step(t), each phase for every agent before the next (R4):
 // (1) cooldowns, (2) turn, (3) move, (4) fire, (5) bullets fly and hit,
 // (6) tick = t, and step t's shots, hits and near misses join the perception
-// window, which keeps the newest DOER_INTERVAL_TICKS steps (R6, R15). Agents
+// window, which keeps the newest PERCEPTION_WINDOW_TICKS steps (R6, R15). Agents
 // never collide with each other (PoC).
 
-import { DOER_INTERVAL_TICKS, nextFloat } from "@decision-arena/core";
-import type { EventOf } from "@decision-arena/core/legacy";
+import { nextFloat } from "@decision-arena/core";
 import { headingTo, normalizeDeg, turnToward } from "../angles";
 import {
   AGENT_RADIUS_M,
@@ -20,6 +19,7 @@ import {
   FIRE_INTERVAL_TICKS,
   INCOMING_RADIUS_M,
   MOVE_SPEED_MPS,
+  PERCEPTION_WINDOW_TICKS,
   TURN_RATE_DPS,
   VISION_RANGE_M,
 } from "../constants";
@@ -38,11 +38,22 @@ import {
 } from "./collision";
 import { spawnBullet, spreadDeg } from "./weapons";
 
-/** New actions from this tick's doer answers, by agent id; an agent without one keeps its current action. */
+/** New actions by agent id (the decisions of this tick, or every agent's current one); an agent without one keeps its current action. */
 export type StepActions = Readonly<Record<AgentId, Action>>;
 
-/** The events a step can produce; the match loop adds Spawn, Tick, Doer, Thinker and MatchEnd. */
-export type StepEvent = EventOf<"Shot" | "Hit" | "Death">;
+/** Agent `agent` fired bullet `bullet` this tick. */
+export type ShotEvent = { kind: "Shot"; tick: number; agent: AgentId; bullet: string };
+/** Bullet `bullet` hit `target` for `damage` HP. */
+export type HitEvent = { kind: "Hit"; tick: number; bullet: string; target: AgentId; damage: number };
+/** `agent` died, killed by `killer` (the hitting bullet's owner). */
+export type DeathEvent = { kind: "Death"; tick: number; agent: AgentId; killer: AgentId };
+
+/**
+ * The events a step can produce, in the order it produces them; an arena adds its
+ * own (the battle royale arena: Spawn) and the match loop its platform events.
+ * The version-1 log's Shot, Hit and Death have the same shape (types.test.ts).
+ */
+export type StepEvent = ShotEvent | HitEvent | DeathEvent;
 
 export interface StepResult {
   state: WorldState;
@@ -129,8 +140,8 @@ export function step(state: WorldState, actions: StepActions = {}): StepResult {
     }
   }
 
-  // (6) The new state is tick t; its window drops the step that is now DOER_INTERVAL_TICKS old.
-  const recent = [...state.recent, facts].slice(-DOER_INTERVAL_TICKS);
+  // (6) The new state is tick t; its window drops the step that is now PERCEPTION_WINDOW_TICKS old.
+  const recent = [...state.recent, facts].slice(-PERCEPTION_WINDOW_TICKS);
   return {
     state: { ...state, tick, agents, bullets, nextBulletId, rng, recent },
     events,

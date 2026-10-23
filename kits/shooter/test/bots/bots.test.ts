@@ -1,8 +1,8 @@
 import { BotKindSchema, DoerAnswerSchema } from "@decision-arena/core/legacy";
 import { describe, expect, it } from "vitest";
-import { makeBot } from "../../src/bots";
+import { BOT_KINDS, makeBot, makeBotMind } from "../../src/bots";
 import { actionFromAnswers } from "../../src/sim/actions";
-import { decideAll, enemy, obs, syntheticViews } from "./helpers";
+import { decideAll, decisionTick, enemy, obs, picks, syntheticViews } from "./helpers";
 
 // makeBot(kind, seed, slot) → DecisionProvider (sim rulings R8, R13): bots run
 // through the same code path as prompted minds, answering in Clef's shape with
@@ -69,5 +69,37 @@ describe("makeBot", () => {
       expect(await stream(5, 0), kind).not.toEqual(await stream(6, 0));
       expect(await stream(5, 0), kind).not.toEqual(await stream(5, 1));
     }
+  });
+});
+
+// R0.4: one implementation behind the version-1 DecisionProvider (the kit's legacy
+// loop, until R0.5) and the battle royale arena's bot Models: the mind decides,
+// each adapter only words the intent.
+describe("makeBotMind", () => {
+  it("BOT_KINDS name the bots, as the version-1 BotKind does", () => {
+    expect(BOT_KINDS).toEqual(["wanderer", "camper"]);
+    expect(BOT_KINDS).toEqual(KINDS);
+    expect(Object.isFrozen(BOT_KINDS)).toBe(true);
+  });
+
+  it("decides what makeBot answers, decision for decision, given the same (seed, slot) and observations", async () => {
+    for (const kind of BOT_KINDS) {
+      for (const seed of [1, 2, 7]) {
+        const views = syntheticViews(seed);
+        const mind = makeBotMind(kind, seed, 4);
+        const intents = views.map((view, n) => mind.decide(decisionTick(n), view));
+        const answers = await decideAll(makeBot(kind, seed, 4), views);
+        expect(intents.map((i) => ({ move: i.move, turn: i.turn, fire: i.fire ? 1 : 0, target: i.target ?? undefined }))).toEqual(answers.map(picks));
+      }
+    }
+  });
+
+  it("a fresh mind per slot: two minds of the same (kind, seed, slot) decide alike, whatever the other was asked", () => {
+    const views = syntheticViews(9);
+    const first = makeBotMind("wanderer", 9, 2);
+    first.decide(decisionTick(0), views[0]!);
+    const a = makeBotMind("wanderer", 9, 2);
+    const b = makeBotMind("wanderer", 9, 2);
+    expect(views.map((view, n) => a.decide(decisionTick(n), view))).toEqual(views.map((view, n) => b.decide(decisionTick(n), view)));
   });
 });

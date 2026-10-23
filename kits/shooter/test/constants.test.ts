@@ -27,6 +27,8 @@ describe("DESIGN.md §6.2: sim numbers", () => {
     ["HEAR_SHOT_RANGE_M", 80],
     ["HEAR_STEPS_RANGE_M", 15],
     ["INCOMING_RADIUS_M", 2],
+    // R15, R24: the perception window covers one decision interval (DOER_INTERVAL_TICKS until R0.4).
+    ["PERCEPTION_WINDOW_TICKS", 10],
   ])("%s = %j", (name, value) => {
     expect(constants).toHaveProperty(name, value);
   });

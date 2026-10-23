@@ -12,9 +12,9 @@
 
 import { headingTo } from "../angles";
 import { ARENA_HEIGHT_M, ARENA_WIDTH_M } from "../constants";
-import type { DecisionContext, DecisionProvider } from "../legacy/providers";
+import type { Observation } from "../types";
 import { dist, type Vec2 } from "../vec2";
-import { botAnswer, botRng, engage, floats, headwayWatch, moveToward, STUCK_DECISIONS, type BotIntent } from "./shared";
+import { botRng, engage, floats, headwayWatch, moveToward, STUCK_DECISIONS, type BotIntent, type BotMind } from "./shared";
 
 /** The camping spot's distance from both walls of its corner. */
 export const CAMP_INSET_M = 5;
@@ -32,7 +32,7 @@ export const CAMP_SPOTS: readonly Vec2[] = Object.freeze(
   ].map((spot) => Object.freeze(spot)),
 );
 
-export function makeCamper(seed: number, slot: number): DecisionProvider {
+export function camperMind(seed: number, slot: number): BotMind {
   const draw = floats(botRng(seed, slot));
   const headway = headwayWatch();
   let corner: number | null = null; // index into CAMP_SPOTS
@@ -41,7 +41,7 @@ export function makeCamper(seed: number, slot: number): DecisionProvider {
   /** A random corner other than the current one. */
   const elsewhere = (from: number) => (from + 1 + Math.floor(draw() * (CAMP_SPOTS.length - 1))) % CAMP_SPOTS.length;
 
-  function intent({ tick, observation }: DecisionContext): BotIntent {
+  function intent(tick: number, observation: Observation): BotIntent {
     const { self, visible } = observation;
     const stuck = headway.check(tick, self.pos);
     if (corner === null) corner = nearest(self.pos);
@@ -60,10 +60,10 @@ export function makeCamper(seed: number, slot: number): DecisionProvider {
   }
 
   return {
-    decide(ctx) {
-      const next = intent(ctx);
-      headway.note(ctx.tick, ctx.observation.self.pos, next.move !== "stop");
-      return Promise.resolve(botAnswer("camper", next));
+    decide(tick, observation) {
+      const next = intent(tick, observation);
+      headway.note(tick, observation.self.pos, next.move !== "stop");
+      return next;
     },
   };
 }

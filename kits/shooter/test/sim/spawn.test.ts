@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { headingTo } from "../../src/angles";
 import { AGENT_HP } from "../../src/constants";
 import { getMap, type MapSpec } from "../../src/maps";
-import { spawn } from "../../src/sim/world";
+import { spawn, spawnWorld } from "../../src/sim/world";
 import { STOP_ACTION } from "../../src/types";
 
 // R14: agents take map spawns in a seeded shuffle, face the arena center, start
@@ -103,5 +103,30 @@ describe("spawn: misuse", () => {
 
   it("throws when the config names another map", () => {
     expect(() => spawn(config(1, 2, "map-2"), map1)).toThrow(/map-2.*map-1/);
+  });
+});
+
+// R0.4 (rulings R21.c, R24): the arena spawns the platform's agents from the
+// platform's RNG; spawn(config, map) is that with a0… and createRng(config.seed).
+describe("spawnWorld: the agents and the RNG the caller gives", () => {
+  it("is spawn's world when given a0… and createRng(seed)", () => {
+    const ids = ["a0", "a1", "a2", "a3"];
+    expect(spawnWorld({ map: map1, agents: ids, durationTicks: 6000, rng: createRng(7) })).toEqual(spawn(config(7, 4), map1));
+  });
+
+  it("names the agents by the ids it is given, in slot order, and shuffles with the RNG it is given", () => {
+    const state = spawnWorld({ map: map1, agents: ["x", "y"], durationTicks: 50, rng: createRng(3) });
+    expect(state.agents.map((a) => [a.id, a.slot])).toEqual([
+      ["x", 0],
+      ["y", 1],
+    ]);
+    expect(state.durationTicks).toBe(50);
+    expect(spawnKey(state)).toBe(spawnKey(spawn(config(3, 2), map1)));
+    expect(spawnKey(spawnWorld({ map: map1, agents: ["x", "y"], durationTicks: 50, rng: createRng(4) }))).not.toBe(spawnKey(state));
+  });
+
+  it("throws when there are more agents than spawns", () => {
+    const tiny: MapSpec = { ...map1, id: "tiny", spawns: map1.spawns.slice(0, 2) };
+    expect(() => spawnWorld({ map: tiny, agents: ["a0", "a1", "a2"], durationTicks: 10, rng: createRng(1) })).toThrow(/3 agents.*2 spawns/);
   });
 });

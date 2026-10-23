@@ -51,3 +51,9 @@ export const HEAR_STEPS_RANGE_M = 15;
 export const INCOMING_RADIUS_M = 2;
 // §6.2 "coarse distance band". ASSUMED, not in DESIGN.md: upper edges in m; beyond `mid` is `far`.
 export const HEARING_BANDS_M = Object.freeze({ near: 20, mid: 45 });
+// Sim ruling R15, R24 (was core's DOER_INTERVAL_TICKS): perception merges the shots, hits and
+// near misses of the last this many steps, one decision interval, so each fact reaches exactly
+// one decision when agents decide every this many ticks. The bots turn a decision's worth at a
+// time on the same count. An arena over the kit sets its actor interval to it (a test in
+// arenas/battle-royale checks).
+export const PERCEPTION_WINDOW_TICKS = 10;

@@ -1,7 +1,6 @@
-import { DOER_INTERVAL_TICKS } from "@decision-arena/core";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { AGENT_RADIUS_M, FIRE_INTERVAL_TICKS, MOVE_SPEED_MPS } from "../../src/constants";
+import { AGENT_RADIUS_M, FIRE_INTERVAL_TICKS, MOVE_SPEED_MPS, PERCEPTION_WINDOW_TICKS } from "../../src/constants";
 import { getMap, MapSpecSchema } from "../../src/maps";
 import { circleInsideArena, circleOverlapsPolygon } from "../../src/sim/collision";
 import { perceive, type PerceptionState } from "../../src/sim/perceive";
@@ -17,7 +16,7 @@ import { deepFreeze, loadScene, makeAgent, makeWorld } from "./helpers";
 // line of sight; other agents' shots within 80 m and enemies' footsteps within
 // 15 m, through walls, as a bearing and a band; hits and near misses on it as the
 // bearing of the shooter; its own status. Shots, hits and near misses are those
-// of the last DOER_INTERVAL_TICKS steps (the window, R15). Bearings in whole
+// of the last PERCEPTION_WINDOW_TICKS steps (the window, R15). Bearings in whole
 // degrees, distances in whole meters, secondsLeft to one decimal.
 
 const NO_FACTS: TickFacts = { shots: [], hits: [], nearMisses: [] };
@@ -182,7 +181,7 @@ describe("incoming: hits and near misses on me this tick, as the shooter's beari
   });
 });
 
-describe("the window: shots, hits and near misses of the last DOER_INTERVAL_TICKS steps (R15)", () => {
+describe("the window: shots, hits and near misses of the last PERCEPTION_WINDOW_TICKS steps (R15)", () => {
   it("hears every other agent's shot in the window, as a bearing and band from where the shooter stood when it fired", () => {
     // a1 fired 6 steps ago from (50, 40) and has walked 1.5 m east since; a2 fired this step;
     // a3 fired 3 steps ago, 81 m away from a0 then and now (out of range); a0's own older shot is not heard.
@@ -192,7 +191,7 @@ describe("the window: shots, hits and near misses of the last DOER_INTERVAL_TICK
       makeAgent(2, { x: 20, y: 10 }),
       makeAgent(3, { x: 50, y: 91 }),
     ];
-    const steps: Partial<TickFacts>[] = Array.from({ length: DOER_INTERVAL_TICKS }, () => ({}));
+    const steps: Partial<TickFacts>[] = Array.from({ length: PERCEPTION_WINDOW_TICKS }, () => ({}));
     steps[3] = { shots: [{ agent: "a1", pos: { x: 50, y: 40 } }, { agent: "a0", pos: { x: 50, y: 10 } }] };
     steps[6] = { shots: [{ agent: "a3", pos: { x: 50, y: 91 } }] };
     steps[9] = { shots: [{ agent: "a2", pos: { x: 20, y: 10 } }] };
@@ -232,7 +231,7 @@ describe("the window: shots, hits and near misses of the last DOER_INTERVAL_TICK
       heard.push(perceive(state, "a0").heard.length);
     }
     const ticksHeard = heard.flatMap((n, tick) => (n > 0 ? [tick] : []));
-    expect(ticksHeard).toEqual(Array.from({ length: DOER_INTERVAL_TICKS }, (_, i) => 7 + i)); // ticks 7..16
+    expect(ticksHeard).toEqual(Array.from({ length: PERCEPTION_WINDOW_TICKS }, (_, i) => 7 + i)); // ticks 7..16
     expect([0, 10, 20, 30].filter((tick) => heard[tick]! > 0)).toEqual([10]); // only the decision at tick 11
   });
 });
@@ -299,11 +298,11 @@ describe("scene fixtures are consistent world states", () => {
         for (const o of state.map.obstacles) expect(circleOverlapsPolygon(a.pos, AGENT_RADIUS_M, o.vertices), a.id).toBe(false);
         expect(a.alive ? a.hp > 0 && a.deathTick === null : a.hp === 0 && a.deathTick !== null && !a.moved, a.id).toBe(true);
       }
-      // R6, R15: the window holds the newest min(tick, DOER_INTERVAL_TICKS) steps, oldest first. A
+      // R6, R15: the window holds the newest min(tick, PERCEPTION_WINDOW_TICKS) steps, oldest first. A
       // shot is recorded where its shooter stood: the newest step's where it stands now, an older
       // one within walking reach of that (MOVE_STEP_M per step); a weapon fires at most once per
       // FIRE_INTERVAL_TICKS. Hits and near misses name agents of this world.
-      expect(state.recent).toHaveLength(Math.min(state.tick, DOER_INTERVAL_TICKS));
+      expect(state.recent).toHaveLength(Math.min(state.tick, PERCEPTION_WINDOW_TICKS));
       state.recent.forEach((facts, i) => {
         const age = state.recent.length - 1 - i;
         for (const shot of facts.shots) {

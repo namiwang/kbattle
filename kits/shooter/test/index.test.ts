@@ -81,6 +81,23 @@ describe("@decision-arena/kit-shooter entry point", () => {
     expect(kit.perceive(subset, "a0")).toEqual(view);
   });
 
+  it("exposes the R0.4 surface: the perception window, spawnWorld, the step's event types and the bot minds", () => {
+    expect(kit.PERCEPTION_WINDOW_TICKS).toBe(10);
+    const world = kit.spawnWorld({ map: kit.getMap("map-1"), agents: ["a0", "a1"], durationTicks: 100, rng: { s: 1 } });
+    expect(world.agents.map((a) => a.id)).toEqual(["a0", "a1"]);
+    const events: kit.StepEvent[] = kit.step(world, {}).events;
+    expect(events).toEqual([]);
+    const shot: kit.ShotEvent = { kind: "Shot", tick: 1, agent: "a0", bullet: "b0" };
+    const answers: kit.ActionAnswers = { fire: { noul: 1 } };
+    expect([shot.kind, kit.actionFromAnswers(answers, []).fire]).toEqual(["Shot", true]);
+    expect(kit.BOT_KINDS).toEqual(["wanderer", "camper"]);
+    const mind: kit.BotMind = kit.makeBotMind("camper", 1, 0);
+    const intent: kit.BotIntent = mind.decide(1, kit.perceive(world, "a0"));
+    expect(intent.target).toBeNull();
+    const setup: kit.SpawnConfig = { mapId: "map-1", seed: 1, durationTicks: 100, slots: [{}, {}] };
+    expect(kit.spawn(setup, kit.getMap("map-1"))).toEqual(kit.spawnWorld({ map: kit.getMap("map-1"), agents: ["a0", "a1"], durationTicks: 100, rng: { s: 1 } }));
+  });
+
   it("exposes the v1.4 surface: both maps, map checks, makeBot as a DecisionProvider", async () => {
     expect(kit.MAP_IDS).toEqual(["map-1", "map-2"]);
     expect(kit.validateMap(kit.getMap("map-2"))).toEqual([]);
