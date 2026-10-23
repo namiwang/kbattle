@@ -5,3 +5,5 @@ export * from "./question";
 export * from "./model";
 export * from "./agent";
 export * from "./constants";
+export * from "./arena";
+export * from "./registry";
