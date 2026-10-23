@@ -27,6 +27,22 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@22.20.5)(vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15))
 
+  arenas/battle-royale:
+    dependencies:
+      '@decision-arena/core':
+        specifier: workspace:*
+        version: link:../../platform/core
+      '@decision-arena/kit-shooter':
+        specifier: workspace:*
+        version: link:../../kits/shooter
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.5
+        version: 22.20.5
+
   kits/shooter:
     dependencies:
       '@decision-arena/core':
