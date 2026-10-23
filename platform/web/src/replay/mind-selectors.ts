@@ -15,16 +15,9 @@
 // Thinker.tick is when a plan was applied (or its failure logged), requestedTick
 // when it was asked for; the plan counts from `tick`.
 
-import {
-  ESCALATE_THRESHOLD,
-  FIRE_THRESHOLD,
-  perceive,
-  type ChoiceAnswer,
-  type DoerAnswers,
-  type Observation,
-  type PerceptionState,
-  type QuestionId,
-} from "@decision-arena/core";
+import { ESCALATE_THRESHOLD } from "@decision-arena/core";
+import type { ChoiceAnswer, DoerAnswers, QuestionId } from "@decision-arena/core/legacy";
+import { FIRE_THRESHOLD, perceive, type Observation, type PerceptionState } from "@decision-arena/kit-shooter";
 import type { DoerEvent, LogIndex, SlotKind, ThinkerEvent } from "./log-index";
 
 /** What core.perceive gives an agent in one world, whether it is alive there, and the lines that show it. */

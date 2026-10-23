@@ -1,10 +1,12 @@
-// A real match for the replay tests: the 16-bot match core's
+// A real match for the replay tests: the 16-bot match the kit's
 // scripts/run-match.ts writes by default (map-1, seed 7, wanderers and
 // campers alternating, MATCH_DURATION_TICKS), run in-process (about 40 ms, no
 // network), with the live world of every tick kept from runMatch's onTick. The
 // log is what the viewer opens; the live worlds are what the agents perceived.
 
-import { botProviders, MATCH_DURATION_TICKS, MatchConfigSchema, runMatch, type MatchLog, type Slot, type WorldState } from "@decision-arena/core";
+import { MATCH_DURATION_TICKS } from "@decision-arena/core";
+import { MatchConfigSchema, type MatchLog, type Slot } from "@decision-arena/core/legacy";
+import { botProviders, runMatch, type WorldState } from "@decision-arena/kit-shooter";
 
 export interface RealMatch {
   readonly log: MatchLog;

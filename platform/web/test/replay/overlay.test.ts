@@ -1,6 +1,7 @@
-import { MatchLogSchema, normalizeDeg, VISION_CONE_DEG, VISION_RANGE_M, vec2, type Vec2 } from "@decision-arena/core";
+import { MatchLogSchema } from "@decision-arena/core/legacy";
+import { normalizeDeg, VISION_CONE_DEG, VISION_RANGE_M, vec2, type Vec2 } from "@decision-arena/kit-shooter";
 import { beforeAll, describe, expect, it } from "vitest";
-import sampleJson from "../../../core/fixtures/sample-log.json" with { type: "json" };
+import sampleJson from "../../../../kits/shooter/fixtures/sample-log.json" with { type: "json" };
 import { indexLog, type LogIndex } from "../../src/replay/log-index";
 import { clipToRect, overlayModel, tickSegment, visionCone } from "../../src/replay/overlay";
 import { stateFromTick } from "../../src/replay/state-from-tick";

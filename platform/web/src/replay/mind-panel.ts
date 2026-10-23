@@ -9,7 +9,7 @@
 // moves them without any script. Element listeners only: nothing on document
 // or window.
 
-import type { PerceptionState } from "@decision-arena/core";
+import type { PerceptionState } from "@decision-arena/kit-shooter";
 import type { LogIndex } from "./log-index";
 import {
   answerSummary,

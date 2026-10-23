@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
-    "@decision-arena/core": "workspace:*"
+    "@decision-arena/core": "workspace:*",
+    "@decision-arena/kit-shooter": "workspace:*"
   }
 }

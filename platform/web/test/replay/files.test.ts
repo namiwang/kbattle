@@ -1,7 +1,7 @@
-import { MatchLogSchema } from "@decision-arena/core";
+import { MatchLogSchema } from "@decision-arena/core/legacy";
 import { describe, expect, it } from "vitest";
-import unknownKindText from "../../../core/fixtures/bad/unknown-event-kind.json?raw";
-import sampleText from "../../../core/fixtures/sample-log.json?raw";
+import unknownKindText from "../../../../kits/shooter/fixtures/bad/unknown-event-kind.json?raw";
+import sampleText from "../../../../kits/shooter/fixtures/sample-log.json?raw";
 import { matchLogFileName, openMatchLogFile, parseMatchLogText, pickJsonFile } from "../../src/replay/files";
 
 const sample = MatchLogSchema.parse(JSON.parse(sampleText));

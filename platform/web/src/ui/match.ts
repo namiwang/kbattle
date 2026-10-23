@@ -4,7 +4,7 @@
 // for when a key comes back. The line under Run match is the check Run match
 // makes (validateForm), kept current as the form changes.
 
-import { MAP_IDS } from "@decision-arena/core";
+import { MAP_IDS } from "@decision-arena/kit-shooter";
 import type { SlotKind } from "../replay/log-index";
 import { KIND_COLORS } from "../replay/theme";
 import { el, showNumber, showText } from "./dom";

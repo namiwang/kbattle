@@ -13,7 +13,7 @@
 // against the Tick rows (trails gone within N ticks), the follow camera, the
 // vision-cone overlay against core.perceive at every tick, and frame timing at
 // 1x with trails and overlay on; at the end the same on a busy 16-agent log,
-// then on a real 16-bot match (the one core's scripts/run-match.ts writes):
+// then on a real 16-bot match (the one the kit's scripts/run-match.ts writes):
 // incoming-fire ticks against the log's hits and near-miss rows, a death,
 // resizing while following, and re-mounting with everything on.
 // Before the files, the v2.4 mind panel: following a0 it shows the log's plan,
@@ -31,23 +31,16 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
+import { DOER_INTERVAL_TICKS, MATCH_DURATION_TICKS } from "@decision-arena/core";
 import {
-  botProviders,
-  DOER_INTERVAL_TICKS,
   eventsOfKind,
-  getMap,
-  MATCH_DURATION_TICKS,
   MatchConfigSchema,
   MatchLogSchema,
-  normalizeDeg,
-  perceive,
-  runMatch,
-  vec2,
   type Event as LogEvent,
   type MatchLog,
   type Slot,
-  type Vec2,
-} from "@decision-arena/core";
+} from "@decision-arena/core/legacy";
+import { botProviders, getMap, normalizeDeg, perceive, runMatch, vec2, type Vec2 } from "@decision-arena/kit-shooter";
 import { chromium, type Locator, type Page } from "playwright";
 import { createServer, type ViteDevServer } from "vite";
 import { TRAIL_TICKS, type DrawnBullets } from "../src/replay/bullets";
@@ -70,8 +63,8 @@ import { BULLET, COLORS, KIND_COLORS, MARKER, OVERLAY, STAGE_PAD_PX } from "../s
 
 const webDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = join(webDir, ".smoke");
-const samplePath = join(webDir, "../core/fixtures/sample-log.json");
-const badPath = join(webDir, "../core/fixtures/bad/unknown-event-kind.json"); // one issue, at events[5].kind
+const samplePath = join(webDir, "../../kits/shooter/fixtures/sample-log.json");
+const badPath = join(webDir, "../../kits/shooter/fixtures/bad/unknown-event-kind.json"); // one issue, at events[5].kind
 const log = MatchLogSchema.parse(JSON.parse(readFileSync(samplePath, "utf8")));
 const map = getMap(log.config.mapId);
 const frames = new Map(eventsOfKind(log, "Tick").map((e) => [e.tick, e]));
@@ -1697,7 +1690,7 @@ async function checkBusyLog(page: Page): Promise<void> {
 // ---- a real 16-bot match: incoming fire, a death, re-mounting while following (v2.3) ----
 
 /**
- * The match core's scripts/run-match.ts writes by default (16 bots on map-1, seed 7, wanderers
+ * The match the kit's scripts/run-match.ts writes by default (16 bots on map-1, seed 7, wanderers
  * and campers alternating), run here in-process: same config, same log, byte for byte.
  * DECISION_ARENA_MATCH_LOG=<file> opens a log that script wrote instead (any map or seed).
  */

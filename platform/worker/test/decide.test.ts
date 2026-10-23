@@ -1,4 +1,4 @@
-import { DoerAnswerSchema } from "@decision-arena/core";
+import { DoerAnswerSchema } from "@decision-arena/core/legacy";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import clientModel from "../../core/fixtures/bad/decide-request-client-model.json" with { type: "json" };
 import oneTargetOption from "../../core/fixtures/bad/decide-request-one-target-option.json" with { type: "json" };

@@ -1,12 +1,13 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import * as core from "@decision-arena/core";
+import * as legacy from "@decision-arena/core/legacy";
+import type { Observation } from "@decision-arena/kit-shooter";
 import * as brain from "../src/index";
 
 describe("@decision-arena/models entry point", () => {
   it("exposes the Anthropic thinker and re-exports core's PlanSchema", () => {
     expect(typeof brain.makeAnthropicThinker).toBe("function");
     expect(typeof brain.thinkingParamFor).toBe("function");
-    expect(brain.PlanSchema).toBe(core.PlanSchema);
+    expect(brain.PlanSchema).toBe(legacy.PlanSchema);
   });
 
   it("exposes the thinker client, its prompt builders and the digest (v3.2)", () => {
@@ -38,14 +39,14 @@ describe("@decision-arena/models entry point", () => {
   });
 
   it("types a successful ThinkerResult with core's Plan", () => {
-    expectTypeOf<brain.Plan>().toEqualTypeOf<core.Plan>();
-    expectTypeOf<Extract<brain.ThinkerResult, { ok: true }>["plan"]>().toEqualTypeOf<core.Plan>();
+    expectTypeOf<brain.Plan>().toEqualTypeOf<legacy.Plan>();
+    expectTypeOf<Extract<brain.ThinkerResult, { ok: true }>["plan"]>().toEqualTypeOf<legacy.Plan>();
     expectTypeOf<brain.ThinkerProvider["complete"]>().returns.resolves.toEqualTypeOf<brain.ThinkerResult>();
   });
 
   it("types a thinker call's log input as the turn it was built from", () => {
     expectTypeOf<brain.ThinkerCall["input"]>().toEqualTypeOf<brain.ThinkerLogInput>();
-    expectTypeOf<brain.ThinkerLogInput["observation"]>().toEqualTypeOf<core.Observation>();
+    expectTypeOf<brain.ThinkerLogInput["observation"]>().toEqualTypeOf<Observation>();
     expectTypeOf<brain.ThinkerClient["call"]>().returns.resolves.toEqualTypeOf<brain.ThinkerCall>();
     expectTypeOf<brain.ThinkerError["fatal"]>().toEqualTypeOf<boolean>();
   });

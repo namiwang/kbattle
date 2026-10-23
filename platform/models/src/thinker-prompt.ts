@@ -2,24 +2,23 @@
 // the user's prompt as the system prompt, and one user message per call with the
 // agent's perception, its current plan, the digest of what changed and its
 // scratchpad. Only what core.perceive gives the agent goes in (principle 3).
+import { DOER_INTERVAL_TICKS, THINKER_MAX_GAP_TICKS, THINKER_MIN_GAP_TICKS, TICK_MS } from "@decision-arena/core";
+import type { Prompts } from "@decision-arena/core/legacy";
+// The shooter kit until R2.3 rewrites this prompt: an accepted exception to the
+// platform's dependency rule (ISSUES I-028).
 import {
   AGENT_HP,
   ARENA_HEIGHT_M,
   ARENA_WIDTH_M,
   BULLET_DAMAGE,
-  DOER_INTERVAL_TICKS,
   HEAR_SHOT_RANGE_M,
   HEAR_STEPS_RANGE_M,
   HEARING_BANDS_M,
   normalizeDeg,
-  THINKER_MAX_GAP_TICKS,
-  THINKER_MIN_GAP_TICKS,
-  TICK_MS,
   VISION_CONE_DEG,
   VISION_RANGE_M,
   type Observation,
-  type Prompts,
-} from "@decision-arena/core";
+} from "@decision-arena/kit-shooter";
 import { PLAN_REPLY_CHARS } from "./schemas";
 
 const seconds = (ticks: number) => (ticks * TICK_MS) / 1000;
@@ -27,7 +26,7 @@ const seconds = (ticks: number) => (ticks * TICK_MS) / 1000;
 /**
  * The fixed first part of every thinker system prompt (§5.4): the game, what the
  * agent can do, how to read the user message, and the JSON to answer with. Users
- * never see or edit it. Numbers come from core's constants, so it follows a retune.
+ * never see or edit it. Numbers come from core's and the shooter kit's constants, so it follows a retune.
  */
 export const HARNESS_PROMPT = `You are the thinker of one agent in a top-down battle royale on a ${ARENA_WIDTH_M} x ${ARENA_HEIGHT_M} m arena with walls. The last one alive wins; ranking is survival, then kills, then hp. Hp starts at ${AGENT_HP}; a hit costs ${BULLET_DAMAGE}. Walls block bullets and sight.
 

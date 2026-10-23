@@ -1,16 +1,8 @@
-import {
-  DOER_INTERVAL_TICKS,
-  MatchLogSchema,
-  normalizeDeg,
-  perceive,
-  type Event as LogEvent,
-  type MatchLog,
-  type Observation,
-  type TickFacts,
-  type Vec2,
-} from "@decision-arena/core";
+import { DOER_INTERVAL_TICKS } from "@decision-arena/core";
+import { MatchLogSchema, type Event as LogEvent, type MatchLog } from "@decision-arena/core/legacy";
+import { normalizeDeg, perceive, type Observation, type TickFacts, type Vec2 } from "@decision-arena/kit-shooter";
 import { beforeAll, describe, expect, it } from "vitest";
-import sampleJson from "../../../core/fixtures/sample-log.json" with { type: "json" };
+import sampleJson from "../../../../kits/shooter/fixtures/sample-log.json" with { type: "json" };
 import { indexLog, type LogIndex, type TickEvent } from "../../src/replay/log-index";
 import { createStateAt, stateFromTick } from "../../src/replay/state-from-tick";
 import { realMatch, type RealMatch } from "./real-match";

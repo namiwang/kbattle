@@ -1,4 +1,4 @@
-import { DecideRequestSchema, type DecideRequest, type DoerAnswer } from "@decision-arena/core";
+import { DecideRequestSchema, type DecideRequest, type DoerAnswer } from "@decision-arena/core/legacy";
 import { clefAnswer, DoerBackendError } from "../decision/clef";
 import { mockAnswer } from "../decision/mock";
 import type { Env } from "../index";

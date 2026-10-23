@@ -3,7 +3,8 @@
 // instruction is fixed by Decision Arena (§5.4), so Prompts has no field for it. A blank
 // instruction uses the default (ISSUES I-005), which the field shows as its placeholder.
 
-import { DOER_INTERVAL_TICKS, MOVE_CHOICES, PromptsSchema, TICK_MS, TURN_CHOICES, type Prompts } from "@decision-arena/core";
+import { DOER_INTERVAL_TICKS, TICK_MS } from "@decision-arena/core";
+import { MOVE_CHOICES, PromptsSchema, TURN_CHOICES, type Prompts } from "@decision-arena/core/legacy";
 import { DEFAULT_PROMPTS } from "./defaults";
 import { el, showText } from "./dom";
 import type { Store } from "./state";

@@ -3,7 +3,7 @@
 // keeps that zoom and moves the world so the agent sits at the middle of the
 // canvas, re-centered every tick. Only the offset changes, never the scale.
 
-import type { Vec2 } from "@decision-arena/core";
+import type { Vec2 } from "@decision-arena/kit-shooter";
 import type { Transform } from "./coords";
 import type { LogIndex } from "./log-index";
 

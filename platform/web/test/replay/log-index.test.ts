@@ -1,6 +1,6 @@
-import { MatchLogSchema, type Event as LogEvent, type MatchLog } from "@decision-arena/core";
+import { MatchLogSchema, type Event as LogEvent, type MatchLog } from "@decision-arena/core/legacy";
 import { describe, expect, it } from "vitest";
-import sampleJson from "../../../core/fixtures/sample-log.json" with { type: "json" };
+import sampleJson from "../../../../kits/shooter/fixtures/sample-log.json" with { type: "json" };
 import { indexLog } from "../../src/replay/log-index";
 
 const sample = MatchLogSchema.parse(sampleJson);

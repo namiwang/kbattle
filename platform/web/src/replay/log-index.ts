@@ -2,7 +2,8 @@
 // (scrubbing never replays from zero). The renderer only reads Tick events,
 // which carry every position (DESIGN.md §5.3); nothing here runs the sim.
 
-import { AGENT_HP, lastTick as lastTickOf, type Event, type EventOf, type MatchLog, type Slot } from "@decision-arena/core";
+import { lastTick as lastTickOf, type Event, type EventOf, type MatchLog, type Slot } from "@decision-arena/core/legacy";
+import { AGENT_HP } from "@decision-arena/kit-shooter";
 
 /**
  * A Tick event. Its optional `near` lists the near misses of the step that

@@ -18,15 +18,15 @@
 // of tick s (it died in that step or before) stands at its last row
 // (ISSUES I-019).
 
+import { DOER_INTERVAL_TICKS } from "@decision-arena/core";
+import type { MatchLog } from "@decision-arena/core/legacy";
 import {
-  DOER_INTERVAL_TICKS,
   getMap,
-  type MatchLog,
   type PerceivedAgent,
   type PerceptionState,
   type TickFacts,
   type Vec2,
-} from "@decision-arena/core";
+} from "@decision-arena/kit-shooter";
 import { clampTick, type LogIndex, type TickEvent } from "./log-index";
 
 type AgentRow = TickEvent["agents"][number];

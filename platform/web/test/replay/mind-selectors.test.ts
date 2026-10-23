@@ -1,6 +1,8 @@
-import { ESCALATE_THRESHOLD, FIRE_THRESHOLD, MatchLogSchema, perceive, type DoerAnswers, type MatchLog } from "@decision-arena/core";
+import { ESCALATE_THRESHOLD } from "@decision-arena/core";
+import { MatchLogSchema, type DoerAnswers, type MatchLog } from "@decision-arena/core/legacy";
+import { FIRE_THRESHOLD, perceive } from "@decision-arena/kit-shooter";
 import { describe, expect, it } from "vitest";
-import sampleJson from "../../../core/fixtures/sample-log.json" with { type: "json" };
+import sampleJson from "../../../../kits/shooter/fixtures/sample-log.json" with { type: "json" };
 import { indexLog } from "../../src/replay/log-index";
 import {
   answerRows,

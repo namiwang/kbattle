@@ -1,7 +1,7 @@
 // Arena floor, bounds and obstacles of a MapSpec, drawn once in map meters
 // inside the world container.
 
-import type { MapSpec } from "@decision-arena/core";
+import type { MapSpec } from "@decision-arena/kit-shooter";
 import { Graphics } from "pixi.js";
 import { COLORS } from "./theme";
 

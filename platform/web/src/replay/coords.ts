@@ -2,7 +2,7 @@
 // y down like the canvas, so the transform is a uniform scale plus an offset,
 // never a flip. The map keeps its aspect inside any canvas (letterbox).
 
-import type { Vec2 } from "@decision-arena/core";
+import type { Vec2 } from "@decision-arena/kit-shooter";
 
 export interface Transform {
   /** Pixels per meter, the same on both axes; 0 when the canvas has no room. */

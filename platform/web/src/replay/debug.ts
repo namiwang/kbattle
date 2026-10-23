@@ -2,7 +2,7 @@
 // (scripts/smoke.ts) and for poking at the viewer from devtools, plus the form
 // check behind Run match (v4.1), which the smoke calls while the button is disabled.
 
-import type { Vec2 } from "@decision-arena/core";
+import type { Vec2 } from "@decision-arena/kit-shooter";
 import type { DrawnBullets } from "./bullets";
 import type { DrawnMind } from "./mind-selectors";
 import type { DrawnOverlay } from "./overlay";

@@ -2,7 +2,8 @@
 // provider under a deadline, and returns the result with what the log records.
 // Fake providers and a fake fetch: no network.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { EventSchema, type Observation } from "@decision-arena/core";
+import { EventSchema } from "@decision-arena/core/legacy";
+import type { Observation } from "@decision-arena/kit-shooter";
 import { makeAnthropicThinker } from "../src/providers/anthropic";
 import { makeThinkerClient } from "../src/thinker-client";
 import { buildSystem, buildUserMessage } from "../src/thinker-prompt";

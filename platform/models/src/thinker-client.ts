@@ -3,7 +3,7 @@
 // scratchpad (thinker-prompt.ts), and the provider gets a deadline. The call never
 // throws and never rejects: every failure is a ThinkerResult (principle 4), so the
 // orchestrator (v3.3) can fire it off without holding a tick (row 31).
-import type { AgentId, Prompts } from "@decision-arena/core";
+import type { AgentId, Prompts } from "@decision-arena/core/legacy";
 import { buildSystem, buildUserMessage, type ThinkerTurn } from "./thinker-prompt";
 import { thinkerError, type ThinkerProvider, type ThinkerResult } from "./types";
 

@@ -1,4 +1,4 @@
-import { PromptsSchema } from "@decision-arena/core";
+import { PromptsSchema } from "@decision-arena/core/legacy";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG, DEFAULT_PROMPTS } from "../../src/ui/defaults";
 

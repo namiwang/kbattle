@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@decision-arena/core": "workspace:*",
+    "@decision-arena/kit-shooter": "workspace:*",
     "@decision-arena/models": "workspace:*",
     "pixi.js": "8.22.0",
     "zod": "^4.6.7"

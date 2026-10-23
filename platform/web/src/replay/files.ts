@@ -4,7 +4,8 @@
 // the viewer needs beyond it, a map it has. A good result is the schema's
 // output, never the raw JSON.
 
-import { MAP_IDS, MatchLogSchema, type MatchLog } from "@decision-arena/core";
+import { MatchLogSchema, type MatchLog } from "@decision-arena/core/legacy";
+import { MAP_IDS } from "@decision-arena/kit-shooter";
 import { formatIssuePath, type FileError } from "./errors";
 
 export type OpenResult = { ok: true; log: MatchLog } | { ok: false; error: FileError };

@@ -1,4 +1,4 @@
-import type { Prompts } from "@decision-arena/core";
+import type { Prompts } from "@decision-arena/core/legacy";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG, DEFAULT_PROMPTS } from "../../src/ui/defaults";
 import type { UiState } from "../../src/ui/state";

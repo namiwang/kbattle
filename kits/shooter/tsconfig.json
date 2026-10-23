@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Node types for tests and scripts (fixture files). src stays runtime-neutral:
+    // web and models typecheck it again without Node types once they import the kit.
+    "types": ["node"]
+  },
+  "include": ["src", "test", "scripts"]
+}

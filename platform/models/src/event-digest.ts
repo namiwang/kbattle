@@ -10,16 +10,10 @@
 // that tick: shots and near misses are facts of the perception window, the last
 // DOER_INTERVAL_TICKS steps (sim ruling R15), so a caller that notes every doer
 // tick sees each fact exactly once.
-import {
-  bearingTo,
-  HEARING_BANDS,
-  normalizeDeg,
-  vec2,
-  type AgentId,
-  type HearingBand,
-  type Observation,
-  type Vec2,
-} from "@decision-arena/core";
+import { HEARING_BANDS, type AgentId, type HearingBand } from "@decision-arena/core/legacy";
+// The shooter kit until R2.3 moves the digest: an accepted exception to the
+// platform's dependency rule (ISSUES I-028).
+import { bearingTo, normalizeDeg, vec2, type Observation, type Vec2 } from "@decision-arena/kit-shooter";
 
 /**
  * The digest's default size in characters. With the other inputs at their caps,

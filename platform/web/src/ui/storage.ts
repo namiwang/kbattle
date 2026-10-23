@@ -10,7 +10,8 @@
 // - Versioning is in the key names: a stored shape that changes incompatibly
 //   moves to `decision-arena:v2:*` and v1 values are left behind.
 
-import { MAP_IDS, PromptsSchema } from "@decision-arena/core";
+import { PromptsSchema } from "@decision-arena/core/legacy";
+import { MAP_IDS } from "@decision-arena/kit-shooter";
 import * as z from "zod";
 import { DEFAULT_CONFIG, DEFAULT_PROMPTS } from "./defaults";
 import type { UiState } from "./state";
