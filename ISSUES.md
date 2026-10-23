@@ -300,3 +300,63 @@ page copy still says mind, thinker and doer (renamed in R1.3/R2.5); bot
 decisions read like model answers with 100% bars. Also: the spike page
 ships in the build with stale copy (I-023), `GET /decide` answers 404
 rather than 405, and comments cite v3.0 section numbers (§7, §5.7).
+
+## I-027 Version-1 parity fixture and wall-time baseline — resolved (R0.4 uses it)
+
+The R0.4 parity gate needs the version-1 log of the 16-bot match written
+by code nobody has touched. Captured on 2026-10-23 at commit 0279b8b
+with `scripts/run-match.ts` (arena-1, seed 7, 6,000 ticks): three runs
+byte-identical, 2,083 events, ends at tick 1168 with a9 (camper) alive,
+510,782 bytes, sha256 7de1324b…d27f0337, stored as
+`platform/core/fixtures/parity/v1-run.json` (it moves with the fixtures
+to the kit in R0.3 and to the arena in R0.4). Wall time of the version-1
+loop on this machine: 44, 40 and 38 ms for the match, so the "within 2×"
+gate is judged against a same-session median, not this number. Cost if
+wrong: none; regenerate from 0279b8b.
+
+## I-028 Version-1 code outlives its milestone — open (deleted by R0.5, R2.3, R2.4)
+
+R0.3 moves the shooter out of `platform/core` while the web, models and
+Worker still read version-1 shapes, so until their own milestones land:
+`@decision-arena/core/legacy` carries the v1 boundary schemas, log
+helpers and constants (deleted when the web reads version 2 in R0.5, the
+models package is rewritten in R2.3 and the Worker's `/ask` lands in
+R2.4); the kit keeps the v1 match loop under `src/legacy` for the web's
+test helper and smoke until R0.5; and `platform/models` imports geometry,
+shooter constants and `Observation` from `@decision-arena/kit-shooter`,
+which breaks the DESIGN §5.1 dependency rule for a platform package.
+Accepted so every commit stays green (plan convention) instead of
+rewriting the thinker glue twice. Cost if wrong: a reader of `platform/`
+in the meantime sees shooter imports in a platform package; the three
+milestones named above remove them, and `grep -rn kit-shooter platform/`
+is the check.
+
+## I-029 Contract refinements beyond DESIGN §5.2–§5.5 — resolved (controller rulings R19–R26)
+
+Settled in `.superpowers/sdd/PLAN/r0-rulings.md` so the R0 agents do not
+each decide: `spawn(config, agents, rng)` returns `{ state, events }` (the
+agent list is the platform's and arenas announce starting positions as
+events, which the parity gate needs); the arena carries `tickData`, the
+zod schema of its Tick payload; core's `Arena` has no `renderer` field
+(core must not know Pixi; the web's registry pairs an arena with its
+renderer in R1.1); every arena config extends a platform base
+`{ seed, durationTicks }` so the loop can seed the RNG and bound event
+ticks without reading arena fields; `MatchEnd` may carry `results`; the
+actor's `Call` logs answers and usage but not its questions or state
+(rebuildable, log size I-018), the planner's logs its input; model ids
+`bot/<name>` resolve through `arena.bots`, others through a resolver the
+caller passes (the catalog in R2.1); the planner is first asked at tick 1
+and then on escalate after 100 ticks or forced after 400, one in flight,
+its reply landing at the first tick after it settles; a fatal model
+error ends the match like a cancel with the Call event saying why; the
+replaying planner lands at its recorded tick through `replayMatch`'s own
+tick hook. The controller folds these into DESIGN.md when R0 ends. Cost
+if wrong: each is a one-file change in `platform/core`.
+
+## I-030 Stale `p0` worktree — blocked-on-nami
+
+`.worktrees/p0` (branch `p0`, the unmerged v3.1 WIP from the session cut
+on 2026-10-21, obsolete under v4.0) is still registered; removing a
+worktree is a deletion the controller's permissions do not allow. Nami:
+`git worktree remove --force .worktrees/p0` and, if wanted,
+`git branch -D p0 p1 p2` (p1 and p2 are merged). Cost if wrong: none.
