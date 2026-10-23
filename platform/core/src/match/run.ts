@@ -304,7 +304,8 @@ export async function playMatch<T extends ArenaTypes>(
       }
       const active = arena.active(state);
       const live = seats.filter((seat) => active.includes(seat.id));
-      if (fatal === undefined && !signal?.aborted) {
+      if (fatal === undefined) {
+        // After a cancel, a request settles at once as aborted, as the actor's calls do: the log says so, and a replay asks the same.
         for (const seat of live) {
           if (seat.planner && plannerDue(seat, t)) seat.pending = askPlanner(seat, seat.planner, t, state);
         }
