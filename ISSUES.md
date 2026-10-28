@@ -401,3 +401,50 @@ given; bots answer 0 or 1, so parity holds); `EventSchema` is a loose
 object with a dispatch transform because zod's discriminated union
 takes no catch-all, so it has no JSON Schema form. Cost if wrong: each
 is a one-file change in `platform/core`.
+
+## I-033 The fixed plan of an agent without a planner — resolved (R0.4)
+
+DESIGN §5.4 gives a doer-only agent "the fixed default plan", which the
+v3 page never shipped. R0.4 wrote one into `arena.defaults.fixedPlan`
+(`arenas/battle-royale/src/questions.ts`) next to the planner prompt and
+the actor instructions carried over from the page's defaults; bots and
+agents with a planner start with an empty plan. Cost if wrong: prompt
+text, tuned in R3.2.
+
+## I-034 A model is not told the tick; bots count their calls — resolved (R0.4, revisit if `active` ever skips a tick)
+
+`Model.ask` carries no tick (§5.3), but the kit's bot minds need one (how
+far they should have walked, when the wanderer re-picks a heading). The
+arena's bot models infer it: the loop asks every active agent on every
+actor-due tick (1, 1 + I, 1 + 2I, …) and a battle royale agent is active
+from tick 1 until it dies, so a bot's n-th call is the decision of tick
+1 + n × I, which is what the version-1 loop gave it (the parity test
+proves it). An arena whose `active` can drop and re-admit an agent would
+break this; it would need the tick in the actor's `state`. Cost if
+wrong: one field added to the actor's state in `platform/core`.
+
+## I-035 A planner reply that answers only one of plan and scratchpad — resolved (R0.4)
+
+The planner is asked two `text` questions; `checkAnswers` allows a
+missing answer. Ruling: the part answered is written to memory and the
+other part stays as it was (a reply with neither changes nothing); an
+empty text is accepted and empties that part. Cost if wrong: one
+function in `platform/core/src/match/run.ts`.
+
+## I-036 How the loop sees an asynchronous planner reply — resolved (R0.4)
+
+The planner never holds a tick, so the loop has to decide when a settled
+reply is "seen". R0.4 lets a fixed number of promise turns (8) pass at
+the start of a tick while a planner call is open, then lands every reply
+that has settled, in slot order. A model that answers at once (a dummy, a
+replaying model) settles within those turns, so it lands at the next
+tick deterministically; a reply that takes longer lands a tick later,
+which the log records and the replay reproduces through
+`replayMatch`'s tick hook (R22.k). Also decided: a fatal reply ends the
+match after the tick in progress with ranking [], calls `onFatal` once
+and stops planner requests; planner calls still in flight at the end
+are cut and logged as aborted before `MatchEnd` (principle 4); the
+planner's timeout may be `Infinity` through `deps.timeoutMs`; the
+version-2 `run-match.ts` log of the parity match is 560,952 bytes
+against 510,782 for version 1 (the `Call` envelope: model id, usage,
+`requestedTick`). Cost if wrong: the turn count is one constant.

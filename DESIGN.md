@@ -1,6 +1,6 @@
 # Decision Arena — Design
 
-Status: v4.0, 2026-10-22, answers folded in, pending Nami's approval. Scope: tech demo / proof of concept, restructured as a platform.
+Status: v4.1, 2026-10-28: v4.0 (2026-10-22, approved) with the R0 contract refinements folded in (row 50). Earlier status: answers folded in, pending Nami's approval. Scope: tech demo / proof of concept, restructured as a platform.
 
 v4.0 renames kbattle to Decision Arena and turns the one game into the
 first of several arenas. It keeps the PoC question, the fault model, the
@@ -100,6 +100,7 @@ others superseded as noted. Rows 35 onward are v4.0.
 | 47 | Old logs | Version-2 logs replace version 1 with no migration; uploading a version-1 file gets a clear "old format" message; the sample log and goldens are regenerated. |
 | 48 | Planner input | The planner gets the arena's static text (the map) as well as the observation; the planner input budget rises from 1,500 to 2,000 tokens (ISSUES I-022). |
 | 49 | Keys and the gateway | `ASSUMED` External-provider calls go from the browser to Nami's AI Gateway with the player's provider key passed through in the `Authorization` header; the gateway stores no keys, keeps no request bodies, and is unauthenticated (a stranger using it spends their own key, not Nami's). Workers AI models go through the Worker binding with the gateway option, paid by Nami and guarded as before. The anti-goal "a key leaves the browser for anything but the provider" is restated: a key goes only to the gateway and the provider, and is never stored. If the gateway cannot be called from a browser (CORS), the Worker proxies the call with the key passed through, never logged. Decided by a 30-minute spike at the start of R2. |
+| 50 | R0 contract refinements (2026-10-23/28) | The shapes as built in R0.2–R0.4 replace §5.2's and §5.5's drafts: `spawn(config, agents, rng)` returns state and events, `tickData`, no renderer in core's `Arena`, a base config `{ seed, durationTicks }`, `MatchEnd.results`, the `Call` logging policy, `actionFrom`'s `previous` undefined before the first answer, bots never asked escalate, the planner cadence and replay landing as §5.2 now says. Recorded in ISSUES I-029, I-032 to I-036; rulings R19–R26 in the executor's ledger. |
 
 ## 4. Principles
 
@@ -144,28 +145,32 @@ registry is the one file that names arenas.
 ### 5.2 Arena contract (`platform/core`)
 
 ```ts
-interface Arena<Config, State, Obs, Answers, Ev> {
+// Built in R0.2–R0.4 (rulings R21–R22, ISSUES I-029, I-032): one type bag per arena.
+interface ArenaTypes { Config: BaseConfig; State; Obs; Action; Event: { kind; tick }; TickData }
+BaseConfig = { seed: uint32; durationTicks: 1..60000 }   // every arena config extends it: the loop seeds the RNG and bounds ticks from it
+
+interface Arena<T extends ArenaTypes> {
   id: string;                       // "battle-royale"
   title: string;
   modes: readonly string[];         // ["solo"]
-  config: ZodType<Config>;          // mapId, seed, durationTicks, slots, mode, arena-specific fields
-  maps: readonly string[];          // ids; getMap(id) returns the arena's map
+  config: ZodType<T["Config"]>;     // BaseConfig plus the arena's fields (mapId, …)
+  maps: readonly string[];          // ids; the arena loads them itself
   tickMs?: number;                  // defaults to the platform's 50 ms
   actorIntervalTicks?: number;      // defaults to the platform's 10
-  questions(obs: Obs, memory: Memory): Questions;   // the actor's typed questions for this observation (§5.3)
-  spawn(config: Config, rng: RngState): State;
-  perceive(state: State, agent: AgentId): Obs;      // pure
-  actionFrom(answers: Answers, obs: Obs, previous: Action): Action; // answers → the sim's action, thresholds inside
-  step(state: State, actions: Record<AgentId, Action>): { state: State; events: Ev[] };
-  tick(state: State): unknown;      // the Tick payload the renderer reads (positions, hp, …)
-  active(state: State): AgentId[];  // agents still to be asked: alive and still in the world (extraction removes extracted agents)
-  ended(state: State): { ranking: AgentId[]; results?: Record<AgentId, unknown> } | null;  // results: per-agent outcome, arena-defined
-  staticText(config: Config): string;   // what every agent knows before the match: the map, the rules in a few lines
-  events: ZodType<Ev>;              // discriminated union of the arena's event kinds
-  bots: Record<string, (seed: number, slot: number) => Model>;   // dummies
-  defaults: AgentDefaults;          // planner prompt, actor instructions per question, fixed plan for planner-less agents
-  observationText(obs: Obs): string;   // for the planner's message
-  renderer: ArenaRenderer;          // §5.6
+  spawn(config, agents: readonly AgentId[], rng: RngState): { state: State; events: Event[] };  // the agent list is the platform's; starting positions are events
+  perceive(state, agent: AgentId): Obs;             // pure
+  questions(obs, memory: Memory): Questions;        // the actor's questions with the arena's default instructions; the loop puts the player's in
+  actionFrom(answers: Answers, obs, previous: Action | undefined): Action;  // checked answers → the action kept until the next; thresholds inside
+  step(state, actions: Record<AgentId, Action>): { state; events: Event[] };   // the active agents that have an action
+  tick(state): TickData;            // the Tick payload; tickData validates it when a log is read
+  tickData: ZodType<TickData>;
+  events: ZodType<Event>;           // discriminated union of the arena's event kinds
+  active(state): AgentId[];         // agents still to be asked, slot order (extraction removes extracted agents)
+  ended(state): { ranking: AgentId[]; results?: Record<AgentId, unknown> } | null;  // never null at durationTicks
+  staticText(config): string;       // what every agent knows before the match: the map, the rules in a few lines
+  observationText(obs): string;     // for the planner's message
+  bots: Record<string, (seed: number, slot: number) => Model>;   // used as "bot/<name>"
+  defaults: { planner: string; actor: Record<QuestionId, string>; fixedPlan: string };
 }
 ```
 
@@ -174,6 +179,21 @@ agents, the interval constants, asking the actor and planner, memory,
 timeouts and aborts, validation and rounding of answers, the log, the
 replaying model, `MatchEnd` and cancellation. The arena owns everything
 in the table above. The loop never reads an arena's state.
+
+Settled in R0 (ISSUES I-029, I-032, I-036): the arena has no `renderer`
+member, because `platform/core` must not know Pixi; the web's registry
+entry pairs an arena with its `ArenaRenderer` (§5.6). The loop asks the
+planner first at tick 1, then on an escalate answer at or above
+`ESCALATE_THRESHOLD` once `PLANNER_MIN_GAP_TICKS` have passed and in any
+case after `PLANNER_MAX_GAP_TICKS`, one call in flight per agent, only
+while the agent is active; the reply lands at the start of the first
+tick after it settles and rewrites memory (a part it did not answer
+stays). Bots (`bot/<name>`, resolved through `arena.bots`) are never
+asked escalate; other model ids go through the resolver the caller
+passes (the catalog, R2.1). A fatal model error ends the match after
+the tick in progress like a cancel, with the `Call` event saying why.
+The replaying model is built from a log's `Call` events and lands a
+planner reply at its recorded tick through `replayMatch`'s tick hook.
 
 The shooter's current `WorldState`, `step`, `perceive`, bots, maps and
 collision code move to `kits/shooter` unchanged; `arenas/battle-royale`
@@ -269,16 +289,18 @@ Nami's Worker (v3 row 2). The editor hides models whose key is missing.
 ### 5.5 Log envelope
 
 ```ts
-MatchLog = { version: 2, arena, mode, config, agents: AgentSpec[] /* by slot */, events: Event[] }
+MatchLog = { version: 2, arena, mode, config /* BaseConfig + arena fields */, agents: AgentSpec[] /* by slot */, events: Event[] }
 Event =
-  | Call     { tick, requestedTick, agent, role: "actor" | "planner", model, ok, questions?, answers?, error?, usage?, input? }
-  | Tick     { tick, data: unknown /* arena-defined, validated by the arena */ }
-  | MatchEnd { tick, ranking }
+  | Call     { tick, requestedTick, agent, role: "actor" | "planner", model, ok, answers?, error?, usage?, input? }
+  | Tick     { tick, data: unknown /* arena-defined, validated by arena.tickData when read */ }
+  | MatchEnd { tick, ranking, results? }
   | <arena event kinds, validated by arena.events>
 ```
 
 `Call` replaces `Doer` and `Thinker`; `requestedTick` equals `tick` for
-sync calls. `Tick.data` is what the renderer and the agent panel read
+sync calls. The actor's `Call` carries its answers and usage, not its
+questions or state (rebuildable from the envelope and `Tick.data`;
+log size, ISSUES I-018); the planner's carries its input as well. `Tick.data` is what the renderer and the agent panel read
 (for the shooter: today's rows plus `near`). Rounding, bounds on ticks,
 cancellation, the event order inside a tick, and byte-identical replay
 carry over from v3.
@@ -327,7 +349,7 @@ ids outside the catalog.
 |-------------------|------|--------|
 | `core/src/{vec2,angles,units,constants}.ts` | `kits/shooter` (vec2, angles, units, shooter constants) and `platform/core` (interval, timeout, thresholds) | split |
 | `core/src/sim/{world,step,collision,weapons,perceive,actions,rng}.ts` | `kits/shooter/sim/*`; `rng.ts` to `platform/core` | move; `actionFromAnswers` becomes `arena.actionFrom` |
-| `core/src/sim/{match,log,providers,replay-provider}.ts` | `platform/core/match/*`, generalized over the Arena and Model contracts | rewrite of the glue, same behaviour and tests |
+| `core/src/sim/{match,log,providers,replay-provider}.ts` | `platform/core/match/*`, generalized over the Arena and Model contracts (R0.4); the version-1 loop lives on in `kits/shooter/src/legacy` and the version-1 schemas under `@decision-arena/core/legacy` until R0.5, R2.3 and R2.4 (ISSUES I-028) | rewrite of the glue, same behaviour and tests |
 | `core/src/bots/*`, `core/maps/*`, `core/src/maps.ts` | `kits/shooter/bots/*` as dummies; maps renamed `map-1`, `map-2` | move, rename |
 | `core/src/schemas.ts` | platform schemas (`Question`, `Answer`, `AgentSpec`, `MatchLog` v2, `Call`) in `platform/core`; shooter state, questions and events in `arenas/battle-royale` | split |
 | `brain/src/providers/anthropic.ts`, `thinker-client.ts`, `event-digest.ts`, `thinker-prompt.ts` | `platform/models/gateway-chat.ts` (replaces the SDK adapter; fault tests carried); the planner message builder and digest in `platform/core/planner/*`, taking `arena.staticText` and `arena.observationText` | rewrite the adapter, move the rest |
@@ -375,11 +397,10 @@ list prices so the cost report is computed, not typed.
 
 ## 10. Left to the builder
 
-- Exact zod shapes for the contracts and the version-2 envelope; the
-  registry's shape; how `Tick.data` is typed per arena.
-- Directory details inside each package, test layout, scripts.
-- The order of moves inside R0 and how to keep the suite green at every
-  commit (git `mv` first, contract adoption second is the suggestion).
+- Settled in R0: the zod shapes of the contracts and the version-2
+  envelope, the registry's shape (`createRegistry`), `Tick.data` typed per
+  arena through `tickData`, the package layouts, and the order of moves
+  (move first, then adopt the contracts, the suite green at every commit).
 - The Pixi stage interface handed to renderers.
 - Which of today's web tests become shell tests and which kit tests.
 
