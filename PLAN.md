@@ -1,164 +1,50 @@
-# Decision Arena — Plan
+# abarena — plan
 
-Status: 2026-10-22, written against DESIGN.md v4.0. Phases R0–R3 restructure
-the kbattle code into the platform and finish the proof of concept.
+What is built and what is next. A step is done when its checks pass;
+`pnpm test` and `pnpm build` pass at every commit. The design is in
+[DESIGN.md](DESIGN.md).
 
-How to use this file: one section per milestone with its goal, what it
-depends on, and exit criteria as checkboxes ticked in place when met.
-Verification commands are the gates. A milestone links to DESIGN.md
-sections instead of restating them. When a milestone ships, add one line
-to the Log at the bottom (date, commit, what deviated). Briefs, ledgers
-and review packages are the executor's git-ignored scratch, not
-documents. Everything under "Done before this plan" is history.
+## Now
 
-Conventions: pnpm, TypeScript strict, vitest; every behaviour test-first;
-the suite (`pnpm -r test`, `typecheck`, `lint`, `build`) and the web smoke
-(`pnpm --filter web smoke`) stay green at every commit. Local curls need
-`--noproxy '*'`. Live model calls need credentials (ISSUES I-001, I-002).
+### 1. One package
+`platform/`, `kits/`, `arenas/`, the workspace and ESLint go. What is
+kept (the sim, perception, the two bots, the two maps, the match loop)
+lives in `src/core` and `src/arenas/battle-royale` with the shapes and
+rules of DESIGN.md. Nothing of the old page, the Anthropic adapter or
+the Worker is carried over; git has them. Until the page exists,
+`pnpm build` is the typecheck.
+- [ ] The two reference bot matches play out tick for tick as before the move; then the hash of the new log is pinned in a test.
+- [ ] A scripted match (a planner, a replan, a failed call, a late actor, a first call that fails, a Stop) logs what DESIGN's Match section says, and the same on a second run.
+- [ ] Under fake timers a real-time match keeps the clock, lands a slow answer late, and stops within a tick.
+- [ ] `pnpm match` runs a bot match and prints its ranking; `pnpm match log.json` also writes the log.
 
-## R0 — Contracts and moves (DESIGN §5.1–§5.5, §6, row 44)
+### 2. Models
+The decision and chat adapters and the model list.
+- [ ] Each adapter passes its tests against a fake `fetch`: the request it sends, a good reply, a refused answer, a reply that is not JSON, an error status.
 
-### R0.1 Relayout and rename
-Goal: the workspace is `platform/{core,models,web,worker}` under the `@decision-arena` scope, with the shooter still inside `platform/core` so nothing changes behaviour yet.
-Depends on: nothing.
-- [x] `git mv core platform/core`, `brain platform/models`, `web platform/web`, `worker platform/worker`; workspace globs `platform/*`, `kits/*`, `arenas/*`; package names, imports, scripts, wrangler name, page title, README, storage prefix `decision-arena:v1:*` renamed.
-- [x] `grep -ri kbattle` finds nothing outside ISSUES.md, PLAN.md and git history.
-- [x] Suite and smoke green with the same counts as before the move (core 548, models 70, web 212, worker 43; smoke 245).
+### 3. The page
+Agents, Run, the replay, the timeline, the panel and the result, as
+DESIGN.md describes them.
+- [ ] Node tests of the page's view functions: from a log cut at any tick, the frame, the panel of a fighter, the timeline bars, a row's result.
+- [ ] By hand in a browser: the page opens on a bot match, playing; select a fighter, pause, scrub, read the panel.
+- [ ] A scripted planner that answers after 3 s: the match keeps real time, is drawn while it runs, the plan lands as a bar, Stop ends it, the log downloads and opens again.
+- [ ] A model that refuses the key ends the match, and the page says why.
 
-### R0.2 Platform contracts
-Goal: `platform/core` defines `Arena`, `Model`, `Question`/`Answer`, `AgentSpec`, `MatchLog` v2 (`Call`, `Tick { data }`, `MatchEnd`) and the registry (DESIGN §5.2–§5.5).
-Depends on: R0.1.
-- [x] zod schemas with positive and negative tests for every boundary shape; `z.infer` types exported.
-- [x] A type-level test that a minimal fake arena (two agents, a counter as state) satisfies `Arena` and runs through the generic loop skeleton.
-- [x] Nothing in the contracts names a position, a bullet or a facing.
+## Next (needs an OpenRouter key or a local Ollama)
 
-### R0.3 Shooter kit
-Goal: `kits/shooter` holds vec2, angles, units, the physics step, collision, perception, bots, the map format with optional `features`, and maps `map-1`, `map-2` (DESIGN §13, row 36).
-Depends on: R0.2.
-- [x] Moved with their tests and goldens; kit tests green; perception window and determinism tests unchanged.
-- [x] `platform/core` imports nothing from the kit; the kit imports from `platform/core` only the RNG and the contract types.
+### 4. First real match
+- [ ] A decision-model actor with a chat-model planner plays from the page.
+- [ ] Measured from the page, per model: time per call (median, p95), failed calls, tokens and cost.
+- [ ] The default match, two fighters with a planner and two without among four bots, over five seeds: mean place and cost per fighter, written into the README whichever way they fall.
+- [ ] The model list holds only ids that answered.
+- [ ] The log of one such match ships with the page as its opening replay.
 
-### R0.4 Battle royale arena and the generic loop
-Goal: `arenas/battle-royale` implements `Arena` over the kit; `platform/core` runs any arena with the actor and planner roles, memory, timeouts, aborts, validation, rounding, `Call` events, cancellation and the replaying model (DESIGN §5.2, §5.5, row 39–40).
-Depends on: R0.3.
-- [x] `runMatch(arena, config, agents, deps)` passes the moved match, determinism, perception-window and cancellation tests against the battle royale arena with bots as dummies.
-- [x] Parity test: the 16-bot match on `map-1` seed 7 produces the same arena events and `Tick.data` as the stored version-1 run (`fixtures/parity/v1-run.json`, converted once), byte for byte apart from the envelope.
-- [x] `active`, `ended` with results, `staticText`, `tickMs` and `actorIntervalTicks` are exercised by the fake arena from R0.2.
-- [x] `scripts/run-match.ts` writes a version-2 log; wall time within 2× of today's.
+### 5. Online
+- [ ] The static page is deployed.
 
-### R0.5 Version-2 fixtures
-Goal: every fixture and golden is version 2; a version-1 upload is refused with a clear message (row 47).
-Depends on: R0.4.
-- [ ] Sample log regenerated by the arena's generator; bad fixtures updated; web upload of a version-1 file shows "old format".
-- [ ] Suite and smoke green.
+## Open
 
-## R1 — Shell and renderer split (DESIGN §5.6–§5.7)
-
-### R1.1 Renderer contract
-Goal: the replay shell mounts an arena's renderer through `ArenaRenderer`; the shooter renderer (map, agents, bullets, camera, overlay, `stateAt`) lives in `kits/shooter/render`.
-Depends on: R0.5.
-- [ ] Shell has no shooter imports; the registry is the only file naming an arena.
-- [ ] Smoke green: playback, follow, trails, overlay as today.
-
-### R1.2 Agent panel
-Goal: the panel shows every role's `Call` events, the decision's own perception via `arena.perceive(renderer.stateAt(tick − 1))`, plan, answers with probabilities, faults, and markers per role.
-Depends on: R1.1.
-- [ ] Selector tests on the version-2 sample; smoke panel checks green; update under 8 ms per scrub.
-
-### R1.3 Page per arena
-Goal: arena picker, agent editor (planner prompt, one instruction per actor question from `arena.defaults`), match config from the arena's config schema, storage per arena, key section per provider.
-Depends on: R1.1.
-- [ ] `validateForm` yields a valid `AgentSpec` and arena config; reload keeps everything; no-key mode as today.
-- [ ] Smoke UI checks green.
-
-## R2 — Models (DESIGN §5.3, rows 38–40, 48–49)
-
-### R2.1 Catalog, dummies, replaying
-Goal: the catalog with ids, adapters, key needs, supported types, `timeoutMs`, latency and prices; `dummy/first`, `dummy/random`, bots as `bot/<name>`; the replaying model; agents resolved by catalog id.
-Depends on: R0.4.
-- [ ] A match with a dummy actor and a dummy planner runs in Node and from the page (minimal run screen: run, cancel, counters per role), downloads and replays byte-identically.
-- [ ] Unsupported role and model combinations are rejected by validation.
-
-### R2.2 Gateway spike
-Goal: know whether the browser can call AI Gateway directly (row 49).
-Depends on: R2.1; a provider key.
-- [ ] A fetch from the page to the gateway with a passed-through key returns a chat completion, or the CORS failure is recorded; the adapter path (direct or Worker-proxied) is written into ISSUES and DESIGN row 49.
-
-### R2.3 gateway-chat adapter and planner glue
-Goal: one adapter for chat providers with JSON-schema structured output and the fault table; the planner's message (static text, observation, digest, memory) under 2,000 tokens; the agent runner with the cadence rules (async planner, min and max gaps, escalate, one in flight, fatal stop).
-Depends on: R2.2.
-- [ ] Fault tests with a fake fetch (timeout, network, 5xx, 429, invalid output, refusal, 401, 402, 404) pass; structured output parsed through the question schema.
-- [ ] Runner tests: debounce under min gap, one in flight, max gap forces, plan applied at the first tick after arrival, doer timeout keeps the action, fatal calls `onFatal`; determinism with `Call` events replays byte-identically.
-- [ ] Budget test: the busiest scene with the default prompt stays under 2,000 tokens.
-
-### R2.4 workers-ai adapter and `/ask`
-Goal: the Worker route renamed to `/ask`, catalog id to Workers AI model mapping, gateway option on the binding, backoff on 429, rounding, mock backend kept; the measure script updated.
-Depends on: R2.1.
-- [ ] Worker tests green (validation, mock, clef, guard, measure report); a clef-flash actor against the mock backend runs a match from the page.
-
-### R2.5 Agent editor with models
-Goal: role to model dropdowns from the catalog, greyed when the key is missing or the type unsupported; wall-clock projection with a warning above 15 minutes; timeouts from the catalog applied by the loop.
-Depends on: R1.3, R2.3, R2.4.
-- [ ] Web tests and smoke green; the default agent is clef-flash actor plus Haiku planner.
-
-## R3 — Proof of concept (DESIGN v3.0 §8 P3–P4, carried)
-
-### R3.1 Live spikes
-Goal: Clef through the Worker and the gateway, and Haiku through the gateway from the browser, measured (needs credentials, ISSUES I-001, I-002).
-Depends on: R2.5.
-- [ ] p50/p95 latency and rate-limit behaviour for clef-flash over at least 50 calls; the Clef wire shape confirmed; cost per Haiku call recorded in DESIGN §8.
-
-### R3.2 Default agent
-Goal: shipped planner prompt and actor instructions that play watchably; tuning of turn rate and timings (ISSUES I-017).
-Depends on: R3.1.
-- [ ] Default match runs from the page; reviewer checklist (moves toward enemies, fires in cone, no spin loops, retreats under 40 HP, plan visible and changing) signed off by Nami.
-
-### R3.3 Cost and wall-clock
-Goal: measured doer and planner calls, tokens, wall-clock and cost for the default match with Haiku and Sonnet planners; DESIGN §8 updated; the planner default chosen (v3.0 `[Q2]`).
-Depends on: R3.2.
-- [ ] Two measured runs; default match under 15 minutes.
-
-### R3.4 Anti-goal check
-Goal: two agents, three seeds, six logged matches; the prompted agent wins at least one; play differs visibly.
-Depends on: R3.3.
-- [ ] Byte-different logs with visible differences in replay; a win recorded; anti-goals 1 and 2 cleared in the Log.
-
-### R3.5 Run and replay on one page
-Goal: run with live counters per role and faults, cancel, fatal error surface, the replay opening with the finished log, download, upload, "edit this agent" (v3.0 v4.2–v4.3).
-Depends on: R2.5.
-- [ ] Smoke: run a dummy match, cancel mid-run leaves a parseable log, the replay opens, download re-uploads, edit seeds the editor.
-
-### R3.6 Worker guard
-Goal: per-IP rate limit on `/ask` through the rate limiting binding, content-type guard, spend cap documented and set (DESIGN row 28, §5.7; ISSUES I-010, I-015).
-Depends on: R2.4; account access.
-- [ ] Throttle script sees 429 above the limit locally and against the deployed Worker; the spend cap is set in the dashboard.
-
-### R3.7 Deploy and stranger run
-Goal: a public URL; a stranger writes an agent, runs, watches, edits, runs again without help.
-Depends on: R3.4, R3.5, R3.6.
-- [ ] `wrangler deploy` works; the stranger's one-page note is in the Log; the four goals of DESIGN §1 map to evidence.
-
-## Parallel tracks
-
-R0 is sequential. After R0.5, R1 and R2.1–R2.4 can run side by side (web
-versus models and worker), merging before R2.5. R3.1 and R3.6 need
-credentials and can start the moment they exist, independently of R1.
-
-## Done before this plan (kbattle v3.0 plan, 2026-10-21 to 2026-10-22)
-
-P0 v0.1–v0.6, P1 v1.1–v1.6 and P2 v2.1–v2.5 complete; v3.2 and v4.1
-complete; v0.5, v0.6 offline parts complete, live parts pending
-credentials; a whole-branch review and its fix pass merged (perception
-window, agent panel decision view, answer validation, abort signal).
-Suite at the end: core 548, brain 70, web 212, worker 43; smoke 245.
-Their progress notes are in git history under `plan/progress/` before
-commit c509a40.
-
-## Log
-
-- 2026-10-21 — v0.1–v0.4, v1.1–v1.4, v2.1–v2.2, v2.5, v4.1, v0.6 and v0.5 (offline) shipped by opus subagents on `poc`; notable deviations: libraries consumed as TypeScript source, DoerAnswer and Plan strip unknown keys, MapSpec pulled forward, `Tick.near` added, four doer fields (escalate fixed).
-- 2026-10-22 — v1.5, v1.6, v3.2, v2.3, v2.4 shipped; final review found the perception-window aliasing (ISSUES I-021), fixed with rulings R15–R18; `poc` fast-forwarded into `main`; DESIGN v4.0 written; this plan replaces `plan/`.
-- 2026-10-22 — R0.1 shipped on `main` (cd01f54 move, a8462fa scope and names, 17f9486 strings); counts unchanged (core 548, models 70, web 212, worker 43; smoke 245); deviations: DESIGN.md and README's history note keep the old name on purpose (controller ruling); comments naming old repo-root paths now say `platform/…`; the thinker harness and the spike prompt drop the product name rather than swap it (budget 1,484 of 1,500 tokens); old `kbattle:v1:*` storage is left behind (ISSUES I-024); the smoke's 16-agent fps check failed once under load and passed on rerun (ISSUES I-025).
-- 2026-10-23 — R0.3 shipped on `r0.3` (1cfe596 rng and round, 9576686 map ids, 7406eac kit and core/legacy); counts core 139 + kit 409 = 548, models 70, web 212, worker 43; smoke 245; deviations, as ruled by the controller: the kit also takes `roundTo`, `TICK_MS`, `DOER_INTERVAL_TICKS` (and, in its version-1 loop, `DOER_TIMEOUT_MS`) from core, its bots and loop import `@decision-arena/core/legacy`, and `sim/{actions,world,step}.ts` import three version-1 types from it until R0.4 retypes them; the /decide fixtures stay in core with `DecideRequestSchema`; the map format's optional `features` waits for the extraction arena and pre-R0.3 logs naming `arena-1` are refused (ISSUES I-031); `parity/v1-run.json` differs from the 0279b8b capture only in `config.mapId` (sha256 dfb9477b…415f28), and the kit's `run-match.ts` rewrites it byte for byte.
-- 2026-10-23 — R0.2 shipped on `r0.2` (d527b4c…d05c50a, merged 87a6841 and wired onto core's main export with R0.3's move); core 139 → 412 (273 contract and loop tests), others unchanged; smoke 245; deviations (controller-accepted, ISSUES I-032): `actionFrom` gets `previous: Action | undefined` and `step` only the active agents that have an action; no `Answers` in the arena type bag; `runMatch` and `parseMatchLogFor` return `MatchLogFor<T>`; `parseMatchLogFor` also checks the log's arena id; the planner role, fatal errors and replay are R0.4's.
-- 2026-10-23/28 — R0.4 shipped on `main` (85bb57c kit retyped and PERCEPTION_WINDOW_TICKS, 4d6b3d8 arena, 7c057b3 v1 constants to legacy, 6bce397 planner role and fatal, 77d7128 replay, 17e54c8 parity, 31c160e moved tests, then the scripts); the opus agent was cut by its session limit after step 5 and the controller finished the scripts and docs on 2026-10-28. Counts: core 470, kit 350, arena 116, models 70, web 212, worker 43 (1,261); smoke 245. Parity: 1,504 arena and Tick events byte-identical to the version-1 run, 579 Calls on the Doer ticks with the same answers minus escalate. Wall: version-2 loop median 21.0 ms against the kit's version-1 loop 15.6 ms on the parity match (ratio 1.35, gate 2); `run-match.ts` writes the version-2 log in about 50 ms. Deviations: bots are not asked escalate (ruling R22.d); `MatchEnd` carries no results for the battle royale; `playMatch` is exported beside `runMatch` for replay's model resolver; decisions in ISSUES I-033 to I-036; the web still reads version-1 logs through the kit's legacy loop until R0.5 (I-028).
+- No model has been called for real yet: no key is set up where this is built. The model ids are listed, never called.
+- OpenRouter's decision endpoint is alpha; its reply is known from documentation only.
+- A hosted page reaches Ollama only when the player sets `OLLAMA_ORIGINS` and allows local network access.
+- A left or right turn held for one decision is 90°, and a late answer keeps an agent turning; tune when real models play.
