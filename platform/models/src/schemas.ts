@@ -1,9 +1,9 @@
 // The thinker's output schema lives in core's legacy entry with the other version-1
 // boundary schemas (DESIGN.md §5.3).
-import { PlanSchema } from "@decision-arena/core/legacy";
+import { PlanSchema } from "@abarena/core/legacy";
 
 export { PlanSchema };
-export type { Plan } from "@decision-arena/core/legacy";
+export type { Plan } from "@abarena/core/legacy";
 
 /**
  * The lengths the harness prompt asks the thinker for, in characters: well under

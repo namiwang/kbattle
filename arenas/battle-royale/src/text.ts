@@ -1,7 +1,7 @@
 // What the planner reads (DESIGN.md row 48, §5.3; ruling R24): the static text
 // every agent knows before the match, and one observation as text.
 
-import { TICK_MS } from "@decision-arena/core";
+import { TICK_MS } from "@abarena/core";
 import {
   AGENT_HP,
   BULLET_DAMAGE,
@@ -18,7 +18,7 @@ import {
   type MapSpec,
   type Observation,
   type Vec2,
-} from "@decision-arena/kit-shooter";
+} from "@abarena/kit-shooter";
 
 const point = ({ x, y }: Vec2) => `(${x},${y})`;
 const seconds = (ticks: number) => (ticks * TICK_MS) / 1000;

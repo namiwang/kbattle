@@ -1,5 +1,5 @@
-import { checkAnswers, QUESTION_TYPES, type AskRequest, type Model, type Reply } from "@decision-arena/core";
-import { BOT_KINDS, makeBot, type Observation } from "@decision-arena/kit-shooter";
+import { checkAnswers, QUESTION_TYPES, type AskRequest, type Model, type Reply } from "@abarena/core";
+import { BOT_KINDS, makeBot, type Observation } from "@abarena/kit-shooter";
 import { describe, expect, it } from "vitest";
 import { battleRoyale } from "../src";
 import { decisionTick, enemy, obs, syntheticViews } from "./helpers";

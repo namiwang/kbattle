@@ -4,7 +4,7 @@ import type * as z from "zod";
 import * as core from "../src/index";
 import * as legacy from "../src/legacy/index";
 
-describe("@decision-arena/core entry point", () => {
+describe("@abarena/core entry point", () => {
   it("exposes the seeded RNG, roundTo and the platform constants, and nothing of the shooter", () => {
     const rng = core.createRng(1);
     expect(core.nextFloat(rng).value).toBe(0.3678755429573357);

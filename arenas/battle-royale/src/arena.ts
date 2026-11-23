@@ -6,7 +6,7 @@
 // still asked (the living), the ending (one alive or time up) and the ranking
 // (R11), the planner's static and observation texts, and the bots.
 
-import { TICK_MS, type Answer, type Answers, type Arena } from "@decision-arena/core";
+import { TICK_MS, type Answer, type Answers, type Arena } from "@abarena/core";
 import {
   actionFromAnswers,
   getMap,
@@ -20,7 +20,7 @@ import {
   type MapSpec,
   type Observation,
   type WorldState,
-} from "@decision-arena/kit-shooter";
+} from "@abarena/kit-shooter";
 import { botModel } from "./bots";
 import { configSchema, type BattleRoyaleConfig } from "./config";
 import { BattleRoyaleEventSchema, spawnEvents, tickData, TickDataSchema, type BattleRoyaleEvent, type TickData } from "./events";

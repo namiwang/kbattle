@@ -1,5 +1,5 @@
 {
-  "name": "decision-arena",
+  "name": "abarena",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.20.0",
@@ -9,7 +9,7 @@
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",
-    "dev": "pnpm --filter @decision-arena/web build && pnpm -r --parallel dev",
+    "dev": "pnpm --filter @abarena/web build && pnpm -r --parallel dev",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"
   },

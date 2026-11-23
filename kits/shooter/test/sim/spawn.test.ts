@@ -1,5 +1,5 @@
-import { createRng } from "@decision-arena/core";
-import type { MatchConfig, Slot } from "@decision-arena/core/legacy";
+import { createRng } from "@abarena/core";
+import type { MatchConfig, Slot } from "@abarena/core/legacy";
 import { describe, expect, it } from "vitest";
 import { headingTo } from "../../src/angles";
 import { AGENT_HP } from "../../src/constants";

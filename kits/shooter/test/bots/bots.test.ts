@@ -1,4 +1,4 @@
-import { BotKindSchema, DoerAnswerSchema } from "@decision-arena/core/legacy";
+import { BotKindSchema, DoerAnswerSchema } from "@abarena/core/legacy";
 import { describe, expect, it } from "vitest";
 import { BOT_KINDS, makeBot, makeBotMind } from "../../src/bots";
 import { actionFromAnswers } from "../../src/sim/actions";

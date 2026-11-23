@@ -1,4 +1,4 @@
-import { getMap, type Observation } from "@decision-arena/kit-shooter";
+import { getMap, type Observation } from "@abarena/kit-shooter";
 import { describe, expect, it } from "vitest";
 import { battleRoyale } from "../src";
 

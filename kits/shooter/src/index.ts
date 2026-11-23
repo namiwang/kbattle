@@ -1,4 +1,4 @@
-// @decision-arena/kit-shooter public surface: the 2D shooter engine (DESIGN.md §5.1).
+// @abarena/kit-shooter public surface: the 2D shooter engine (DESIGN.md §5.1).
 // Vector helpers live under `vec2` (vec2.add, vec2.fromAngle, ...) to keep
 // generic names like `add` and `len` off the package root.
 export * as vec2 from "./vec2";

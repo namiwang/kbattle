@@ -1,8 +1,8 @@
-// The `window.__decisionArena` hook: read-only state for the headless smoke
+// The `window.__abarena` hook: read-only state for the headless smoke
 // (scripts/smoke.ts) and for poking at the viewer from devtools, plus the form
 // check behind Run match (v4.1), which the smoke calls while the button is disabled.
 
-import type { Vec2 } from "@decision-arena/kit-shooter";
+import type { Vec2 } from "@abarena/kit-shooter";
 import type { DrawnBullets } from "./bullets";
 import type { DrawnMind } from "./mind-selectors";
 import type { DrawnOverlay } from "./overlay";
@@ -17,7 +17,7 @@ export interface DrawnAgent {
   tip: { x: number; y: number };
 }
 
-export interface DecisionArenaDebug {
+export interface AbarenaDebug {
   /** True once a log is open and its first frame drawn; false while a file loads. */
   readonly ready: boolean;
   /** The tick on screen. */
@@ -42,6 +42,6 @@ export interface DecisionArenaDebug {
 
 declare global {
   interface Window {
-    __decisionArena?: DecisionArenaDebug;
+    __abarena?: AbarenaDebug;
   }
 }

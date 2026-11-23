@@ -5,7 +5,7 @@
 // one in ./maps; each is defined once there.
 // Units (§6.1): meters, y down, degrees clockwise-positive with 0° = +x, ticks.
 
-import type { RngState } from "@decision-arena/core";
+import type { RngState } from "@abarena/core";
 import type { MapSpec } from "./maps";
 import type { Vec2 } from "./vec2";
 

@@ -10,8 +10,8 @@
 // integer in 0..config.durationTicks: the writer refuses anything else.
 // (platform/core/src/legacy/log.ts holds the read helpers over a finished log.)
 
-import { roundTo } from "@decision-arena/core";
-import type { Event, EventOf, MatchConfig, MatchLog, Prompts } from "@decision-arena/core/legacy";
+import { roundTo } from "@abarena/core";
+import type { Event, EventOf, MatchConfig, MatchLog, Prompts } from "@abarena/core/legacy";
 import { normalizeDeg } from "../angles";
 import type { AgentId, WorldState } from "../types";
 

@@ -9,8 +9,8 @@
 // tick 1 until it dies, so a bot's n-th call (from 0) is the decision of tick
 // 1 + n × I: the tick the version-1 loop gave its mind (ISSUES I-034).
 
-import { dummyModel, type Answers, type Model } from "@decision-arena/core";
-import { makeBotMind, type BotIntent, type BotKind, type Observation } from "@decision-arena/kit-shooter";
+import { dummyModel, type Answers, type Model } from "@abarena/core";
+import { makeBotMind, type BotIntent, type BotKind, type Observation } from "@abarena/kit-shooter";
 
 /** A fresh `bot/<kind>` for one agent, deciding every `interval` ticks from tick 1. */
 export function botModel(kind: BotKind, seed: number, slot: number, interval: number): Model {

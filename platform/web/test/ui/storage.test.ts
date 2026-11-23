@@ -1,13 +1,13 @@
-import type { Prompts } from "@decision-arena/core/legacy";
+import type { Prompts } from "@abarena/core/legacy";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG, DEFAULT_PROMPTS } from "../../src/ui/defaults";
 import type { UiState } from "../../src/ui/state";
 import { loadState, saveState } from "../../src/ui/storage";
 import { fakeStorage } from "./fake-storage";
 
-const KEY = "decision-arena:v1:anthropic-key";
-const PROMPTS = "decision-arena:v1:prompts";
-const CONFIG = "decision-arena:v1:config";
+const KEY = "abarena:v1:anthropic-key";
+const PROMPTS = "abarena:v1:prompts";
+const CONFIG = "abarena:v1:config";
 
 const DEFAULTS: UiState = { key: "", prompts: DEFAULT_PROMPTS, config: DEFAULT_CONFIG };
 

@@ -1,4 +1,4 @@
-import { createRng, nextFloat, type RngState } from "@decision-arena/core";
+import { createRng, nextFloat, type RngState } from "@abarena/core";
 import { describe, expect, it } from "vitest";
 import { AGENT_HP, AGENT_RADIUS_M } from "../../src/constants";
 import type { MapSpec } from "../../src/maps";

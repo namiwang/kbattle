@@ -1,8 +1,8 @@
 // Injected perception for bot tests: hand-built Observations and a driver that
 // feeds a bot one decision at a time, as the match loop would (ticks 1, 11, …).
 
-import { createRng, nextFloat, type RngState } from "@decision-arena/core";
-import type { DoerAnswer } from "@decision-arena/core/legacy";
+import { createRng, nextFloat, type RngState } from "@abarena/core";
+import type { DoerAnswer } from "@abarena/core/legacy";
 import type { DecisionProvider } from "../../src/legacy/providers";
 import type { AgentId, Observation } from "../../src/types";
 

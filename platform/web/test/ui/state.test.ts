@@ -1,4 +1,4 @@
-import { MatchConfigSchema, type Prompts, type Slot } from "@decision-arena/core/legacy";
+import { MatchConfigSchema, type Prompts, type Slot } from "@abarena/core/legacy";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG, DEFAULT_PROMPTS } from "../../src/ui/defaults";
 import {
@@ -206,8 +206,8 @@ describe("formatFormResult", () => {
 });
 
 describe("createStore", () => {
-  const KEY = "decision-arena:v1:anthropic-key";
-  const CONFIG = "decision-arena:v1:config";
+  const KEY = "abarena:v1:anthropic-key";
+  const CONFIG = "abarena:v1:config";
 
   it("starts from the defaults; load() replaces them with what storage holds", () => {
     const storage = fakeStorage({ [KEY]: "sk-ant-test", [CONFIG]: JSON.stringify(form({ seed: 9, slots: 12 })) });
@@ -254,7 +254,7 @@ describe("createStore", () => {
     expect(heard).toEqual(["sk-ant-test"]);
     storage.data.clear();
     store.save();
-    expect([...storage.data.keys()].sort()).toEqual(["decision-arena:v1:anthropic-key", "decision-arena:v1:config", "decision-arena:v1:prompts"]);
+    expect([...storage.data.keys()].sort()).toEqual(["abarena:v1:anthropic-key", "abarena:v1:config", "abarena:v1:prompts"]);
   });
 
   it("stops calling a listener once it unsubscribes", () => {

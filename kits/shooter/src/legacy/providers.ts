@@ -3,7 +3,7 @@
 // observation alone; brain's doer client (v3.1) implements it by building a
 // DecideRequest from the context and the user's prompts, which core never sees.
 
-import type { DoerAnswer, Event, Slot } from "@decision-arena/core/legacy";
+import type { DoerAnswer, Event, Slot } from "@abarena/core/legacy";
 import type { AgentId, Observation } from "../types";
 
 /** One doer decision: what the agent perceives and its current plan text. */

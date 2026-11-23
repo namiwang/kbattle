@@ -1,5 +1,5 @@
-import { botSpec, eventsOfKind, runMatch, TICK_MS, type Arena, type Model } from "@decision-arena/core";
-import { PERCEPTION_WINDOW_TICKS, type Observation, type WorldState } from "@decision-arena/kit-shooter";
+import { botSpec, eventsOfKind, runMatch, TICK_MS, type Arena, type Model } from "@abarena/core";
+import { PERCEPTION_WINDOW_TICKS, type Observation, type WorldState } from "@abarena/kit-shooter";
 import { describe, expect, it } from "vitest";
 import { battleRoyale, DEFAULT_DURATION_TICKS, type BattleRoyaleTypes } from "../src";
 

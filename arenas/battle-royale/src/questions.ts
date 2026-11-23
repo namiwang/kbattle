@@ -8,7 +8,7 @@
 // Players write only the instructions; the platform puts theirs over these
 // defaults and adds its own `escalate` (R22.d).
 
-import type { AgentDefaults, Questions } from "@decision-arena/core";
+import type { AgentDefaults, Questions } from "@abarena/core";
 import {
   dpsToDegreesPerTick,
   MOVE_SPEED_MPS,
@@ -18,7 +18,7 @@ import {
   type MoveChoice,
   type Observation,
   type TurnChoice,
-} from "@decision-arena/kit-shooter";
+} from "@abarena/kit-shooter";
 
 // One decision interval (the actor's, which is the perception window) of each action:
 // 2.5 m of walking and 90° of turning at the defaults.

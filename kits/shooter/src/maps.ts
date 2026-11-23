@@ -3,7 +3,7 @@
 // validateMap, then cached and deeply frozen, so a caller that mutates a spawn
 // point fails loudly instead of corrupting the shared map.
 
-import { roundTo } from "@decision-arena/core";
+import { roundTo } from "@abarena/core";
 // Namespace import on purpose: `import { z }` keeps every zod locale in a bundle
 // (platform/core/src/legacy/schemas.ts has the measurement).
 import * as z from "zod";

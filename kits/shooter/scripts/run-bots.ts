@@ -5,8 +5,8 @@
 // Defaults: map-1, seed 1, wanderer vs camper, MATCH_DURATION_TICKS. Prints
 // who decided when, the first Death, who is alive at the end, and the MatchEnd.
 
-import { MATCH_DURATION_TICKS } from "@decision-arena/core/legacy";
-import { BotKindSchema, eventsOfKind, MatchConfigSchema, type MatchConfig } from "@decision-arena/core/legacy";
+import { MATCH_DURATION_TICKS } from "@abarena/core/legacy";
+import { BotKindSchema, eventsOfKind, MatchConfigSchema, type MatchConfig } from "@abarena/core/legacy";
 import { botProviders } from "../src/bots";
 import { runMatch } from "../src/legacy/match";
 import type { WorldState } from "../src/types";

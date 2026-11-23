@@ -6,7 +6,7 @@
 // the action the agent keeps both match; a recorded Thinker event lands at its
 // recorded tick through pollEvents.
 
-import type { EventOf, MatchLog } from "@decision-arena/core/legacy";
+import type { EventOf, MatchLog } from "@abarena/core/legacy";
 import type { MapSpec } from "../maps";
 import type { AgentId } from "../types";
 import { runMatch } from "./match";

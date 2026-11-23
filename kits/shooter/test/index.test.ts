@@ -1,9 +1,9 @@
-import * as legacy from "@decision-arena/core/legacy";
+import * as legacy from "@abarena/core/legacy";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import * as kit from "../src/index";
 
-describe("@decision-arena/kit-shooter entry point", () => {
+describe("@abarena/kit-shooter entry point", () => {
   it("exposes the vector helpers under the vec2 namespace", () => {
     expect(kit.vec2.add({ x: 1, y: 2 }, { x: 3, y: 4 })).toEqual({ x: 4, y: 6 });
     expect(kit.vec2.fromAngle(90).y).toBe(1);

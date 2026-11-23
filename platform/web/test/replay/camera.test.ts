@@ -1,4 +1,4 @@
-import { MatchLogSchema, type Event as LogEvent, type MatchLog } from "@decision-arena/core/legacy";
+import { MatchLogSchema, type Event as LogEvent, type MatchLog } from "@abarena/core/legacy";
 import { describe, expect, it } from "vitest";
 import sampleJson from "../../../../kits/shooter/fixtures/sample-log.json" with { type: "json" };
 import { cameraTransform, centerOn, followChoices, FREE } from "../../src/replay/camera";

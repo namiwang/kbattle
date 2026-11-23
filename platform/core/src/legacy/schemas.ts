@@ -184,7 +184,7 @@ const DoerInstructionText = z.string().max(500);
 
 /**
  * The prompts that produced a match, so a replay is reproducible (§5.3). Four
- * user-editable doer instructions; escalate's instruction is fixed by Decision Arena
+ * user-editable doer instructions; escalate's instruction is fixed by abarena
  * (§5.4). Blank is allowed: the request builder uses the shipped default (I-005).
  */
 export const PromptsSchema = z.object({

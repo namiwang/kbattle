@@ -1,6 +1,6 @@
 // Hand-built worlds for the sim tests and the golden scenarios.
 
-import { createRng } from "@decision-arena/core";
+import { createRng } from "@abarena/core";
 import { readFileSync } from "node:fs";
 import { AGENT_HP } from "../../src/constants";
 import { getMap, type MapSpec } from "../../src/maps";

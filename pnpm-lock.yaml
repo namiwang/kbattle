@@ -29,10 +29,10 @@ importers:
 
   arenas/battle-royale:
     dependencies:
-      '@decision-arena/core':
+      '@abarena/core':
         specifier: workspace:*
         version: link:../../platform/core
-      '@decision-arena/kit-shooter':
+      '@abarena/kit-shooter':
         specifier: workspace:*
         version: link:../../kits/shooter
       zod:
@@ -45,7 +45,7 @@ importers:
 
   kits/shooter:
     dependencies:
-      '@decision-arena/core':
+      '@abarena/core':
         specifier: workspace:*
         version: link:../../platform/core
       zod:
@@ -71,22 +71,22 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.135.0
         version: 0.135.0(zod@4.6.7)
-      '@decision-arena/core':
+      '@abarena/core':
         specifier: workspace:*
         version: link:../core
-      '@decision-arena/kit-shooter':
+      '@abarena/kit-shooter':
         specifier: workspace:*
         version: link:../../kits/shooter
 
   platform/web:
     dependencies:
-      '@decision-arena/core':
+      '@abarena/core':
         specifier: workspace:*
         version: link:../core
-      '@decision-arena/kit-shooter':
+      '@abarena/kit-shooter':
         specifier: workspace:*
         version: link:../../kits/shooter
-      '@decision-arena/models':
+      '@abarena/models':
         specifier: workspace:*
         version: link:../models
       pixi.js:
@@ -108,17 +108,17 @@ importers:
 
   platform/worker:
     dependencies:
-      '@decision-arena/core':
+      '@abarena/core':
         specifier: workspace:*
         version: link:../core
-      '@decision-arena/models':
+      '@abarena/models':
         specifier: workspace:*
         version: link:../models
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20261019.1
         version: 5.20261019.1
-      '@decision-arena/web':
+      '@abarena/web':
         specifier: workspace:*
         version: link:../web
       wrangler:

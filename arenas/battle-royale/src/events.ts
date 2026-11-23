@@ -11,8 +11,8 @@
 // matches the one the agent got. Dead agents are left out of Tick rows; bullets
 // are listed while in flight; near misses are written only when there are some.
 
-import { roundTo } from "@decision-arena/core";
-import { normalizeDeg, Vec2Schema, type WorldState } from "@decision-arena/kit-shooter";
+import { roundTo } from "@abarena/core";
+import { normalizeDeg, Vec2Schema, type WorldState } from "@abarena/kit-shooter";
 import * as z from "zod";
 
 const TickNumber = z.number().int().min(0);

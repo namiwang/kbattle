@@ -16,7 +16,7 @@ import {
   type MatchLogFor,
   type Model,
   type Reply,
-} from "@decision-arena/core";
+} from "@abarena/core";
 import { readdirSync, readFileSync } from "node:fs";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { battleRoyale, createBattleRoyale, type BattleRoyaleTypes } from "../src";
@@ -254,8 +254,8 @@ describe("determinism harness: faults, planner calls, cancels and clocks", () =>
 
     it("the sim, the bots, the arena and the loops read no clock and no Math.random; performance.now appears only in the loops' wall floors", () => {
       // The kit and core through the arena's links to them (src/ is TypeScript source, R19).
-      const kit = new URL("../node_modules/@decision-arena/kit-shooter/src/", import.meta.url);
-      const core = new URL("../node_modules/@decision-arena/core/src/", import.meta.url);
+      const kit = new URL("../node_modules/@abarena/kit-shooter/src/", import.meta.url);
+      const core = new URL("../node_modules/@abarena/core/src/", import.meta.url);
       const own = new URL("../src/", import.meta.url);
       const under = (root: URL, label: string, dir: string) =>
         readdirSync(new URL(dir, root)).map((name) => ({ name: `${label}/${dir}${name}`, text: readFileSync(new URL(`${dir}${name}`, root), "utf8") }));

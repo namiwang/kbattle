@@ -1,6 +1,6 @@
-import { PERCEPTION_WINDOW_TICKS } from "@decision-arena/kit-shooter";
-import { MatchLogSchema, type Event as LogEvent, type MatchLog } from "@decision-arena/core/legacy";
-import { normalizeDeg, perceive, type Observation, type TickFacts, type Vec2 } from "@decision-arena/kit-shooter";
+import { PERCEPTION_WINDOW_TICKS } from "@abarena/kit-shooter";
+import { MatchLogSchema, type Event as LogEvent, type MatchLog } from "@abarena/core/legacy";
+import { normalizeDeg, perceive, type Observation, type TickFacts, type Vec2 } from "@abarena/kit-shooter";
 import { beforeAll, describe, expect, it } from "vitest";
 import sampleJson from "../../../../kits/shooter/fixtures/sample-log.json" with { type: "json" };
 import { indexLog, type LogIndex, type TickEvent } from "../../src/replay/log-index";

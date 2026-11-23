@@ -1,4 +1,4 @@
-import { ACTOR_INTERVAL_TICKS, BaseConfigSchema, createRng, roundTo, TICK_MS, type Arena } from "@decision-arena/core";
+import { ACTOR_INTERVAL_TICKS, BaseConfigSchema, createRng, roundTo, TICK_MS, type Arena } from "@abarena/core";
 import {
   getMap,
   MAP_IDS,
@@ -11,7 +11,7 @@ import {
   tickEvent as v1TickEvent,
   type Action,
   type WorldState,
-} from "@decision-arena/kit-shooter";
+} from "@abarena/kit-shooter";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { battleRoyale, createBattleRoyale, rankAgents, type BattleRoyaleTypes } from "../src";
 import { makeAgent, makeBullet, makeWorld, map1, OPEN } from "./helpers";

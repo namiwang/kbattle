@@ -1,5 +1,5 @@
 {
-  "name": "@decision-arena/web",
+  "name": "@abarena/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,9 +12,9 @@
     "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
-    "@decision-arena/core": "workspace:*",
-    "@decision-arena/kit-shooter": "workspace:*",
-    "@decision-arena/models": "workspace:*",
+    "@abarena/core": "workspace:*",
+    "@abarena/kit-shooter": "workspace:*",
+    "@abarena/models": "workspace:*",
     "pixi.js": "8.22.0",
     "zod": "^4.6.7"
   },

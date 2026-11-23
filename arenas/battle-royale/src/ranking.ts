@@ -2,7 +2,7 @@
 // ISSUES I-023). A copy of the version-1 loop's rankAgents
 // (kits/shooter/src/legacy/match.ts), which stays untouched until R0.5 deletes it.
 
-import type { Agent, AgentId } from "@decision-arena/kit-shooter";
+import type { Agent, AgentId } from "@abarena/kit-shooter";
 
 /**
  * The final ranking (R11), winner first: living agents by kills, then HP, then

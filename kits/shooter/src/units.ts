@@ -2,7 +2,7 @@
 // deg/s or seconds are converted once at load; inside the sim, ticks are the
 // only time unit.
 
-import { TICK_MS } from "@decision-arena/core";
+import { TICK_MS } from "@abarena/core";
 
 /** Meters per second to meters per tick. */
 export function mpsToMetersPerTick(mps: number): number {

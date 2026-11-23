@@ -1,10 +1,10 @@
 // The Mind section (DESIGN.md §7 item 2, row 13): the thinker system prompt and
 // one instruction per doer question. Four of the five questions: escalate's
-// instruction is fixed by Decision Arena (§5.4), so Prompts has no field for it. A blank
+// instruction is fixed by abarena (§5.4), so Prompts has no field for it. A blank
 // instruction uses the default (ISSUES I-005), which the field shows as its placeholder.
 
-import { ACTOR_INTERVAL_TICKS, TICK_MS } from "@decision-arena/core";
-import { MOVE_CHOICES, PromptsSchema, TURN_CHOICES, type Prompts } from "@decision-arena/core/legacy";
+import { ACTOR_INTERVAL_TICKS, TICK_MS } from "@abarena/core";
+import { MOVE_CHOICES, PromptsSchema, TURN_CHOICES, type Prompts } from "@abarena/core/legacy";
 import { DEFAULT_PROMPTS } from "./defaults";
 import { el, showText } from "./dom";
 import type { Store } from "./state";
@@ -72,7 +72,7 @@ export function createMindSection(store: Store): HTMLElement {
       el("p", {
         id: "ui-thinker-hint",
         className: "ui-hint",
-        textContent: "Decision Arena puts its own harness first (the rules, what the agent perceives, the reply format); you write the strategy.",
+        textContent: "abarena puts its own harness first (the rules, what the agent perceives, the reply format); you write the strategy.",
       }),
     ),
     el(
@@ -84,7 +84,7 @@ export function createMindSection(store: Store): HTMLElement {
         className: "ui-hint",
         textContent:
           "A blank field uses the default. A fifth question, escalate (“the plan no longer fits the situation”), " +
-          "is fixed by Decision Arena: a yes calls the thinker for a new plan.",
+          "is fixed by abarena: a yes calls the thinker for a new plan.",
       }),
     ),
   );

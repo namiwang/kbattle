@@ -2,8 +2,8 @@
 // the match form, in a tiny store saved to localStorage; and the pure rules that
 // turn the form into a MatchConfig. Run match (v4.2) calls validateForm.
 
-import { MatchConfigSchema, PromptsSchema, type MatchConfig, type Prompts, type Slot } from "@decision-arena/core/legacy";
-import { MAP_IDS } from "@decision-arena/kit-shooter";
+import { MatchConfigSchema, PromptsSchema, type MatchConfig, type Prompts, type Slot } from "@abarena/core/legacy";
+import { MAP_IDS } from "@abarena/kit-shooter";
 import * as z from "zod";
 import { formatIssuePath } from "../replay/errors";
 import { DEFAULT_CONFIG, DEFAULT_PROMPTS } from "./defaults";

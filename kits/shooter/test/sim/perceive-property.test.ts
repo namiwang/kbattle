@@ -1,4 +1,4 @@
-import { createRng, nextFloat, type RngState } from "@decision-arena/core";
+import { createRng, nextFloat, type RngState } from "@abarena/core";
 import { describe, expect, it } from "vitest";
 import { AGENT_RADIUS_M, HEAR_SHOT_RANGE_M, MOVE_SPEED_MPS, PERCEPTION_WINDOW_TICKS, VISION_CONE_DEG, VISION_RANGE_M } from "../../src/constants";
 import { circleInsideArena, circleOverlapsPolygon } from "../../src/sim/collision";

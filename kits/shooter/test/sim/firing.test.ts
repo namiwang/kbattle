@@ -1,4 +1,4 @@
-import { nextFloat } from "@decision-arena/core";
+import { nextFloat } from "@abarena/core";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { normalizeDeg } from "../../src/angles";

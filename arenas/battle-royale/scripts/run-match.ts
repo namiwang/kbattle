@@ -2,7 +2,7 @@
 // platform's loop, R0.4): 8 wanderers and 8 campers alternating, the whole
 // MatchLog as compact JSON (what the viewer's Download will save from R0.5).
 //
-//   pnpm --filter @decision-arena/arena-battle-royale exec tsx scripts/run-match.ts [out.json | -] [mapId] [seed]
+//   pnpm --filter @abarena/arena-battle-royale exec tsx scripts/run-match.ts [out.json | -] [mapId] [seed]
 //
 // Defaults: stdout, map-1, seed 7, DEFAULT_DURATION_TICKS (6,000). The same CLI
 // as the kit's version-1 scripts/run-match.ts. The log is checked with
@@ -11,7 +11,7 @@
 // file, and to stderr when the log goes to stdout, so `> match.json` captures
 // the log alone.
 
-import { botSpec, eventsOfKind, parseMatchLogFor, runMatch, tickMsOf } from "@decision-arena/core";
+import { botSpec, eventsOfKind, parseMatchLogFor, runMatch, tickMsOf } from "@abarena/core";
 import { writeFileSync } from "node:fs";
 import { battleRoyale, DEFAULT_DURATION_TICKS } from "../src";
 

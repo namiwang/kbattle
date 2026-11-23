@@ -1,4 +1,4 @@
-import type { DoerAnswers } from "@decision-arena/core/legacy";
+import type { DoerAnswers } from "@abarena/core/legacy";
 import { describe, expect, it } from "vitest";
 import { FIRE_THRESHOLD } from "../../src/constants";
 import { actionFromAnswers, type ActionAnswers } from "../../src/sim/actions";

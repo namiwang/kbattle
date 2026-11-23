@@ -14,8 +14,8 @@ import {
   type MatchLogFor,
   type Model,
   type Reply,
-} from "@decision-arena/core";
-import { getMap, normalizeDeg, type MoveChoice, type TurnChoice, type WorldState } from "@decision-arena/kit-shooter";
+} from "@abarena/core";
+import { getMap, normalizeDeg, type MoveChoice, type TurnChoice, type WorldState } from "@abarena/kit-shooter";
 import { beforeAll, describe, expect, it } from "vitest";
 import { battleRoyale, createBattleRoyale, rankAgents, type BattleRoyaleTypes } from "../src";
 import { OPEN, SIXTEEN_BOTS } from "./helpers";

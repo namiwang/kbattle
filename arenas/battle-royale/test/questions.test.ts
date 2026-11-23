@@ -1,5 +1,5 @@
-import { checkAnswers, MemorySchema, QuestionsSchema, type Answers } from "@decision-arena/core";
-import { FIRE_THRESHOLD, MOVE_CHOICES, STOP_ACTION, TURN_CHOICES } from "@decision-arena/kit-shooter";
+import { checkAnswers, MemorySchema, QuestionsSchema, type Answers } from "@abarena/core";
+import { FIRE_THRESHOLD, MOVE_CHOICES, STOP_ACTION, TURN_CHOICES } from "@abarena/kit-shooter";
 import { describe, expect, it } from "vitest";
 import { battleRoyale, DEFAULTS, MOVE_CRITERIA, NO_TARGET, TURN_CRITERIA } from "../src";
 import { enemy, obs } from "./helpers";

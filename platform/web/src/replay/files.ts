@@ -4,8 +4,8 @@
 // the viewer needs beyond it, a map it has. A good result is the schema's
 // output, never the raw JSON.
 
-import { MatchLogSchema, type MatchLog } from "@decision-arena/core/legacy";
-import { MAP_IDS } from "@decision-arena/kit-shooter";
+import { MatchLogSchema, type MatchLog } from "@abarena/core/legacy";
+import { MAP_IDS } from "@abarena/kit-shooter";
 import { formatIssuePath, type FileError } from "./errors";
 
 export type OpenResult = { ok: true; log: MatchLog } | { ok: false; error: FileError };
@@ -36,9 +36,9 @@ export async function openMatchLogFile(file: File): Promise<OpenResult> {
   return parseMatchLogText(await file.text());
 }
 
-/** The name Download gives a log: `decision-arena-<mapId>-<seed>.json`. */
+/** The name Download gives a log: `abarena-<mapId>-<seed>.json`. */
 export function matchLogFileName(log: MatchLog): string {
-  return `decision-arena-${log.config.mapId}-${log.seed}.json`;
+  return `abarena-${log.config.mapId}-${log.seed}.json`;
 }
 
 /** The single .json file of a drop or a file picker, or a sentence saying why there is none to open. */
@@ -56,7 +56,7 @@ export function pickJsonFile(files: ArrayLike<File>): { ok: true; file: File } |
 // (FileSaver.js waits 40 s for the same reason).
 const REVOKE_AFTER_MS = 40_000;
 
-/** Saves `log` as compact JSON (no pretty print) to `decision-arena-<mapId>-<seed>.json`, through a Blob URL. */
+/** Saves `log` as compact JSON (no pretty print) to `abarena-<mapId>-<seed>.json`, through a Blob URL. */
 export function downloadMatchLog(log: MatchLog): void {
   const url = URL.createObjectURL(new Blob([JSON.stringify(log)], { type: "application/json" }));
   const link = document.createElement("a");

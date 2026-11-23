@@ -1,5 +1,5 @@
 // What the page keeps in localStorage (DESIGN.md §7, §10 Keys): the provider
-// key, the prompts and the match form, under versioned `decision-arena:v1:*` keys.
+// key, the prompts and the match form, under versioned `abarena:v1:*` keys.
 //
 // - The key is plain text, the convention the v0.6 spike page already uses, so
 //   both pages share it. Prompts and form are JSON.
@@ -8,18 +8,18 @@
 //   the rest of a long prompt. A storage that throws (blocked, full) reads as
 //   empty and drops writes; the page then works for this visit only.
 // - Versioning is in the key names: a stored shape that changes incompatibly
-//   moves to `decision-arena:v2:*` and v1 values are left behind.
+//   moves to `abarena:v2:*` and v1 values are left behind.
 
-import { PromptsSchema } from "@decision-arena/core/legacy";
-import { MAP_IDS } from "@decision-arena/kit-shooter";
+import { PromptsSchema } from "@abarena/core/legacy";
+import { MAP_IDS } from "@abarena/kit-shooter";
 import * as z from "zod";
 import { DEFAULT_CONFIG, DEFAULT_PROMPTS } from "./defaults";
 import type { UiState } from "./state";
 
 export const STORAGE_KEYS = Object.freeze({
-  key: "decision-arena:v1:anthropic-key",
-  prompts: "decision-arena:v1:prompts",
-  config: "decision-arena:v1:config",
+  key: "abarena:v1:anthropic-key",
+  prompts: "abarena:v1:prompts",
+  config: "abarena:v1:config",
 });
 
 /** The part of the Web Storage API the page uses; tests pass a fake. */

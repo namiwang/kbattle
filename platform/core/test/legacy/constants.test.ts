@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import * as core from "../../src/index";
 import * as legacy from "../../src/legacy/index";
 
-// The version-1 model and cadence constants, frozen under @decision-arena/core/legacy
+// The version-1 model and cadence constants, frozen under @abarena/core/legacy
 // for the web, models and Worker until they move to version 2 (ruling R20; ISSUES I-028).
 // Their version-2 successors: ACTOR_INTERVAL_TICKS, ACTOR_TIMEOUT_MS and the planner's
 // gaps in contracts/constants.ts, the kit's PERCEPTION_WINDOW_TICKS, the arena's length.
-describe("@decision-arena/core/legacy: the version-1 constants (R20)", () => {
+describe("@abarena/core/legacy: the version-1 constants (R20)", () => {
   it.each([
     ["THINKER_MODEL", "claude-haiku-5-5"],
     ["DOER_MODEL", "@cf/cloudflare/clef-flash"],

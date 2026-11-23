@@ -1,5 +1,5 @@
 {
-  "name": "@decision-arena/models",
+  "name": "@abarena/models",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
-    "@decision-arena/core": "workspace:*",
-    "@decision-arena/kit-shooter": "workspace:*"
+    "@abarena/core": "workspace:*",
+    "@abarena/kit-shooter": "workspace:*"
   }
 }

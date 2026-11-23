@@ -7,11 +7,11 @@
 // and exits 1 when the version-2 median is more than twice the version-1 median.
 // A one-off: it goes with the kit's legacy loop in R0.5.
 //
-//   pnpm --filter @decision-arena/arena-battle-royale exec tsx scripts/time-loops.ts [runs]
+//   pnpm --filter @abarena/arena-battle-royale exec tsx scripts/time-loops.ts [runs]
 
-import { botSpec, runMatch } from "@decision-arena/core";
-import { MatchConfigSchema, type Prompts, type Slot } from "@decision-arena/core/legacy";
-import { botProviders, runMatch as runVersion1 } from "@decision-arena/kit-shooter";
+import { botSpec, runMatch } from "@abarena/core";
+import { MatchConfigSchema, type Prompts, type Slot } from "@abarena/core/legacy";
+import { botProviders, runMatch as runVersion1 } from "@abarena/kit-shooter";
 import { battleRoyale, DEFAULT_DURATION_TICKS } from "../src";
 
 const runs = Number(process.argv[2] ?? 5);

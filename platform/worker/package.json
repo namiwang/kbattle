@@ -1,5 +1,5 @@
 {
-  "name": "@decision-arena/worker",
+  "name": "@abarena/worker",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,12 +11,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@decision-arena/core": "workspace:*",
-    "@decision-arena/models": "workspace:*"
+    "@abarena/core": "workspace:*",
+    "@abarena/models": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261019.1",
-    "@decision-arena/web": "workspace:*",
+    "@abarena/web": "workspace:*",
     "wrangler": "4.151.2"
   }
 }

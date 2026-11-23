@@ -1,5 +1,5 @@
-import { eventsOfKind, runMatch, type Arena, type MatchLogFor, type Model } from "@decision-arena/core";
-import { bearingTo, HEAR_SHOT_RANGE_M, HEARING_BANDS_M, normalizeDeg, PERCEPTION_WINDOW_TICKS, vec2, type AgentId, type HearingBand, type Observation, type Vec2 } from "@decision-arena/kit-shooter";
+import { eventsOfKind, runMatch, type Arena, type MatchLogFor, type Model } from "@abarena/core";
+import { bearingTo, HEAR_SHOT_RANGE_M, HEARING_BANDS_M, normalizeDeg, PERCEPTION_WINDOW_TICKS, vec2, type AgentId, type HearingBand, type Observation, type Vec2 } from "@abarena/kit-shooter";
 import { beforeAll, describe, expect, it } from "vitest";
 import { battleRoyale, type BattleRoyaleTypes } from "../src";
 import { SIXTEEN_BOTS } from "./helpers";

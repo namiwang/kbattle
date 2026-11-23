@@ -2,8 +2,8 @@
 // private RNG, the Clef-shaped answer they give, when they fire, and how they
 // notice they are stuck. Bots know only their Observation (§3 principle 3).
 
-import { createRng, nextFloat, nextUint32, type RngState } from "@decision-arena/core";
-import type { DoerAnswer } from "@decision-arena/core/legacy";
+import { createRng, nextFloat, nextUint32, type RngState } from "@abarena/core";
+import type { DoerAnswer } from "@abarena/core/legacy";
 import { normalizeDeg } from "../angles";
 import { MOVE_SPEED_MPS, PERCEPTION_WINDOW_TICKS, TURN_RATE_DPS } from "../constants";
 import type { AgentId, MoveChoice, Observation, TurnChoice } from "../types";

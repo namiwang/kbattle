@@ -3,8 +3,8 @@
 // are the platform's (the slots of version 1 are gone from the config), and the
 // mode is the envelope's.
 
-import { BaseConfigSchema } from "@decision-arena/core";
-import { MAP_IDS, secondsToTicks } from "@decision-arena/kit-shooter";
+import { BaseConfigSchema } from "@abarena/core";
+import { MAP_IDS, secondsToTicks } from "@abarena/kit-shooter";
 import * as z from "zod";
 
 /** §13 ASSUMED: a match lasts at most 6,000 ticks, 5 min of sim time, unless the last agent alive ends it first. */

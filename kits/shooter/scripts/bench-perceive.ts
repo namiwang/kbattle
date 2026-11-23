@@ -11,9 +11,9 @@
 // pair needs a line-of-sight test, all walking, and every agent's shot plus
 // hits and near misses spread over the window's PERCEPTION_WINDOW_TICKS steps (R15).
 
-import { createRng, nextFloat, type RngState } from "@decision-arena/core";
+import { createRng, nextFloat, type RngState } from "@abarena/core";
 import { PERCEPTION_WINDOW_TICKS } from "../src/constants";
-import type { Slot } from "@decision-arena/core/legacy";
+import type { Slot } from "@abarena/core/legacy";
 import { headingTo } from "../src/angles";
 import { getMap, type MapSpec } from "../src/maps";
 import { perceive } from "../src/sim/perceive";

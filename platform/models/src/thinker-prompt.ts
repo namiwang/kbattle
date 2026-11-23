@@ -2,8 +2,8 @@
 // the user's prompt as the system prompt, and one user message per call with the
 // agent's perception, its current plan, the digest of what changed and its
 // scratchpad. Only what core.perceive gives the agent goes in (principle 3).
-import { TICK_MS } from "@decision-arena/core";
-import { DOER_INTERVAL_TICKS, THINKER_MAX_GAP_TICKS, THINKER_MIN_GAP_TICKS, type Prompts } from "@decision-arena/core/legacy";
+import { TICK_MS } from "@abarena/core";
+import { DOER_INTERVAL_TICKS, THINKER_MAX_GAP_TICKS, THINKER_MIN_GAP_TICKS, type Prompts } from "@abarena/core/legacy";
 // The shooter kit until R2.3 rewrites this prompt: an accepted exception to the
 // platform's dependency rule (ISSUES I-028).
 import {
@@ -18,7 +18,7 @@ import {
   VISION_CONE_DEG,
   VISION_RANGE_M,
   type Observation,
-} from "@decision-arena/kit-shooter";
+} from "@abarena/kit-shooter";
 import { PLAN_REPLY_CHARS } from "./schemas";
 
 const seconds = (ticks: number) => (ticks * TICK_MS) / 1000;

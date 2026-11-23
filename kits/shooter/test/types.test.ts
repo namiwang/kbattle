@@ -1,4 +1,4 @@
-import type { DoerState, Event, MatchConfig, MatchLog } from "@decision-arena/core/legacy";
+import type { DoerState, Event, MatchConfig, MatchLog } from "@abarena/core/legacy";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { HEARING_BANDS_M } from "../src/constants";
 import type { MapSpec } from "../src/maps";

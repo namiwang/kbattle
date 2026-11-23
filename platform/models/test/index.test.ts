@@ -1,9 +1,9 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import * as legacy from "@decision-arena/core/legacy";
-import type { Observation } from "@decision-arena/kit-shooter";
+import * as legacy from "@abarena/core/legacy";
+import type { Observation } from "@abarena/kit-shooter";
 import * as brain from "../src/index";
 
-describe("@decision-arena/models entry point", () => {
+describe("@abarena/models entry point", () => {
   it("exposes the Anthropic thinker and re-exports core's PlanSchema", () => {
     expect(typeof brain.makeAnthropicThinker).toBe("function");
     expect(typeof brain.thinkingParamFor).toBe("function");

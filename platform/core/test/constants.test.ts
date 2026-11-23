@@ -19,7 +19,7 @@ describe("DESIGN.md §5.6: every named constant exports its default", () => {
 
 describe("the version-1 constants are retired from the main export (R20, R0.4)", () => {
   it.each(["THINKER_MODEL", "DOER_MODEL", "MATCH_DURATION_TICKS", "DOER_INTERVAL_TICKS", "DOER_TIMEOUT_MS", "THINKER_MIN_GAP_TICKS", "THINKER_MAX_GAP_TICKS"])(
-    "%s is not on @decision-arena/core",
+    "%s is not on @abarena/core",
     (name) => {
       expect(constants).not.toHaveProperty(name);
       expect(core).not.toHaveProperty(name);

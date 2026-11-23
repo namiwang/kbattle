@@ -1,4 +1,4 @@
-import { MatchLogSchema } from "@decision-arena/core/legacy";
+import { MatchLogSchema } from "@abarena/core/legacy";
 import { describe, expect, it } from "vitest";
 import unknownKindText from "../../../../kits/shooter/fixtures/bad/unknown-event-kind.json?raw";
 import sampleText from "../../../../kits/shooter/fixtures/sample-log.json?raw";
@@ -80,9 +80,9 @@ describe("openMatchLogFile", () => {
 });
 
 describe("matchLogFileName", () => {
-  it("is decision-arena-<mapId>-<seed>.json", () => {
-    expect(matchLogFileName(sample)).toBe("decision-arena-map-1-1.json");
-    expect(matchLogFileName({ ...sample, seed: 42, config: { ...sample.config, seed: 42 } })).toBe("decision-arena-map-1-42.json");
+  it("is abarena-<mapId>-<seed>.json", () => {
+    expect(matchLogFileName(sample)).toBe("abarena-map-1-1.json");
+    expect(matchLogFileName({ ...sample, seed: 42, config: { ...sample.config, seed: 42 } })).toBe("abarena-map-1-42.json");
   });
 });
 

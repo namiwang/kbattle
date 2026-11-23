@@ -1,5 +1,5 @@
 {
-  "name": "@decision-arena/kit-shooter",
+  "name": "@abarena/kit-shooter",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@decision-arena/core": "workspace:*",
+    "@abarena/core": "workspace:*",
     "zod": "^4.6.7"
   },
   "devDependencies": {

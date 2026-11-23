@@ -1,4 +1,4 @@
-import type { MatchConfig, Slot } from "@decision-arena/core/legacy";
+import type { MatchConfig, Slot } from "@abarena/core/legacy";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { step } from "../../src/sim/step";

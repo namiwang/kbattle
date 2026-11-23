@@ -1,4 +1,4 @@
-// @decision-arena/arena-battle-royale public surface (DESIGN.md §5.1, §13): the
+// @abarena/arena-battle-royale public surface (DESIGN.md §5.1, §13): the
 // battle royale arena over the shooter kit, and what a page or a script needs
 // beside it (its config, events and Tick payload, defaults, ranking).
 export { battleRoyale, createBattleRoyale, type BattleRoyaleTypes } from "./arena";

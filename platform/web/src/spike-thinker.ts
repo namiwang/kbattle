@@ -1,11 +1,11 @@
 // v0.6 thinker spike page (disposable, may go in P4): paste a key, send a sample
 // perception to the thinker, see the parsed Plan or the fault (DESIGN.md §5.4-§5.6).
 // The key lives in localStorage and goes only to api.anthropic.com (§7, §10).
-import { makeAnthropicThinker } from "@decision-arena/models";
-import { THINKER_MODEL } from "@decision-arena/core/legacy";
+import { makeAnthropicThinker } from "@abarena/models";
+import { THINKER_MODEL } from "@abarena/core/legacy";
 import { applyResult, initialSpikeState, type SpikeState } from "./spike-thinker-state";
 
-const KEY_STORAGE = "decision-arena:v1:anthropic-key";
+const KEY_STORAGE = "abarena:v1:anthropic-key";
 
 // A stand-in for the harness prompt v3.4 writes.
 const SAMPLE_SYSTEM = `You are the thinker for agent a0 in a top-down 2D battle royale: the last agent alive wins.

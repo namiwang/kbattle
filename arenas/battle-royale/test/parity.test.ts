@@ -1,4 +1,4 @@
-import { callsOf, parseMatchLogFor, runMatch, type MatchLogFor } from "@decision-arena/core";
+import { callsOf, parseMatchLogFor, runMatch, type MatchLogFor } from "@abarena/core";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";

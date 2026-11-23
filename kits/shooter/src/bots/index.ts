@@ -5,7 +5,7 @@
 // the first: makeBot, a version-1 DecisionProvider for the kit's legacy loop, and
 // the battle royale arena's bot Models (arenas/battle-royale/src/bots.ts).
 
-import type { Slot } from "@decision-arena/core/legacy";
+import type { Slot } from "@abarena/core/legacy";
 import type { DecisionProvider, ProviderFactory } from "../legacy/providers";
 import { camperMind } from "./camper";
 import { botAnswer, type BotKind, type BotMind } from "./shared";

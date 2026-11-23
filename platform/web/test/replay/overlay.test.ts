@@ -1,5 +1,5 @@
-import { MatchLogSchema } from "@decision-arena/core/legacy";
-import { normalizeDeg, VISION_CONE_DEG, VISION_RANGE_M, vec2, type Vec2 } from "@decision-arena/kit-shooter";
+import { MatchLogSchema } from "@abarena/core/legacy";
+import { normalizeDeg, VISION_CONE_DEG, VISION_RANGE_M, vec2, type Vec2 } from "@abarena/kit-shooter";
 import { beforeAll, describe, expect, it } from "vitest";
 import sampleJson from "../../../../kits/shooter/fixtures/sample-log.json" with { type: "json" };
 import { indexLog, type LogIndex } from "../../src/replay/log-index";

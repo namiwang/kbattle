@@ -11,7 +11,7 @@
 // window, which keeps the newest PERCEPTION_WINDOW_TICKS steps (R6, R15). Agents
 // never collide with each other (PoC).
 
-import { nextFloat } from "@decision-arena/core";
+import { nextFloat } from "@abarena/core";
 import { headingTo, normalizeDeg, turnToward } from "../angles";
 import {
   AGENT_RADIUS_M,

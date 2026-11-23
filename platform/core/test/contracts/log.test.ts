@@ -246,7 +246,7 @@ describe("MatchLog: the version-2 envelope", () => {
   });
 
   it("drops an unknown top-level field", () => {
-    expect(MatchLogSchema.parse({ ...log, producer: "decision-arena 0.5" })).toEqual(log);
+    expect(MatchLogSchema.parse({ ...log, producer: "abarena 0.5" })).toEqual(log);
   });
 });
 

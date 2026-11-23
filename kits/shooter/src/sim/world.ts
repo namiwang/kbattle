@@ -1,6 +1,6 @@
 // The world at tick 0 (DESIGN.md §6.1, §6.2; sim rulings R1, R14).
 
-import { createRng, nextFloat, type RngState } from "@decision-arena/core";
+import { createRng, nextFloat, type RngState } from "@abarena/core";
 import { headingTo } from "../angles";
 import { AGENT_HP } from "../constants";
 import type { MapSpec } from "../maps";

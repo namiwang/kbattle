@@ -4,7 +4,7 @@
 // the transform; the aspect never changes. With a camera center set (follow,
 // camera.ts) the world keeps the fitted zoom and puts that point mid-canvas.
 
-import type { Vec2 } from "@decision-arena/kit-shooter";
+import type { Vec2 } from "@abarena/kit-shooter";
 import { Application, Container } from "pixi.js";
 import { cameraTransform } from "./camera";
 import { makeTransform, type Transform } from "./coords";

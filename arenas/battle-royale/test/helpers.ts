@@ -1,8 +1,8 @@
 // Shared test fixtures: hand-built observations and worlds, and the 16-bot match
 // of the version-1 demo (map-1, seed 7, wanderers and campers alternating).
 
-import { botSpec, createRng, nextFloat, type AgentSpec, type RngState } from "@decision-arena/core";
-import { AGENT_HP, getMap, STOP_ACTION, type Agent, type AgentId, type Bullet, type MapSpec, type Observation, type Vec2, type WorldState } from "@decision-arena/kit-shooter";
+import { botSpec, createRng, nextFloat, type AgentSpec, type RngState } from "@abarena/core";
+import { AGENT_HP, getMap, STOP_ACTION, type Agent, type AgentId, type Bullet, type MapSpec, type Observation, type Vec2, type WorldState } from "@abarena/kit-shooter";
 
 type Self = Observation["self"];
 

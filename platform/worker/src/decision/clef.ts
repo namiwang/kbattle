@@ -1,5 +1,5 @@
-import { DOER_MODEL } from "@decision-arena/core/legacy";
-import { DoerAnswerSchema, type DecideRequest, type DoerAnswer } from "@decision-arena/core/legacy";
+import { DOER_MODEL } from "@abarena/core/legacy";
+import { DoerAnswerSchema, type DecideRequest, type DoerAnswer } from "@abarena/core/legacy";
 
 /**
  * The slice of the Workers AI binding (env.AI) the Clef adapter calls. clef-flash is not in workers-types'

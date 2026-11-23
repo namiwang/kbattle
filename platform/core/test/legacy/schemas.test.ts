@@ -491,7 +491,7 @@ describe("MatchLog: the replay file", () => {
   });
 
   it("drops an unknown top-level field instead of rejecting it (non-strict)", () => {
-    expect(MatchLogSchema.parse({ ...matchLog, producer: "decision-arena 0.4" })).toEqual(matchLog);
+    expect(MatchLogSchema.parse({ ...matchLog, producer: "abarena 0.4" })).toEqual(matchLog);
   });
 
   it.each([

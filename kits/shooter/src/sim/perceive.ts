@@ -30,7 +30,7 @@
 // values. Order: visible nearest first; heard shots before steps, each nearest
 // first; ties keep slot (or window) order. A dead agent perceives only itself.
 
-import { roundTo, TICK_MS } from "@decision-arena/core";
+import { roundTo, TICK_MS } from "@abarena/core";
 import { bearingTo, normalizeDeg } from "../angles";
 import {
   HEAR_SHOT_RANGE_M,

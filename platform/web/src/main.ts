@@ -3,7 +3,7 @@
 // (kits/shooter/fixtures/sample-log.json); Upload, a drop or Download replace or save it.
 
 import sampleLogUrl from "../../../kits/shooter/fixtures/sample-log.json?url";
-import type { DecisionArenaDebug } from "./replay/debug";
+import type { AbarenaDebug } from "./replay/debug";
 import { createReplayPage } from "./replay/page";
 import { createShell } from "./ui/shell";
 import { createStore } from "./ui/state";
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   const page = createReplayPage(shell.replayHost);
 
   // Reads whichever viewer is on screen, so it follows uploads.
-  const debug: DecisionArenaDebug = {
+  const debug: AbarenaDebug = {
     get ready() {
       return page.ready;
     },
@@ -41,7 +41,7 @@ async function main(): Promise<void> {
     drawnMind: () => page.viewer?.drawnMind() ?? null,
     validateForm: () => shell.validateForm(),
   };
-  window.__decisionArena = debug;
+  window.__abarena = debug;
 
   const response = await fetch(sampleLogUrl);
   if (!response.ok) throw new Error(`sample log: HTTP ${response.status}`);

@@ -1,4 +1,4 @@
-import { MatchLogSchema } from "@decision-arena/core/legacy";
+import { MatchLogSchema } from "@abarena/core/legacy";
 import { describe, expect, it } from "vitest";
 import sampleJson from "../../../../kits/shooter/fixtures/sample-log.json" with { type: "json" };
 import { createTrailBuffer, trailAlpha, TRAIL_TICKS, type BulletRow, type Trail } from "../../src/replay/bullets";

@@ -18,7 +18,7 @@
 // of tick s (it died in that step or before) stands at its last row
 // (ISSUES I-019).
 
-import type { MatchLog } from "@decision-arena/core/legacy";
+import type { MatchLog } from "@abarena/core/legacy";
 import {
   getMap,
   PERCEPTION_WINDOW_TICKS,
@@ -26,7 +26,7 @@ import {
   type PerceptionState,
   type TickFacts,
   type Vec2,
-} from "@decision-arena/kit-shooter";
+} from "@abarena/kit-shooter";
 import { clampTick, type LogIndex, type TickEvent } from "./log-index";
 
 type AgentRow = TickEvent["agents"][number];

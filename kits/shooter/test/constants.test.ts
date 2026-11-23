@@ -1,4 +1,4 @@
-import { ESCALATE_THRESHOLD } from "@decision-arena/core";
+import { ESCALATE_THRESHOLD } from "@abarena/core";
 import { describe, expect, it } from "vitest";
 import * as constants from "../src/constants";
 
