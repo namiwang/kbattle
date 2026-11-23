@@ -179,8 +179,7 @@ actor's answers land on the tick they were asked and a plan lands at
 the next decision. The same seed and the same scripts give the same
 log, byte for byte. With `realTime` the match waits for the tick's time
 and for nothing else: a slow model, actor or planner, costs what it
-would cost in the world. It stops keeping time once only bots are left,
-and a call with no answer after 30 s is given up.
+would cost in the world. A call with no answer after 30 s is given up.
 
 A job's first call in a match must succeed: if it fails, the match ends
 with that error. A match that an error or Stop cut short has no ranking
@@ -250,8 +249,8 @@ around the edge with 100 HP and one gun. The last one alive wins; after
 - A tick is 50 ms; a decision comes every 10 ticks, and an observation
   covers exactly those 10.
 - Questions: `move` (forward, back, left, right, stop), `turn` (left,
-  right, none, face_target: toward the nearest enemy it saw at this
-  decision, followed until the next) and `fire` (yes, no).
+  right, none, face_target: toward the nearest enemy in sight when the
+  answer lands, followed until the next) and `fire` (yes, no).
 - A fighter sees enemies in a cone ahead with line of sight, hears
   shots and footsteps through walls, and feels bullets that hit it or
   pass close.

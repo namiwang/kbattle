@@ -48,3 +48,4 @@ DESIGN.md describes them.
 - OpenRouter's decision endpoint is alpha; its reply is known from documentation only.
 - A hosted page reaches Ollama only when the player sets `OLLAMA_ORIGINS` and allows local network access.
 - A left or right turn held for one decision is 90°, and a late answer keeps an agent turning; tune when real models play.
+- A real-time match plays to its end in real time, even after every model-driven fighter is dead.
