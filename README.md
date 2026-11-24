@@ -9,10 +9,11 @@ arena and watch the match play itself in the browser.
 
 ## Run
 
-Node 22+ and pnpm.
+Node 22.18+ and pnpm.
 
 ```sh
 pnpm install
 pnpm test     # vitest
 pnpm build    # typecheck
+pnpm match    # a match of 16 bots, prints the ranking; `pnpm match log.json` also writes the log
 ```

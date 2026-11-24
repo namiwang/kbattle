@@ -13,10 +13,10 @@ lives in `src/core` and `src/arenas/battle-royale` with the shapes and
 rules of DESIGN.md. Nothing of the old page, the Anthropic adapter or
 the Worker is carried over; git has them. Until the page exists,
 `pnpm build` is the typecheck.
-- [ ] The two reference bot matches play out tick for tick as before the move; then the hash of the new log is pinned in a test.
-- [ ] A scripted match (a planner, a replan, a failed call, a late actor, a first call that fails, a Stop) logs what DESIGN's Match section says, and the same on a second run.
-- [ ] Under fake timers a real-time match keeps the clock, lands a slow answer late, and stops within a tick.
-- [ ] `pnpm match` runs a bot match and prints its ranking; `pnpm match log.json` also writes the log.
+- [x] The two reference bot matches play out tick for tick as before the move; then the hash of the new log is pinned in a test.
+- [x] A scripted match (a planner, a replan, a failed call, a late actor, a first call that fails, a Stop) logs what DESIGN's Match section says, and the same on a second run.
+- [x] Under fake timers a real-time match keeps the clock, lands a slow answer late, and stops within a tick.
+- [x] `pnpm match` runs a bot match and prints its ranking; `pnpm match log.json` also writes the log.
 
 ### 2. Models
 The decision and chat adapters and the model list.

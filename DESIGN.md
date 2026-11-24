@@ -83,8 +83,8 @@ choice has 2 to 26 options with lower-case ids.
 
 A model that cannot answer throws, with the provider's own words. The
 loop checks every reply against what it asked: a pick that is not one
-of the options is dropped, a text is cut to `maxChars`, and a reply
-with nothing left is a failed call.
+of the options is dropped, and so is a blank text; a text is cut to
+`maxChars`; a reply with nothing left is a failed call.
 
 Two adapters cover every hosted and local model:
 
@@ -150,7 +150,7 @@ agent's action.
 ```ts
 runMatch(arena, config, agents, options?: {
   models?: (id: string) => Model;     // every id that is not bot/<name>
-  realTime?: boolean;                 // keep the clock: tick k is due k × tickMs after the start
+  realTime?: boolean;                 // keep the clock: a tick takes tickMs
   signal?: AbortSignal;               // Stop: the match ends after the tick in progress
   onEvent?: (event: Event) => void;   // each event as it is logged; a running match is drawn from these
 }): Promise<MatchLog>
@@ -179,7 +179,8 @@ actor's answers land on the tick they were asked and a plan lands at
 the next decision. The same seed and the same scripts give the same
 log, byte for byte. With `realTime` the match waits for the tick's time
 and for nothing else: a slow model, actor or planner, costs what it
-would cost in the world. A call with no answer after 30 s is given up.
+would cost in the world. A late tick is not caught up. A call with no
+answer after 30 s is given up.
 
 A job's first call in a match must succeed: if it fails, the match ends
 with that error. A match that an error or Stop cut short has no ranking
@@ -195,7 +196,7 @@ type Event =
   | { kind: "Tick"; tick: number; snapshot: unknown }
   | { kind: "Call"; tick: number; agent: string; job: "actor" | "planner";
       askedTick?: number;       // when it was asked, if earlier than tick
-      observation?: unknown;    // what the arena showed the actor
+      observation?: unknown;    // what the arena showed the agent when it was asked
       answers?: Record<string, string>;
       probabilities?: Record<string, Record<string, number>>;
       usage?: { input_tokens: number; output_tokens: number; cost?: number };
@@ -206,9 +207,9 @@ type Event =
 
 Events are in the order things happened. A call is logged at the tick
 its answer took effect. The plan an actor read is the answer of its
-planner's latest call at or before that tick, else the agent's prompt.
-What a planner read is already in the log: its agent's actor calls
-since its last request.
+planner's latest call at or before the tick it was asked, else the
+agent's prompt. What a planner read is in the log too: its observation,
+and its agent's actor calls since its last request.
 
 ## Page
 
