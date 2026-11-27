@@ -6,6 +6,7 @@ arena and watch the match play itself in the browser.
 
 - [DESIGN.md](DESIGN.md): what it is and how it works
 - [PLAN.md](PLAN.md): what is built and what is next
+- [COMPETITORS.md](COMPETITORS.md): similar products and projects, and what they mean for abarena
 
 ## Run
 
